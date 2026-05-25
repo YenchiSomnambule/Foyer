@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foyer</title>
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+
+  <div id="app">
+    <div id="grid-container">
+      <div id="grid"></div>
+    </div>
+  </div>
+
+  <!-- Add Site Modal -->
+  <div id="add-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 class="modal-title">Add Site</h2>
+      <div class="input-group">
+        <label>URL</label>
+        <input type="url" id="url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="input-group">
+        <label>Name</label>
+        <input type="text" id="name-input" placeholder="My Site" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancel-add">Cancel</button>
+        <button class="btn-confirm" id="confirm-add">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div id="rename-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 class="modal-title">Rename</h2>
+      <div class="input-group">
+        <label>Name</label>
+        <input type="text" id="rename-input" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancel-rename">Cancel</button>
+        <button class="btn-confirm" id="confirm-rename">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Open Overlay (iPhone-style folder) -->
+  <div id="group-overlay" class="hidden" role="dialog" aria-modal="true">
+    <div id="group-backdrop"></div>
+    <div id="group-panel">
+      <div id="group-header">
+        <div id="group-title-wrap">
+          <span id="group-title"></span>
+        </div>
+      </div>
+      <div id="group-grid"></div>
+      <button id="close-group" aria-label="Close group">✕</button>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="context-menu" class="hidden" role="menu">
+    <button class="ctx-item" data-action="rename">Rename</button>
+    <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+  </div>
+
+  <script src="newtab.js"></script>
+</body>
+</html>
