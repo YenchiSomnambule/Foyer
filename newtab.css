@@ -385,8 +385,44 @@ body {
   font-size: 18px;
   font-weight: 600;
   color: white;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   letter-spacing: -0.02em;
+}
+
+/* ─── Favicon Preview (Add modal) ─── */
+#favicon-preview-box {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+  overflow: hidden;
+  transition: box-shadow 0.25s, border-color 0.25s;
+  flex-shrink: 0;
+}
+
+#favicon-preview-box.loaded {
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+}
+
+#favicon-preview-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+#favicon-preview-letter {
+  font-size: 28px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.22);
+  line-height: 1;
+  transition: opacity 0.2s;
 }
 
 .input-group { margin-bottom: 14px; }

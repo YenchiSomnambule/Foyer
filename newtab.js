@@ -6,17 +6,42 @@ function uid() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
 
-function getFavicon(url) {
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Priority chain: apple-touch-icon (high-res logo) → gstatic (Google cache, 128px) → s2/favicons → raw favicon.ico
+function getFaviconSources(url) {
   try {
-    const host = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+    const { hostname: host, origin } = new URL(url);
+    return [
+      `${origin}/apple-touch-icon.png`,
+      `${origin}/apple-touch-icon-precomposed.png`,
+      `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(origin)}&size=128`,
+      `https://www.google.com/s2/favicons?domain=${host}&sz=64`,
+      `${origin}/favicon.ico`,
+    ];
   } catch {
-    return null;
+    return [];
   }
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Tries each source in order; calls onResolved(src) with the first that loads, or onResolved(null) if all fail.
+function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
+  if (idx === undefined) idx = 0;
+  if (idx >= sources.length) {
+    img.style.display = 'none';
+    if (fallbackEl) fallbackEl.style.display = 'flex';
+    if (onResolved) onResolved(null);
+    return;
+  }
+  img.onerror = () => tryFaviconChain(img, fallbackEl, sources, idx + 1, onResolved);
+  img.onload  = () => {
+    img.style.display = '';
+    if (fallbackEl) fallbackEl.style.display = 'none';
+    if (onResolved) onResolved(img.src);
+  };
+  img.src = sources[idx];
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -24,6 +49,14 @@ function escHtml(s) {
 let items = [];
 let ctxTargetId = null;
 let openGroupId = null;
+let pendingFavicon = null;   // favicon URL resolved in the add modal
+let faviconEpoch   = 0;      // increments on each new URL in the modal, cancels stale loads
+
+let _saveTimer = null;
+function debouncedSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => save(), 400);
+}
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
@@ -61,18 +94,30 @@ function buildSiteTile(item) {
   tile.dataset.id = item.id;
   tile.draggable = true;
 
-  const fav = getFavicon(item.url) ?? '';
+  const letter = (item.name[0] ?? '?').toUpperCase();
   tile.innerHTML = `
     <div class="tile-icon">
-      <img src="${fav}" alt="" draggable="false">
-      <div class="tile-icon-fallback" style="display:none">${(item.name[0]??'?').toUpperCase()}</div>
+      <img alt="" draggable="false" style="display:none">
+      <div class="tile-icon-fallback" style="display:flex">${letter}</div>
     </div>
     <span class="tile-name">${escHtml(item.name)}</span>
   `;
 
-  tile.querySelector('img').addEventListener('error', e => {
-    e.target.style.display = 'none';
-    tile.querySelector('.tile-icon-fallback').style.display = 'flex';
+  const img      = tile.querySelector('img');
+  const fallback = tile.querySelector('.tile-icon-fallback');
+
+  // Stored favicon first (from when the site was added), then full chain
+  const sources = [
+    ...(item.favicon ? [item.favicon] : []),
+    ...getFaviconSources(item.url),
+  ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+
+  tryFaviconChain(img, fallback, sources, 0, resolvedSrc => {
+    // Auto-persist the working URL so future renders skip the chain probing
+    if (resolvedSrc && !item.favicon) {
+      item.favicon = resolvedSrc;
+      debouncedSave();
+    }
   });
 
   tile.addEventListener('click', e => {
@@ -91,17 +136,32 @@ function buildGroupTile(item) {
   tile.dataset.id = item.id;
   tile.draggable = true;
 
-  const miniIcons = (item.items ?? []).slice(0, 9).map(s => {
-    const fav = getFavicon(s.url) ?? '';
-    return `<img src="${fav}" alt="" class="mini-favicon" draggable="false">`;
-  }).join('');
+  // Mini icons: build placeholders, then lazy-load via chain
+  const sites = (item.items ?? []).slice(0, 9);
+  const miniPlaceholders = sites.map(() =>
+    `<img alt="" class="mini-favicon" draggable="false" style="opacity:0">`
+  ).join('');
 
   tile.innerHTML = `
     <div class="tile-icon group-icon">
-      <div class="mini-grid">${miniIcons}</div>
+      <div class="mini-grid">${miniPlaceholders}</div>
     </div>
     <span class="tile-name">${escHtml(item.name)}</span>
   `;
+
+  // Load each mini favicon via chain
+  tile.querySelectorAll('.mini-favicon').forEach((img, i) => {
+    const site = sites[i];
+    if (!site) return;
+    const sources = [
+      ...(site.favicon ? [site.favicon] : []),
+      ...getFaviconSources(site.url),
+    ].filter((v, j, a) => a.indexOf(v) === j);
+    tryFaviconChain(img, null, sources, 0, () => {
+      img.style.opacity = '1';
+    });
+    img.onerror = () => { img.style.opacity = '0.2'; };
+  });
 
   tile.addEventListener('click', e => {
     if (e.defaultPrevented) return;
@@ -279,18 +339,21 @@ function openGroup(groupId) {
   (group.items ?? []).forEach(site => {
     const tile = document.createElement('div');
     tile.className = 'group-site-tile';
-    const fav = getFavicon(site.url) ?? '';
+    const letter = (site.name[0] ?? '?').toUpperCase();
     tile.innerHTML = `
       <div class="group-site-icon">
-        <img src="${fav}" alt="" draggable="false">
-        <div class="group-site-fallback" style="display:none">${(site.name[0]??'?').toUpperCase()}</div>
+        <img alt="" draggable="false" style="display:none">
+        <div class="group-site-fallback" style="display:flex">${letter}</div>
       </div>
       <span>${escHtml(site.name)}</span>
     `;
-    tile.querySelector('img').addEventListener('error', e => {
-      e.target.style.display = 'none';
-      tile.querySelector('.group-site-fallback').style.display = 'flex';
-    });
+    const img      = tile.querySelector('img');
+    const fallback = tile.querySelector('.group-site-fallback');
+    const sources  = [
+      ...(site.favicon ? [site.favicon] : []),
+      ...getFaviconSources(site.url),
+    ].filter((v, i, a) => a.indexOf(v) === i);
+    tryFaviconChain(img, fallback, sources);
     tile.addEventListener('click', () => { window.location.href = site.url; });
     tile.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -414,14 +477,84 @@ function promptRename(id) {
 // ─── Add Site ─────────────────────────────────────────────────────────────────
 
 function openAddModal() {
-  document.getElementById('url-input').value = '';
+  document.getElementById('url-input').value  = '';
   document.getElementById('name-input').value = '';
+  resetFaviconPreview();
+  pendingFavicon = null;
   document.getElementById('add-modal').classList.remove('hidden');
   document.getElementById('url-input').focus();
 }
 
 function closeAddModal() {
   document.getElementById('add-modal').classList.add('hidden');
+  faviconEpoch++; // cancel any in-flight favicon load
+}
+
+function resetFaviconPreview() {
+  const img    = document.getElementById('favicon-preview-img');
+  const letter = document.getElementById('favicon-preview-letter');
+  const box    = document.getElementById('favicon-preview-box');
+  img.src = '';
+  img.style.display  = 'none';
+  letter.style.display = '';
+  box.classList.remove('loaded');
+}
+
+let _faviconInputTimer = null;
+
+function onUrlInput(rawValue) {
+  clearTimeout(_faviconInputTimer);
+  _faviconInputTimer = setTimeout(() => loadModalFaviconPreview(rawValue), 450);
+}
+
+function loadModalFaviconPreview(rawValue) {
+  let url = rawValue.trim();
+  if (!url) { resetFaviconPreview(); pendingFavicon = null; return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  // Auto-fill name from hostname if name field is still empty
+  const nameInput = document.getElementById('name-input');
+  if (!nameInput.value.trim()) {
+    try { nameInput.value = new URL(url).hostname.replace(/^www\./, ''); } catch {}
+  }
+
+  // Increment epoch so any stale chain is ignored
+  faviconEpoch++;
+  const epoch = faviconEpoch;
+
+  const img    = document.getElementById('favicon-preview-img');
+  const letter = document.getElementById('favicon-preview-letter');
+  const box    = document.getElementById('favicon-preview-box');
+
+  // Reset visual
+  img.style.display  = 'none';
+  letter.style.display = '';
+  box.classList.remove('loaded');
+  pendingFavicon = null;
+
+  const sources = getFaviconSources(url);
+
+  function tryIdx(idx) {
+    if (faviconEpoch !== epoch) return; // a newer URL was typed; bail
+    if (idx >= sources.length) {
+      img.style.display  = 'none';
+      letter.style.display = '';
+      box.classList.remove('loaded');
+      pendingFavicon = null;
+      return;
+    }
+    img.onerror = () => tryIdx(idx + 1);
+    img.onload  = () => {
+      if (faviconEpoch !== epoch) return;
+      img.style.display  = '';
+      letter.style.display = 'none';
+      box.classList.add('loaded');
+      pendingFavicon = img.src;
+    };
+    img.src = sources[idx];
+  }
+
+  tryIdx(0);
 }
 
 function addSite() {
@@ -432,7 +565,10 @@ function addSite() {
   const siteName = name || (() => {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
   })();
-  items.push({ id: uid(), type: 'site', name: siteName, url });
+  items.push({
+    id: uid(), type: 'site', name: siteName, url,
+    favicon: pendingFavicon ?? undefined, // store the resolved logo URL
+  });
   save().then(render);
   closeAddModal();
 }
@@ -449,7 +585,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Add modal
   document.getElementById('confirm-add').addEventListener('click', addSite);
   document.getElementById('cancel-add').addEventListener('click', closeAddModal);
-  document.getElementById('url-input').addEventListener('keydown', e => {
+
+  const urlInput = document.getElementById('url-input');
+  urlInput.addEventListener('input', e => onUrlInput(e.target.value));
+  urlInput.addEventListener('paste', e => {
+    // paste fires before input value updates, so read it on next tick
+    setTimeout(() => onUrlInput(urlInput.value), 0);
+  });
+  urlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const nameInput = document.getElementById('name-input');
       nameInput.value.trim() ? addSite() : nameInput.focus();

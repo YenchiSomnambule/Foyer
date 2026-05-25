@@ -19,6 +19,13 @@
   <div id="add-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
       <h2 class="modal-title">Add Site</h2>
+
+      <!-- Live favicon preview -->
+      <div id="favicon-preview-box">
+        <img id="favicon-preview-img" alt="" style="display:none" draggable="false">
+        <span id="favicon-preview-letter">?</span>
+      </div>
+
       <div class="input-group">
         <label>URL</label>
         <input type="url" id="url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false">
