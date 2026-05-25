@@ -9,10 +9,11 @@
 <body>
 
   <div id="app">
-    <div id="grid-container">
-      <div id="grid"></div>
-    </div>
+    <div id="grid"></div>
   </div>
+
+  <!-- Fixed Add Button -->
+  <button id="add-btn" aria-label="Add site">+</button>
 
   <!-- Add Site Modal -->
   <div id="add-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
@@ -53,9 +54,7 @@
     <div id="group-backdrop"></div>
     <div id="group-panel">
       <div id="group-header">
-        <div id="group-title-wrap">
-          <span id="group-title"></span>
-        </div>
+        <span id="group-title"></span>
       </div>
       <div id="group-grid"></div>
       <button id="close-group" aria-label="Close group">✕</button>

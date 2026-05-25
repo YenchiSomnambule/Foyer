@@ -8,22 +8,24 @@
 :root {
   --tile-size: 88px;
   --tile-icon-size: 60px;
-  --gap: 24px;
+  --tile-name-h: 21px;
+  --gap-y: 28px;
+  --gap-x: 28px;
   --radius: 16px;
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-  --text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  --glass: rgba(255,255,255,0.15);
-  --glass-border: rgba(255,255,255,0.25);
+  --text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  --glass: rgba(255,255,255,0.14);
+  --glass-border: rgba(255,255,255,0.22);
   --overlay-bg: rgba(0,0,0,0.45);
 }
 
 html, body {
   width: 100%;
   height: 100%;
-  overflow: hidden;
   font-family: var(--font);
   user-select: none;
   -webkit-user-select: none;
+  overflow: hidden;
 }
 
 body {
@@ -34,30 +36,21 @@ body {
   background-attachment: fixed;
 }
 
-/* ─── App Shell ─── */
+/* ─── App Shell: fills viewport, scrolls vertically, starts top-left ─── */
 #app {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 52px 48px 120px;
 }
 
-#grid-container {
-  width: 100%;
-  max-width: 1100px;
-  padding: 40px 48px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-/* ─── Grid ─── */
+/* ─── Grid: fills left → right naturally ─── */
 #grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--tile-size));
-  gap: var(--gap) calc(var(--gap) + 8px);
-  justify-content: center;
+  gap: var(--gap-y) var(--gap-x);
+  /* no justify-content → tiles flow from the left edge */
 }
 
 /* ─── Tiles ─── */
@@ -93,7 +86,7 @@ body {
   position: relative;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .tile:hover .tile-icon {
@@ -132,6 +125,7 @@ body {
   white-space: nowrap;
   line-height: 1.2;
   letter-spacing: 0.01em;
+  height: var(--tile-name-h);
 }
 
 /* ─── Group Tile ─── */
@@ -158,37 +152,68 @@ body {
   background: rgba(255,255,255,0.08);
 }
 
-/* ─── Add Button ─── */
-.add-tile {
-  opacity: 0.6;
-  transition: opacity 0.2s, transform 0.15s;
-}
-
-.add-tile:hover {
-  opacity: 1;
-}
-
-.add-tile .tile-icon {
-  background: rgba(255,255,255,0.08);
-  border: 2px dashed rgba(255,255,255,0.3);
-  box-shadow: none;
-}
-
-.add-icon {
-  font-size: 28px;
-  color: rgba(255,255,255,0.7);
-  line-height: 1;
-  font-weight: 300;
-}
-
 /* ─── Drag states ─── */
 .tile.dragging {
-  opacity: 0.3;
+  opacity: 0.15;
+  pointer-events: none;
 }
 
-.tile.drag-over .tile-icon {
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.7), 0 6px 24px rgba(0,0,0,0.5);
-  transform: scale(1.08);
+/* Group target: tile glows when dragging another tile onto its center */
+.tile.drag-group-target .tile-icon {
+  box-shadow: 0 0 0 3px rgba(100,180,255,0.85), 0 6px 24px rgba(0,0,0,0.5);
+  transform: scale(1.12);
+}
+
+/* Reorder drop indicator: thin blue line left or right of the target tile */
+.tile.drop-before::before,
+.tile.drop-after::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: var(--tile-name-h);
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(80,160,255,0.9);
+  box-shadow: 0 0 8px rgba(80,160,255,0.6);
+  pointer-events: none;
+}
+
+.tile.drop-before::before { left: calc(var(--gap-x) / -2 - 1px); }
+.tile.drop-after::after   { right: calc(var(--gap-x) / -2 - 1px); }
+
+/* ─── Fixed Add Button ─── */
+#add-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px dashed rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.9);
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  z-index: 50;
+}
+
+#add-btn:hover {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.75);
+  transform: scale(1.1);
+}
+
+#add-btn:active {
+  transform: scale(0.93);
 }
 
 /* ─── Group Overlay (iPhone folder) ─── */
@@ -201,9 +226,7 @@ body {
   justify-content: center;
 }
 
-#group-overlay.hidden {
-  display: none;
-}
+#group-overlay.hidden { display: none; }
 
 #group-backdrop {
   position: absolute;
@@ -269,9 +292,7 @@ body {
   line-height: 1;
 }
 
-#close-group:hover {
-  background: rgba(255,255,255,0.22);
-}
+#close-group:hover { background: rgba(255,255,255,0.22); }
 
 #group-grid {
   display: grid;
@@ -290,9 +311,7 @@ body {
   transition: transform 0.15s ease;
 }
 
-.group-site-tile:active {
-  transform: scale(0.88);
-}
+.group-site-tile:active { transform: scale(0.88); }
 
 .group-site-icon {
   width: 54px;
@@ -308,11 +327,7 @@ body {
   backdrop-filter: blur(4px);
 }
 
-.group-site-icon img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
+.group-site-icon img { width: 32px; height: 32px; object-fit: contain; }
 
 .group-site-fallback {
   width: 32px;
@@ -352,9 +367,7 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-.modal-overlay.hidden {
-  display: none;
-}
+.modal-overlay.hidden { display: none; }
 
 .modal-card {
   background: rgba(30,35,55,0.92);
@@ -376,9 +389,7 @@ body {
   letter-spacing: -0.02em;
 }
 
-.input-group {
-  margin-bottom: 14px;
-}
+.input-group { margin-bottom: 14px; }
 
 .input-group label {
   display: block;
@@ -403,9 +414,7 @@ body {
   transition: border-color 0.2s, background 0.2s;
 }
 
-.input-group input::placeholder {
-  color: rgba(255,255,255,0.3);
-}
+.input-group input::placeholder { color: rgba(255,255,255,0.3); }
 
 .input-group input:focus {
   border-color: rgba(100,160,255,0.6);
@@ -430,9 +439,7 @@ body {
   transition: opacity 0.15s, transform 0.1s;
 }
 
-.btn-cancel:active, .btn-confirm:active {
-  transform: scale(0.97);
-}
+.btn-cancel:active, .btn-confirm:active { transform: scale(0.97); }
 
 .btn-cancel {
   background: rgba(255,255,255,0.1);
@@ -440,9 +447,7 @@ body {
   border: 1px solid rgba(255,255,255,0.15);
 }
 
-.btn-cancel:hover {
-  background: rgba(255,255,255,0.15);
-}
+.btn-cancel:hover { background: rgba(255,255,255,0.15); }
 
 .btn-confirm {
   background: linear-gradient(135deg, #4f8cff, #6a5acd);
@@ -450,9 +455,7 @@ body {
   box-shadow: 0 2px 12px rgba(79,140,255,0.35);
 }
 
-.btn-confirm:hover {
-  opacity: 0.9;
-}
+.btn-confirm:hover { opacity: 0.9; }
 
 /* ─── Context Menu ─── */
 #context-menu {
@@ -474,9 +477,7 @@ body {
   to   { opacity: 1; transform: scale(1); }
 }
 
-#context-menu.hidden {
-  display: none;
-}
+#context-menu.hidden { display: none; }
 
 .ctx-item {
   display: block;
@@ -494,26 +495,17 @@ body {
   transition: background 0.15s;
 }
 
-.ctx-item:hover {
-  background: rgba(255,255,255,0.1);
-}
-
-.ctx-danger {
-  color: #ff6b6b;
-}
-
-.ctx-danger:hover {
-  background: rgba(255,80,80,0.12);
-}
+.ctx-item:hover { background: rgba(255,255,255,0.1); }
+.ctx-danger { color: #ff6b6b; }
+.ctx-danger:hover { background: rgba(255,80,80,0.12); }
 
 /* ─── Scrollbar ─── */
-#group-panel::-webkit-scrollbar {
-  width: 4px;
-}
-#group-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
+#app::-webkit-scrollbar,
+#group-panel::-webkit-scrollbar { width: 4px; }
+#app::-webkit-scrollbar-track,
+#group-panel::-webkit-scrollbar-track { background: transparent; }
+#app::-webkit-scrollbar-thumb,
 #group-panel::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.18);
   border-radius: 2px;
 }

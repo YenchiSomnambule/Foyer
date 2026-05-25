@@ -15,12 +15,15 @@ function getFavicon(url) {
   }
 }
 
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
-let items = [];          // flat list: { id, type:'site'|'group', name, url?, items? }
-let dragSrcId = null;    // id being dragged
-let ctxTargetId = null;  // id for the open context menu
-let openGroupId = null;  // group currently expanded
+let items = [];
+let ctxTargetId = null;
+let openGroupId = null;
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
@@ -29,16 +32,16 @@ async function load() {
   items = data.items ?? sampleItems();
 }
 
-async function save() {
-  await chrome.storage.local.set({ items });
+function save() {
+  return chrome.storage.local.set({ items });
 }
 
 function sampleItems() {
   return [
-    { id: uid(), type: 'site', name: 'Google', url: 'https://www.google.com' },
-    { id: uid(), type: 'site', name: 'YouTube', url: 'https://www.youtube.com' },
-    { id: uid(), type: 'site', name: 'GitHub', url: 'https://github.com' },
-    { id: uid(), type: 'site', name: 'Twitter', url: 'https://twitter.com' },
+    { id: uid(), type: 'site', name: 'Google',   url: 'https://www.google.com' },
+    { id: uid(), type: 'site', name: 'YouTube',  url: 'https://www.youtube.com' },
+    { id: uid(), type: 'site', name: 'GitHub',   url: 'https://github.com' },
+    { id: uid(), type: 'site', name: 'Twitter',  url: 'https://twitter.com' },
   ];
 }
 
@@ -47,22 +50,9 @@ function sampleItems() {
 function render() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
-
   items.forEach(item => {
     grid.appendChild(item.type === 'group' ? buildGroupTile(item) : buildSiteTile(item));
   });
-
-  // Add (+) button
-  const addTile = document.createElement('div');
-  addTile.className = 'tile add-tile';
-  addTile.innerHTML = `
-    <div class="tile-icon">
-      <span class="add-icon">+</span>
-    </div>
-    <span class="tile-name">Add Site</span>
-  `;
-  addTile.addEventListener('click', openAddModal);
-  grid.appendChild(addTile);
 }
 
 function buildSiteTile(item) {
@@ -75,14 +65,13 @@ function buildSiteTile(item) {
   tile.innerHTML = `
     <div class="tile-icon">
       <img src="${fav}" alt="" draggable="false">
-      <div class="tile-icon-fallback" style="display:none">${(item.name[0] ?? '?').toUpperCase()}</div>
+      <div class="tile-icon-fallback" style="display:none">${(item.name[0]??'?').toUpperCase()}</div>
     </div>
     <span class="tile-name">${escHtml(item.name)}</span>
   `;
 
-  const img = tile.querySelector('img');
-  img.addEventListener('error', () => {
-    img.style.display = 'none';
+  tile.querySelector('img').addEventListener('error', e => {
+    e.target.style.display = 'none';
     tile.querySelector('.tile-icon-fallback').style.display = 'flex';
   });
 
@@ -124,8 +113,156 @@ function buildGroupTile(item) {
   return tile;
 }
 
-function escHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// ─── Drag & Drop ─────────────────────────────────────────────────────────────
+// Three modes:
+//   reorder-before  – drop indicator left of target  → insert before target
+//   reorder-after   – drop indicator right of target → insert after target
+//   group           – merge src into/with target tile
+
+let dragSrcId  = null;
+let dropTgtId  = null;
+let dropMode   = null;   // 'before' | 'after' | 'group'
+
+function clearDragIndicators() {
+  document.querySelectorAll(
+    '.drag-group-target, .drop-before, .drop-after'
+  ).forEach(el => el.classList.remove('drag-group-target', 'drop-before', 'drop-after'));
+}
+
+function attachDrag(tile, id) {
+  tile.addEventListener('dragstart', e => {
+    dragSrcId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    // Defer so the drag image captures normal tile, not the dimmed state
+    requestAnimationFrame(() => tile.classList.add('dragging'));
+  });
+
+  tile.addEventListener('dragend', () => {
+    tile.classList.remove('dragging');
+    clearDragIndicators();
+    dragSrcId = null;
+    dropTgtId = null;
+    dropMode  = null;
+    render(); // ensure clean state if drop was handled or cancelled
+  });
+
+  tile.addEventListener('dragover', e => {
+    if (!dragSrcId || dragSrcId === id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    // Auto-scroll #app when near the top/bottom edge
+    const app = document.getElementById('app');
+    const ZONE = 80, SPEED = 10;
+    if (e.clientY < ZONE) app.scrollTop -= SPEED;
+    else if (e.clientY > window.innerHeight - ZONE) app.scrollTop += SPEED;
+
+    const rect = tile.getBoundingClientRect();
+    const relX  = (e.clientX - rect.left)  / rect.width;
+    const relY  = (e.clientY - rect.top)   / rect.height;
+    const dist  = Math.sqrt((relX - 0.5) ** 2 + (relY - 0.5) ** 2);
+
+    clearDragIndicators();
+
+    if (dist < 0.28) {
+      // Center zone → group merge
+      dropTgtId = id;
+      dropMode  = 'group';
+      tile.classList.add('drag-group-target');
+    } else {
+      // Edge zone → reorder
+      dropTgtId = id;
+      dropMode  = relX < 0.5 ? 'before' : 'after';
+      tile.classList.add(dropMode === 'before' ? 'drop-before' : 'drop-after');
+    }
+  });
+
+  tile.addEventListener('dragleave', e => {
+    if (!tile.contains(e.relatedTarget)) {
+      tile.classList.remove('drag-group-target', 'drop-before', 'drop-after');
+    }
+  });
+
+  tile.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragSrcId || dragSrcId === id) return;
+
+    if (dropMode === 'group') {
+      doGroup(dragSrcId, id);
+    } else {
+      doReorder(dragSrcId, id, dropMode === 'before');
+    }
+    // dragend will clean up and re-render
+  });
+}
+
+// Also handle drop on empty grid space → move src to end
+document.getElementById('grid').addEventListener('dragover', e => {
+  if (!dragSrcId) return;
+  if (e.target.closest && e.target.closest('.tile')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+});
+
+document.getElementById('grid').addEventListener('drop', e => {
+  if (!dragSrcId) return;
+  if (e.target.closest && e.target.closest('.tile')) return;
+  e.preventDefault();
+  const srcIdx = items.findIndex(i => i.id === dragSrcId);
+  if (srcIdx >= 0) {
+    const [src] = items.splice(srcIdx, 1);
+    items.push(src);
+    save();
+  }
+  // dragend will re-render
+});
+
+function doReorder(srcId, tgtId, insertBefore) {
+  const srcIdx = items.findIndex(i => i.id === srcId);
+  const tgtIdx = items.findIndex(i => i.id === tgtId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  const [src] = items.splice(srcIdx, 1);
+  const newTgtIdx = items.findIndex(i => i.id === tgtId);
+  items.splice(insertBefore ? newTgtIdx : newTgtIdx + 1, 0, src);
+  save();
+}
+
+function doGroup(srcId, tgtId) {
+  const src = items.find(i => i.id === srcId);
+  const tgt = items.find(i => i.id === tgtId);
+  if (!src || !tgt) return;
+
+  if (tgt.type === 'group') {
+    // Add src into existing group
+    if (src.type === 'site') {
+      tgt.items = tgt.items ?? [];
+      tgt.items.push({ id: uid(), name: src.name, url: src.url });
+      items = items.filter(i => i.id !== srcId);
+    }
+    save();
+  } else if (src.type === 'site' && tgt.type === 'site') {
+    // Create a new group from two sites
+    const newGroup = {
+      id: uid(), type: 'group', name: 'New Group',
+      items: [
+        { id: uid(), name: src.name, url: src.url },
+        { id: uid(), name: tgt.name, url: tgt.url },
+      ],
+    };
+    const tgtIdx = items.findIndex(i => i.id === tgtId);
+    items.splice(tgtIdx, 1, newGroup);
+    items = items.filter(i => i.id !== srcId);
+    save();
+    // Prompt rename — dragend will render first, showing the "New Group" tile
+    // We delay slightly so render() has a chance to complete
+    setTimeout(() => promptRename(newGroup.id), 50);
+  } else if (src.type === 'group' && tgt.type === 'site') {
+    src.items = src.items ?? [];
+    src.items.push({ id: uid(), name: tgt.name, url: tgt.url });
+    items = items.filter(i => i.id !== tgtId);
+    save();
+  }
 }
 
 // ─── Group Overlay ────────────────────────────────────────────────────────────
@@ -146,23 +283,19 @@ function openGroup(groupId) {
     tile.innerHTML = `
       <div class="group-site-icon">
         <img src="${fav}" alt="" draggable="false">
-        <div class="group-site-fallback" style="display:none">${(site.name[0] ?? '?').toUpperCase()}</div>
+        <div class="group-site-fallback" style="display:none">${(site.name[0]??'?').toUpperCase()}</div>
       </div>
       <span>${escHtml(site.name)}</span>
     `;
-    const img = tile.querySelector('img');
-    img.addEventListener('error', () => {
-      img.style.display = 'none';
+    tile.querySelector('img').addEventListener('error', e => {
+      e.target.style.display = 'none';
       tile.querySelector('.group-site-fallback').style.display = 'flex';
     });
     tile.addEventListener('click', () => { window.location.href = site.url; });
-
-    // Right-click inside group to delete
     tile.addEventListener('contextmenu', e => {
       e.preventDefault();
       showGroupSiteCtx(e, groupId, site.id);
     });
-
     grid.appendChild(tile);
   });
 
@@ -176,137 +309,28 @@ function closeGroup() {
 
 function showGroupSiteCtx(e, groupId, siteId) {
   const menu = document.getElementById('context-menu');
-  menu.innerHTML = `
-    <button class="ctx-item ctx-danger" data-action="remove-from-group">Remove from group</button>
-  `;
-  menu.querySelector('[data-action="remove-from-group"]').addEventListener('click', () => {
-    removeFromGroup(groupId, siteId);
+  menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="remove">Remove from group</button>`;
+  menu.querySelector('[data-action="remove"]').addEventListener('click', () => {
+    const group = items.find(i => i.id === groupId);
+    if (!group) return;
+    const site = group.items.find(s => s.id === siteId);
+    if (!site) return;
+    group.items = group.items.filter(s => s.id !== siteId);
+    items.push({ id: uid(), type: 'site', name: site.name, url: site.url });
+    if (group.items.length <= 1) {
+      if (group.items.length === 1) {
+        const rem = group.items[0];
+        items = items.filter(i => i.id !== groupId);
+        items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url });
+      } else {
+        items = items.filter(i => i.id !== groupId);
+      }
+    }
+    save().then(render);
     closeCtxMenu();
     closeGroup();
-    save().then(render);
   });
   positionAndShow(menu, e.clientX, e.clientY);
-}
-
-function removeFromGroup(groupId, siteId) {
-  const group = items.find(i => i.id === groupId);
-  if (!group) return;
-  const site = group.items.find(s => s.id === siteId);
-  if (!site) return;
-  group.items = group.items.filter(s => s.id !== siteId);
-  // Put site back on main grid
-  items.push({ id: uid(), type: 'site', name: site.name, url: site.url });
-  if (group.items.length === 0) {
-    items = items.filter(i => i.id !== groupId);
-  } else if (group.items.length === 1) {
-    // Ungroup
-    const remaining = group.items[0];
-    items = items.filter(i => i.id !== groupId);
-    items.push({ id: uid(), type: 'site', name: remaining.name, url: remaining.url });
-  }
-}
-
-// ─── Drag & Drop (drop site onto site → group) ────────────────────────────────
-
-function attachDrag(tile, id) {
-  tile.addEventListener('dragstart', e => {
-    dragSrcId = id;
-    tile.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-  });
-
-  tile.addEventListener('dragend', () => {
-    dragSrcId = null;
-    tile.classList.remove('dragging');
-    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-  });
-
-  tile.addEventListener('dragover', e => {
-    if (dragSrcId && dragSrcId !== id) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      tile.classList.add('drag-over');
-    }
-  });
-
-  tile.addEventListener('dragleave', () => tile.classList.remove('drag-over'));
-
-  tile.addEventListener('drop', e => {
-    e.preventDefault();
-    tile.classList.remove('drag-over');
-    if (!dragSrcId || dragSrcId === id) return;
-    handleDrop(dragSrcId, id);
-  });
-}
-
-function handleDrop(srcId, tgtId) {
-  const src = items.find(i => i.id === srcId);
-  const tgt = items.find(i => i.id === tgtId);
-  if (!src || !tgt) return;
-
-  if (tgt.type === 'group') {
-    // Add src into group
-    if (src.type === 'site') {
-      tgt.items = tgt.items ?? [];
-      tgt.items.push({ id: uid(), name: src.name, url: src.url });
-      items = items.filter(i => i.id !== srcId);
-    }
-  } else if (src.type === 'site' && tgt.type === 'site') {
-    // Create a new group from the two sites
-    const newGroup = {
-      id: uid(),
-      type: 'group',
-      name: 'New Group',
-      items: [
-        { id: uid(), name: src.name, url: src.url },
-        { id: uid(), name: tgt.name, url: tgt.url },
-      ],
-    };
-    const tgtIdx = items.findIndex(i => i.id === tgtId);
-    items.splice(tgtIdx, 1, newGroup);
-    items = items.filter(i => i.id !== srcId);
-    // Prompt rename immediately
-    promptRenameGroup(newGroup.id);
-    save().then(render);
-    return;
-  } else if (src.type === 'group' && tgt.type === 'site') {
-    // Add target site into src group
-    src.items = src.items ?? [];
-    src.items.push({ id: uid(), name: tgt.name, url: tgt.url });
-    items = items.filter(i => i.id !== tgtId);
-  }
-
-  save().then(render);
-}
-
-function promptRenameGroup(groupId) {
-  const group = items.find(i => i.id === groupId);
-  if (!group) return;
-  const modal = document.getElementById('rename-modal');
-  const input = document.getElementById('rename-input');
-  input.value = group.name;
-  modal.classList.remove('hidden');
-  input.focus();
-  input.select();
-
-  const doSave = () => {
-    const val = input.value.trim();
-    if (val) { group.name = val; save().then(render); }
-    modal.classList.add('hidden');
-    unbind();
-  };
-
-  const onKeydown = e => { if (e.key === 'Enter') doSave(); if (e.key === 'Escape') { modal.classList.add('hidden'); unbind(); } };
-  document.getElementById('confirm-rename').onclick = doSave;
-  document.getElementById('cancel-rename').onclick = () => { modal.classList.add('hidden'); unbind(); };
-  input.addEventListener('keydown', onKeydown);
-
-  function unbind() {
-    input.removeEventListener('keydown', onKeydown);
-    document.getElementById('confirm-rename').onclick = null;
-    document.getElementById('cancel-rename').onclick = null;
-  }
 }
 
 // ─── Context Menu ─────────────────────────────────────────────────────────────
@@ -323,34 +347,28 @@ function attachContextMenu(tile, id) {
 function showCtxMenu(x, y, id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-
   const menu = document.getElementById('context-menu');
   menu.innerHTML = `
     <button class="ctx-item" data-action="rename">Rename</button>
     <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
   `;
-
   menu.querySelector('[data-action="rename"]').addEventListener('click', () => {
     closeCtxMenu();
-    promptRenameGroup(id) || promptRenameSite(id);
+    promptRename(id);
   });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
     items = items.filter(i => i.id !== id);
     save().then(render);
     closeCtxMenu();
   });
-
   positionAndShow(menu, x, y);
 }
 
 function positionAndShow(menu, x, y) {
   menu.classList.remove('hidden');
-  // Keep menu on screen
   const mw = 180, mh = 90;
-  const left = Math.min(x, window.innerWidth - mw - 8);
-  const top  = Math.min(y, window.innerHeight - mh - 8);
-  menu.style.left = `${left}px`;
-  menu.style.top  = `${top}px`;
+  menu.style.left = `${Math.min(x, window.innerWidth  - mw - 8)}px`;
+  menu.style.top  = `${Math.min(y, window.innerHeight - mh - 8)}px`;
 }
 
 function closeCtxMenu() {
@@ -358,9 +376,11 @@ function closeCtxMenu() {
   ctxTargetId = null;
 }
 
-function promptRenameSite(id) {
+// ─── Rename ───────────────────────────────────────────────────────────────────
+
+function promptRename(id) {
   const item = items.find(i => i.id === id);
-  if (!item || item.type !== 'site') return false;
+  if (!item) return;
 
   const modal = document.getElementById('rename-modal');
   const input = document.getElementById('rename-input');
@@ -389,16 +409,14 @@ function promptRenameSite(id) {
     document.getElementById('confirm-rename').onclick = null;
     document.getElementById('cancel-rename').onclick = null;
   }
-  return true;
 }
 
 // ─── Add Site ─────────────────────────────────────────────────────────────────
 
 function openAddModal() {
-  const modal = document.getElementById('add-modal');
   document.getElementById('url-input').value = '';
   document.getElementById('name-input').value = '';
-  modal.classList.remove('hidden');
+  document.getElementById('add-modal').classList.remove('hidden');
   document.getElementById('url-input').focus();
 }
 
@@ -407,18 +425,13 @@ function closeAddModal() {
 }
 
 function addSite() {
-  let url = document.getElementById('url-input').value.trim();
+  let url  = document.getElementById('url-input').value.trim();
   const name = document.getElementById('name-input').value.trim();
-
   if (!url) return;
-
-  // Auto-prefix https://
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-
   const siteName = name || (() => {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
   })();
-
   items.push({ id: uid(), type: 'site', name: siteName, url });
   save().then(render);
   closeAddModal();
@@ -430,17 +443,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   await load();
   render();
 
+  // Add button (fixed, bottom-right)
+  document.getElementById('add-btn').addEventListener('click', openAddModal);
+
   // Add modal
   document.getElementById('confirm-add').addEventListener('click', addSite);
   document.getElementById('cancel-add').addEventListener('click', closeAddModal);
   document.getElementById('url-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const nameInput = document.getElementById('name-input');
-      if (!nameInput.value.trim()) {
-        nameInput.focus();
-      } else {
-        addSite();
-      }
+      nameInput.value.trim() ? addSite() : nameInput.focus();
     }
     if (e.key === 'Escape') closeAddModal();
   });
@@ -448,11 +460,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') addSite();
     if (e.key === 'Escape') closeAddModal();
   });
-
-  // Close modals on backdrop click
   document.getElementById('add-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddModal();
   });
+
+  // Rename modal backdrop
   document.getElementById('rename-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('rename-modal').classList.add('hidden');
   });
@@ -461,16 +473,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('close-group').addEventListener('click', closeGroup);
   document.getElementById('group-backdrop').addEventListener('click', closeGroup);
 
-  // Context menu — dismiss on outside click
+  // Context menu dismiss
   document.addEventListener('click', e => {
-    if (!document.getElementById('context-menu').contains(e.target)) {
-      closeCtxMenu();
-    }
+    if (!document.getElementById('context-menu').contains(e.target)) closeCtxMenu();
   });
+
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      closeCtxMenu();
-      closeGroup();
-    }
+    if (e.key === 'Escape') { closeCtxMenu(); closeGroup(); closeAddModal(); }
   });
 });
