@@ -329,30 +329,39 @@ function _applyReorderPreview(tgtEl, insertBefore) {
   const grid = document.getElementById('grid');
   if (!pdSrcEl) return;
 
-  // Cancel any running animations first, record FIRST positions
   const others = [...grid.querySelectorAll('.tile')].filter(t => t !== pdSrcEl);
-  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+
+  // Freeze any in-flight animations into inline style so FIRST = current visual position,
+  // not the snapped-to-final-value that a plain transform:'' clear would give.
+  others.forEach(t => {
+    t.getAnimations().forEach(a => { try { a.commitStyles(); a.cancel(); } catch {} });
+  });
+
+  // FIRST: visual positions (layout + any committed mid-animation offset)
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  // Move the ghost placeholder in the DOM (CHANGE step)
+  // Clear transforms/transitions so the DOM move lands on clean layout positions
+  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+
+  // Move the ghost placeholder in the DOM
   if (insertBefore) grid.insertBefore(pdSrcEl, tgtEl);
   else              grid.insertBefore(pdSrcEl, tgtEl.nextSibling);
 
-  grid.offsetHeight; // force reflow so LAST positions are fresh
+  grid.offsetHeight; // settle layout
 
-  // Compute delta and apply inverse transform (INVERT step)
+  // INVERT: each tile appears at its visual position, will animate to new layout
   others.forEach(t => {
     const f = firsts.get(t); if (!f) return;
-    const l = t.getBoundingClientRect();
+    const l = t.getBoundingClientRect(); // new layout, no transform
     const dx = f.left - l.left, dy = f.top - l.top;
     if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
       t.style.transform = `translate(${dx}px,${dy}px)`;
   });
 
-  // PLAY: animate all tiles to their real (transformed-to-zero) positions
+  // PLAY
   requestAnimationFrame(() => requestAnimationFrame(() => {
     others.forEach(t => {
-      t.style.transition = 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transition = 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)';
       t.style.transform  = '';
     });
   }));
@@ -362,8 +371,9 @@ function _commitDrag() {
   pdClone?.remove(); pdClone = null;
   if (pdSrcEl) pdSrcEl.style.opacity = '';
 
-  // Clear all drag decorations and transforms
+  // Cancel any in-flight FLIP animations and clear decorations
   document.querySelectorAll('.tile').forEach(t => {
+    t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.classList.remove('drag-group-target');
     t.style.transition = '';
     t.style.transform  = '';
@@ -550,8 +560,15 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   if (!page) return;
 
   const others = [...page.querySelectorAll('.group-site-tile')].filter(t => t !== gpDragSrcEl);
-  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+
+  // Freeze any in-flight animations into inline style so we animate FROM the visual position
+  others.forEach(t => {
+    t.getAnimations().forEach(a => { try { a.commitStyles(); a.cancel(); } catch {} });
+  });
+
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
+
+  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
 
   if (insertBefore) page.insertBefore(gpDragSrcEl, tgtEl);
   else              page.insertBefore(gpDragSrcEl, tgtEl.nextSibling);
@@ -568,7 +585,7 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
 
   requestAnimationFrame(() => requestAnimationFrame(() => {
     others.forEach(t => {
-      t.style.transition = 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transition = 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)';
       t.style.transform  = '';
     });
   }));
@@ -579,6 +596,7 @@ function _gpCommitDrag(groupId) {
   if (gpDragSrcEl) gpDragSrcEl.style.opacity = '';
 
   document.querySelectorAll('.group-site-tile').forEach(t => {
+    t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.style.transition = '';
     t.style.transform  = '';
   });
