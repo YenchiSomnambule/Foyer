@@ -70,6 +70,9 @@ let ctxTargetId = null;
 let openGroupId = null;
 let pendingFavicon = null;
 let faviconEpoch   = 0;
+let editTargetId      = null;
+let pendingEditFavicon = null;
+let editFaviconEpoch   = 0;
 
 // Group page state
 let groupCurrentPage  = 0;
@@ -540,13 +543,20 @@ function showCtxMenu(x, y, id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   const menu = document.getElementById('context-menu');
+  const editBtn = item.type === 'site'
+    ? `<button class="ctx-item" data-action="edit">Edit</button>` : '';
   menu.innerHTML = `
     <button class="ctx-item" data-action="rename">Rename</button>
+    ${editBtn}
     <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
   `;
   menu.querySelector('[data-action="rename"]').addEventListener('click', () => {
     closeCtxMenu();
     promptRename(id);
+  });
+  menu.querySelector('[data-action="edit"]')?.addEventListener('click', () => {
+    closeCtxMenu();
+    openEditModal(id);
   });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
     items = items.filter(i => i.id !== id);
@@ -601,6 +611,126 @@ function promptRename(id) {
     document.getElementById('confirm-rename').onclick = null;
     document.getElementById('cancel-rename').onclick = null;
   }
+}
+
+// ─── Edit Site ────────────────────────────────────────────────────────────────
+
+function openEditModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item || item.type !== 'site') return;
+  editTargetId = id;
+  pendingEditFavicon = item.favicon ?? null;
+
+  document.getElementById('edit-url-input').value  = item.url;
+  document.getElementById('edit-name-input').value = item.name;
+
+  // Show existing favicon in preview
+  const img    = document.getElementById('edit-favicon-preview-img');
+  const letter = document.getElementById('edit-favicon-preview-letter');
+  const box    = document.getElementById('edit-favicon-preview-box');
+  letter.style.display = 'none';
+  box.classList.remove('loaded');
+  img.style.display = 'none';
+
+  editFaviconEpoch++;
+  const epoch   = editFaviconEpoch;
+  const sources = [
+    ...(item.favicon ? [item.favicon] : []),
+    ...getFaviconSources(item.url),
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  img.onerror = function tryNext() {
+    const idx = sources.indexOf(img.src) + 1;
+    if (editFaviconEpoch !== epoch) return;
+    if (idx >= sources.length) { img.style.display = 'none'; letter.style.display = ''; return; }
+    img.onerror = tryNext;
+    img.src = sources[idx];
+  };
+  img.onload = () => {
+    if (editFaviconEpoch !== epoch) return;
+    img.style.display = '';
+    letter.style.display = 'none';
+    box.classList.add('loaded');
+  };
+  if (sources.length) {
+    img.src = sources[0];
+  } else {
+    letter.style.display = '';
+  }
+
+  document.getElementById('edit-modal').classList.remove('hidden');
+  document.getElementById('edit-url-input').focus();
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.add('hidden');
+  editFaviconEpoch++;
+  editTargetId = null;
+}
+
+let _editFaviconInputTimer = null;
+
+function onEditUrlInput(rawValue) {
+  clearTimeout(_editFaviconInputTimer);
+  _editFaviconInputTimer = setTimeout(() => loadEditFaviconPreview(rawValue), 450);
+}
+
+function loadEditFaviconPreview(rawValue) {
+  let url = rawValue.trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  editFaviconEpoch++;
+  const epoch = editFaviconEpoch;
+
+  const img    = document.getElementById('edit-favicon-preview-img');
+  const letter = document.getElementById('edit-favicon-preview-letter');
+  const box    = document.getElementById('edit-favicon-preview-box');
+  img.style.display  = 'none';
+  letter.style.display = '';
+  box.classList.remove('loaded');
+  pendingEditFavicon = null;
+
+  const sources = getFaviconSources(url);
+
+  function tryIdx(idx) {
+    if (editFaviconEpoch !== epoch) return;
+    if (idx >= sources.length) {
+      img.style.display = 'none';
+      letter.style.display = '';
+      pendingEditFavicon = null;
+      return;
+    }
+    img.onerror = () => tryIdx(idx + 1);
+    img.onload  = () => {
+      if (editFaviconEpoch !== epoch) return;
+      img.style.display = '';
+      letter.style.display = 'none';
+      box.classList.add('loaded');
+      pendingEditFavicon = img.src;
+    };
+    img.src = sources[idx];
+  }
+  tryIdx(0);
+}
+
+function saveEdit() {
+  if (!editTargetId) return;
+  const item = items.find(i => i.id === editTargetId);
+  if (!item) return;
+
+  let url  = document.getElementById('edit-url-input').value.trim();
+  const name = document.getElementById('edit-name-input').value.trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  item.url  = url;
+  item.name = name || item.name;
+  // Clear cached favicon so it re-resolves with the new URL
+  item.favicon = pendingEditFavicon ?? undefined;
+
+  save().then(render);
+  closeEditModal();
 }
 
 // ─── Add Site ─────────────────────────────────────────────────────────────────
@@ -736,6 +866,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeAddModal();
   });
 
+  // Edit modal
+  document.getElementById('confirm-edit').addEventListener('click', saveEdit);
+  document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
+  const editUrlInput  = document.getElementById('edit-url-input');
+  const editNameInput = document.getElementById('edit-name-input');
+  editUrlInput.addEventListener('input', e => onEditUrlInput(e.target.value));
+  editUrlInput.addEventListener('paste', () => setTimeout(() => onEditUrlInput(editUrlInput.value), 0));
+  editUrlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') editNameInput.value.trim() ? saveEdit() : editNameInput.focus();
+    if (e.key === 'Escape') closeEditModal();
+  });
+  editNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') closeEditModal();
+  });
+  document.getElementById('edit-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditModal();
+  });
+
   // Rename modal backdrop
   document.getElementById('rename-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('rename-modal').classList.add('hidden');
@@ -751,6 +900,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeCtxMenu(); closeGroup(); closeAddModal(); }
+    if (e.key === 'Escape') { closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal(); }
   });
 });

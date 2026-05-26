@@ -41,6 +41,31 @@
     </div>
   </div>
 
+  <!-- Edit Site Modal -->
+  <div id="edit-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 class="modal-title">Edit Site</h2>
+
+      <div id="edit-favicon-preview-box">
+        <img id="edit-favicon-preview-img" alt="" style="display:none" draggable="false">
+        <span id="edit-favicon-preview-letter">?</span>
+      </div>
+
+      <div class="input-group">
+        <label>URL</label>
+        <input type="url" id="edit-url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="input-group">
+        <label>Name</label>
+        <input type="text" id="edit-name-input" placeholder="My Site" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancel-edit">Cancel</button>
+        <button class="btn-confirm" id="confirm-edit">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Rename Modal -->
   <div id="rename-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
