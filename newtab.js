@@ -361,7 +361,7 @@ function _applyReorderPreview(tgtEl, insertBefore) {
   // PLAY
   requestAnimationFrame(() => requestAnimationFrame(() => {
     others.forEach(t => {
-      t.style.transition = 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
       t.style.transform  = '';
     });
   }));
@@ -585,7 +585,7 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
 
   requestAnimationFrame(() => requestAnimationFrame(() => {
     others.forEach(t => {
-      t.style.transition = 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
       t.style.transform  = '';
     });
   }));
