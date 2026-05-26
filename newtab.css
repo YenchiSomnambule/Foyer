@@ -457,8 +457,9 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* ─── Favicon Preview (Add modal) ─── */
-#favicon-preview-box {
+/* ─── Favicon Preview (Add / Edit modals) ─── */
+#favicon-preview-box,
+#edit-favicon-preview-box {
   width: 72px;
   height: 72px;
   border-radius: 18px;
@@ -473,19 +474,22 @@ body {
   flex-shrink: 0;
 }
 
-#favicon-preview-box.loaded {
+#favicon-preview-box.loaded,
+#edit-favicon-preview-box.loaded {
   border-color: rgba(255,255,255,0.28);
   box-shadow: 0 4px 18px rgba(0,0,0,0.35);
 }
 
-#favicon-preview-img {
+#favicon-preview-img,
+#edit-favicon-preview-img {
   width: 52px;
   height: 52px;
   object-fit: contain;
   border-radius: 6px;
 }
 
-#favicon-preview-letter {
+#favicon-preview-letter,
+#edit-favicon-preview-letter {
   font-size: 28px;
   font-weight: 300;
   color: rgba(255,255,255,0.22);
