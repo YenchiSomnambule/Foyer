@@ -524,8 +524,9 @@ function _gpMoveDrag(cx, cy) {
   const cloneCY = cr.top  + cr.height / 2;
 
   // Find nearest group-site-tile by center-to-center distance
+  // Scope to .group-page to exclude the floating clone (also has the same class)
   let nearestTile = null, nearestDist = Infinity;
-  for (const t of document.querySelectorAll('.group-site-tile')) {
+  for (const t of document.querySelectorAll('.group-page .group-site-tile')) {
     if (t === gpDragSrcEl) continue;
     const r = t.getBoundingClientRect();
     const d = Math.hypot(cloneCX - (r.left + r.width / 2), cloneCY - (r.top + r.height / 2));
