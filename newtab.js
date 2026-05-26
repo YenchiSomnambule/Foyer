@@ -10,6 +10,25 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+const ICON_GRADIENTS = [
+  'linear-gradient(135deg,#667eea,#764ba2)',
+  'linear-gradient(135deg,#f093fb,#f5576c)',
+  'linear-gradient(135deg,#4facfe,#00f2fe)',
+  'linear-gradient(135deg,#43e97b,#38f9d7)',
+  'linear-gradient(135deg,#fa709a,#fee140)',
+  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+  'linear-gradient(135deg,#fccb90,#d57eeb)',
+  'linear-gradient(135deg,#e0c3fc,#8ec5fc)',
+  'linear-gradient(135deg,#ff9a9e,#fecfef)',
+  'linear-gradient(135deg,#96fbc4,#f9f586)',
+];
+
+function tileGradient(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (h * 33 ^ str.charCodeAt(i)) >>> 0;
+  return ICON_GRADIENTS[h % ICON_GRADIENTS.length];
+}
+
 // Priority chain: apple-touch-icon (high-res logo) → gstatic (Google cache, 128px) → s2/favicons → raw favicon.ico
 function getFaviconSources(url) {
   try {
@@ -49,8 +68,13 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 let items = [];
 let ctxTargetId = null;
 let openGroupId = null;
-let pendingFavicon = null;   // favicon URL resolved in the add modal
-let faviconEpoch   = 0;      // increments on each new URL in the modal, cancels stale loads
+let pendingFavicon = null;
+let faviconEpoch   = 0;
+
+// Group page state
+let groupCurrentPage  = 0;
+let groupTotalPages   = 0;
+let cleanupGroupDrag  = null;
 
 let _saveTimer = null;
 function debouncedSave() {
@@ -136,31 +160,38 @@ function buildGroupTile(item) {
   tile.dataset.id = item.id;
   tile.draggable = true;
 
-  // Mini icons: build placeholders, then lazy-load via chain
   const sites = (item.items ?? []).slice(0, 9);
-  const miniPlaceholders = sites.map(() =>
-    `<img alt="" class="mini-favicon" draggable="false" style="opacity:0">`
-  ).join('');
+
+  // 9-slot mini-grid: filled slots show letter+favicon, empty slots stay faint
+  let miniHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const s = sites[i];
+    if (s) {
+      const letter = (s.name[0] ?? '?').toUpperCase();
+      const bg = tileGradient(s.url);
+      miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
+    } else {
+      miniHTML += `<div class="mini-cell empty"></div>`;
+    }
+  }
 
   tile.innerHTML = `
     <div class="tile-icon group-icon">
-      <div class="mini-grid">${miniPlaceholders}</div>
+      <div class="mini-grid">${miniHTML}</div>
     </div>
     <span class="tile-name">${escHtml(item.name)}</span>
   `;
 
-  // Load each mini favicon via chain
-  tile.querySelectorAll('.mini-favicon').forEach((img, i) => {
+  tile.querySelectorAll('.mini-cell:not(.empty)').forEach((cell, i) => {
     const site = sites[i];
     if (!site) return;
+    const img    = cell.querySelector('img');
+    const letter = cell.querySelector('.mini-letter');
     const sources = [
       ...(site.favicon ? [site.favicon] : []),
       ...getFaviconSources(site.url),
     ].filter((v, j, a) => a.indexOf(v) === j);
-    tryFaviconChain(img, null, sources, 0, () => {
-      img.style.opacity = '1';
-    });
-    img.onerror = () => { img.style.opacity = '0.2'; };
+    tryFaviconChain(img, letter, sources);
   });
 
   tile.addEventListener('click', e => {
@@ -327,47 +358,145 @@ function doGroup(srcId, tgtId) {
 
 // ─── Group Overlay ────────────────────────────────────────────────────────────
 
+function buildGroupSiteTile(site, groupId) {
+  const tile = document.createElement('div');
+  tile.className = 'group-site-tile';
+  const letter   = (site.name[0] ?? '?').toUpperCase();
+  const gradient = tileGradient(site.url);
+  tile.innerHTML = `
+    <div class="group-site-icon">
+      <img alt="" draggable="false" style="display:none">
+      <div class="group-site-fallback" style="display:flex;background:${gradient}">${letter}</div>
+    </div>
+    <span>${escHtml(site.name)}</span>
+  `;
+  const img      = tile.querySelector('img');
+  const fallback = tile.querySelector('.group-site-fallback');
+  const sources  = [
+    ...(site.favicon ? [site.favicon] : []),
+    ...getFaviconSources(site.url),
+  ].filter((v, i, a) => a.indexOf(v) === i);
+  tryFaviconChain(img, fallback, sources);
+  tile.addEventListener('click', e => {
+    if (!e.defaultPrevented) window.location.href = site.url;
+  });
+  tile.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    showGroupSiteCtx(e, groupId, site.id);
+  });
+  return tile;
+}
+
 function openGroup(groupId) {
   const group = items.find(i => i.id === groupId);
   if (!group || group.type !== 'group') return;
   openGroupId = groupId;
+  groupCurrentPage = 0;
 
   document.getElementById('group-title').textContent = group.name;
-  const grid = document.getElementById('group-grid');
-  grid.innerHTML = '';
 
-  (group.items ?? []).forEach(site => {
-    const tile = document.createElement('div');
-    tile.className = 'group-site-tile';
-    const letter = (site.name[0] ?? '?').toUpperCase();
-    tile.innerHTML = `
-      <div class="group-site-icon">
-        <img alt="" draggable="false" style="display:none">
-        <div class="group-site-fallback" style="display:flex">${letter}</div>
-      </div>
-      <span>${escHtml(site.name)}</span>
-    `;
-    const img      = tile.querySelector('img');
-    const fallback = tile.querySelector('.group-site-fallback');
-    const sources  = [
-      ...(site.favicon ? [site.favicon] : []),
-      ...getFaviconSources(site.url),
-    ].filter((v, i, a) => a.indexOf(v) === i);
-    tryFaviconChain(img, fallback, sources);
-    tile.addEventListener('click', () => { window.location.href = site.url; });
-    tile.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      showGroupSiteCtx(e, groupId, site.id);
-    });
-    grid.appendChild(tile);
+  const track = document.getElementById('group-pages-track');
+  const dots  = document.getElementById('group-dots');
+  track.innerHTML = '';
+  dots.innerHTML  = '';
+  track.style.transform = 'translateX(0)';
+
+  // Split items into pages of 9
+  const allSites = group.items ?? [];
+  const pages = [];
+  for (let i = 0; i < allSites.length; i += 9) pages.push(allSites.slice(i, i + 9));
+  if (pages.length === 0) pages.push([]);
+  groupTotalPages = pages.length;
+
+  pages.forEach((pageSites, pi) => {
+    const page = document.createElement('div');
+    page.className = 'group-page';
+    pageSites.forEach(site => page.appendChild(buildGroupSiteTile(site, groupId)));
+    track.appendChild(page);
+
+    if (pages.length > 1) {
+      const dot = document.createElement('div');
+      dot.className = 'group-dot' + (pi === 0 ? ' active' : '');
+      dot.addEventListener('click', () => goToGroupPage(pi));
+      dots.appendChild(dot);
+    }
   });
+
+  const container = document.getElementById('group-pages-container');
+  if (cleanupGroupDrag) cleanupGroupDrag();
+  cleanupGroupDrag = initGroupPageDrag(container, track, dots);
 
   document.getElementById('group-overlay').classList.remove('hidden');
 }
 
 function closeGroup() {
   document.getElementById('group-overlay').classList.add('hidden');
+  if (cleanupGroupDrag) { cleanupGroupDrag(); cleanupGroupDrag = null; }
   openGroupId = null;
+  groupCurrentPage = 0;
+}
+
+function goToGroupPage(page) {
+  groupCurrentPage = Math.max(0, Math.min(groupTotalPages - 1, page));
+  const container = document.getElementById('group-pages-container');
+  const track     = document.getElementById('group-pages-track');
+  track.style.transition = '';
+  track.style.transform  = `translateX(${groupCurrentPage * -container.offsetWidth}px)`;
+  document.querySelectorAll('.group-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === groupCurrentPage)
+  );
+}
+
+function initGroupPageDrag(container, track, dots) {
+  const THRESHOLD = 48;
+  let startX = null;
+
+  function onStart(e) {
+    // Don't hijack clicks on tiles or the close button
+    if (e.target.closest('.group-site-tile') || e.target.closest('#close-group')) return;
+    startX = e.clientX;
+    track.style.transition = 'none';
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (startX === null) return;
+    const dx  = e.clientX - startX;
+    const w   = container.offsetWidth;
+    const min = -(groupTotalPages - 1) * w;
+    const raw = groupCurrentPage * -w + dx;
+    // Rubber-band: resist dragging past first/last page
+    const clamped = raw < min ? min + (raw - min) * 0.25
+                  : raw > 0   ? raw * 0.25
+                  : raw;
+    track.style.transform = `translateX(${clamped}px)`;
+  }
+
+  function onEnd(e) {
+    if (startX === null) return;
+    const dx = e.clientX - startX;
+    startX = null;
+    track.style.transition = ''; // re-enable spring transition
+
+    if      (dx < -THRESHOLD && groupCurrentPage < groupTotalPages - 1) groupCurrentPage++;
+    else if (dx >  THRESHOLD && groupCurrentPage > 0)                   groupCurrentPage--;
+
+    const w = container.offsetWidth;
+    track.style.transform = `translateX(${groupCurrentPage * -w}px)`;
+    dots.querySelectorAll('.group-dot').forEach((d, i) =>
+      d.classList.toggle('active', i === groupCurrentPage)
+    );
+  }
+
+  container.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove',  onMove);
+  document.addEventListener('mouseup',    onEnd);
+
+  return () => {
+    container.removeEventListener('mousedown', onStart);
+    document.removeEventListener('mousemove',  onMove);
+    document.removeEventListener('mouseup',    onEnd);
+  };
 }
 
 function showGroupSiteCtx(e, groupId, siteId) {
