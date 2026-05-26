@@ -91,6 +91,8 @@ let gpDropMode = null;
 let _gpSuppressClick = false;
 const _GP_DIST = 6;
 
+let _addTargetGroupId = null;  // non-null when the add modal is adding into a group
+
 let _saveTimer = null;
 function debouncedSave() {
   clearTimeout(_saveTimer);
@@ -952,6 +954,17 @@ function saveEdit() {
 // ─── Add Site ─────────────────────────────────────────────────────────────────
 
 function openAddModal() {
+  _addTargetGroupId = null;
+  document.getElementById('url-input').value  = '';
+  document.getElementById('name-input').value = '';
+  resetFaviconPreview();
+  pendingFavicon = null;
+  document.getElementById('add-modal').classList.remove('hidden');
+  document.getElementById('url-input').focus();
+}
+
+function openAddModalForGroup(groupId) {
+  _addTargetGroupId = groupId;
   document.getElementById('url-input').value  = '';
   document.getElementById('name-input').value = '';
   resetFaviconPreview();
@@ -962,7 +975,8 @@ function openAddModal() {
 
 function closeAddModal() {
   document.getElementById('add-modal').classList.add('hidden');
-  faviconEpoch++; // cancel any in-flight favicon load
+  faviconEpoch++;
+  _addTargetGroupId = null;
 }
 
 function resetFaviconPreview() {
@@ -1048,9 +1062,23 @@ function addSite() {
       return base.charAt(0).toUpperCase() + base.slice(1);
     } catch { return url; }
   })();
+
+  if (_addTargetGroupId) {
+    const group = items.find(i => i.id === _addTargetGroupId);
+    if (group) {
+      group.items = group.items ?? [];
+      group.items.push({ id: uid(), name: siteName, url, favicon: pendingFavicon ?? undefined });
+      const gid = _addTargetGroupId;
+      save();
+      closeAddModal();
+      openGroup(gid);
+      return;
+    }
+  }
+
   items.push({
     id: uid(), type: 'site', name: siteName, url,
-    favicon: pendingFavicon ?? undefined, // store the resolved logo URL
+    favicon: pendingFavicon ?? undefined,
   });
   save().then(render);
   closeAddModal();
@@ -1091,6 +1119,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add button (fixed, bottom-right)
   document.getElementById('add-btn').addEventListener('click', openAddModal);
+
+  // Double-click on empty grid background opens add modal
+  document.getElementById('app').addEventListener('dblclick', e => {
+    if (e.target.closest('.tile') || pdActive) return;
+    openAddModal();
+  });
+
+  // Double-click on empty group panel background adds to that group
+  document.getElementById('group-panel').addEventListener('dblclick', e => {
+    if (e.target.closest('.group-site-tile') ||
+        e.target.closest('#close-group') ||
+        e.target.closest('#group-header') ||
+        e.target.closest('#group-dots')) return;
+    if (openGroupId) openAddModalForGroup(openGroupId);
+  });
 
   // Add modal
   document.getElementById('confirm-add').addEventListener('click', addSite);
