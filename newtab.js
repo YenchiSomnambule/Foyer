@@ -832,10 +832,37 @@ function addSite() {
   closeAddModal();
 }
 
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+const THEMES = ['pink', 'blue', 'yellow', 'dark', 'white'];
+
+function applyTheme(theme) {
+  THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
+  document.body.classList.add(`theme-${theme}`);
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.theme === theme);
+  });
+}
+
+function saveTheme(theme) {
+  chrome.storage.local.set({ theme });
+}
+
+async function loadTheme() {
+  return new Promise(resolve => {
+    chrome.storage.local.get(['theme'], r => {
+      const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'pink';
+      applyTheme(theme);
+      resolve(theme);
+    });
+  });
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   await load();
+  await loadTheme();
   render();
 
   // Add button (fixed, bottom-right)
@@ -897,9 +924,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Context menu dismiss
   document.addEventListener('click', e => {
     if (!document.getElementById('context-menu').contains(e.target)) closeCtxMenu();
+    if (!document.getElementById('theme-picker').contains(e.target)) {
+      document.getElementById('theme-swatches').classList.add('hidden');
+    }
   });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal(); }
+    if (e.key === 'Escape') {
+      closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
+      document.getElementById('theme-swatches').classList.add('hidden');
+    }
+  });
+
+  // Theme picker
+  const themeBtn     = document.getElementById('theme-btn');
+  const themeSwatches = document.getElementById('theme-swatches');
+  themeBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    themeSwatches.classList.toggle('hidden');
+  });
+  document.querySelectorAll('.swatch').forEach(swatch => {
+    swatch.addEventListener('click', e => {
+      e.stopPropagation();
+      const theme = swatch.dataset.theme;
+      applyTheme(theme);
+      saveTheme(theme);
+      themeSwatches.classList.add('hidden');
+    });
   });
 });

@@ -6,7 +6,7 @@
   <title>Foyer</title>
   <link rel="stylesheet" href="newtab.css">
 </head>
-<body>
+<body class="theme-pink">
 
   <div id="app">
     <div id="grid"></div>
@@ -102,6 +102,24 @@
   <div id="context-menu" class="hidden" role="menu">
     <button class="ctx-item" data-action="rename">Rename</button>
     <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+  </div>
+
+  <!-- Theme Picker -->
+  <div id="theme-picker">
+    <button id="theme-btn" title="Change theme" aria-label="Change theme">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/>
+        <circle cx="8.5"  cy="7.5" r="1.5"/><circle cx="6.5"  cy="12"   r="1.5"/>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2v-.5c0-.55.45-1 1-1h2c2.76 0 5-2.24 5-5 0-5.52-4.48-10-10-10z"/>
+      </svg>
+    </button>
+    <div id="theme-swatches" class="hidden">
+      <button class="swatch" data-theme="pink"   title="Pink"></button>
+      <button class="swatch" data-theme="blue"   title="Blue"></button>
+      <button class="swatch" data-theme="yellow" title="Yellow"></button>
+      <button class="swatch" data-theme="dark"   title="Dark"></button>
+      <button class="swatch" data-theme="white"  title="White"></button>
+    </div>
   </div>
 
   <script src="newtab.js"></script>

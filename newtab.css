@@ -13,10 +13,15 @@
   --gap-x: 28px;
   --radius: 16px;
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  /* defaults — dark/coloured themes */
+  --text-color:  rgba(255,255,255,0.92);
   --text-shadow: 0 1px 4px rgba(0,0,0,0.55);
-  --glass: rgba(255,255,255,0.14);
-  --glass-border: rgba(255,255,255,0.22);
-  --overlay-bg: rgba(0,0,0,0.45);
+  --glass:       rgba(255,255,255,0.14);
+  --glass-border:rgba(255,255,255,0.22);
+  --overlay-bg:  rgba(0,0,0,0.45);
+  --add-btn-bg:  rgba(255,255,255,0.12);
+  --add-btn-border: rgba(255,255,255,0.45);
+  --add-btn-color:  rgba(255,255,255,0.9);
 }
 
 html, body {
@@ -29,18 +34,8 @@ html, body {
 }
 
 body {
-  background:
-    /* sun: white-hot core → yellow ring */
-    radial-gradient(ellipse at 50% 8%,  rgba(255,253,215,1)    0%, rgba(252,218,30,0.85) 10%, rgba(240,195,20,0.35) 26%, transparent 48%),
-    /* sky-blue ambient fill */
-    radial-gradient(ellipse at 50% 40%, rgba(75,158,230,0.45)  0%, transparent 68%),
-    /* grass-green glow — bottom-left mountain slope */
-    radial-gradient(ellipse at 16% 100%, rgba(58,138,38,0.55) 0%, transparent 38%),
-    /* grass-green glow — bottom-right mountain slope */
-    radial-gradient(ellipse at 84% 100%, rgba(52,128,34,0.5)  0%, transparent 38%),
-    /* base: deep sky-blue */
-    linear-gradient(178deg, #0d3d72 0%, #195c9e 28%, #2270b0 55%, #154e8a 78%, #0b2e60 100%);
   background-attachment: fixed;
+  transition: background 0.45s ease;
 }
 
 /* ─── App Shell: fills viewport, scrolls vertically, starts top-left ─── */
@@ -123,7 +118,7 @@ body {
 .tile-name {
   font-size: 11px;
   font-weight: 500;
-  color: rgba(255,255,255,0.92);
+  color: var(--text-color);
   text-shadow: var(--text-shadow);
   text-align: center;
   width: 100%;
@@ -218,9 +213,9 @@ body {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  border: 2px dashed rgba(255,255,255,0.45);
-  color: rgba(255,255,255,0.9);
+  background: var(--add-btn-bg);
+  border: 2px dashed var(--add-btn-border);
+  color: var(--add-btn-color);
   font-size: 30px;
   font-weight: 300;
   line-height: 1;
@@ -623,4 +618,164 @@ body {
 #group-panel::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.18);
   border-radius: 2px;
+}
+
+/* ─── Theme Backgrounds ─── */
+body.theme-pink {
+  background:
+    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(255,205,225,0.72) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(240,165,205,0.62) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(250,180,210,0.52) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(225,150,190,0.55) 0%, transparent 52%),
+    linear-gradient(155deg, #b05578 0%, #c0688a 28%, #c8729a 55%, #b46080 78%, #a24a6e 100%);
+}
+
+body.theme-blue {
+  background:
+    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(195,228,255,0.72) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(155,200,255,0.62) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(175,215,255,0.52) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(145,195,255,0.55) 0%, transparent 52%),
+    linear-gradient(155deg, #1a6fb8 0%, #2880c8 28%, #3090d8 55%, #2278b8 78%, #1460a0 100%);
+}
+
+body.theme-yellow {
+  background:
+    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(255,248,190,0.72) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(255,232,155,0.62) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(255,240,170,0.52) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(250,220,140,0.55) 0%, transparent 52%),
+    linear-gradient(155deg, #c8920a 0%, #d8a018 28%, #e0aa20 55%, #cca010 78%, #be8c08 100%);
+}
+
+body.theme-dark {
+  background:
+    radial-gradient(ellipse 70% 55% at 25% 20%, rgba(80,60,130,0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 75% 70%, rgba(60,45,105,0.45) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 42% at 12% 80%, rgba(70,50,115,0.40) 0%, transparent 48%),
+    radial-gradient(ellipse 50% 45% at 88% 15%, rgba(65,48,110,0.42) 0%, transparent 48%),
+    linear-gradient(155deg, #08080f 0%, #0e0e1a 28%, #12121e 55%, #0c0c18 78%, #080810 100%);
+}
+
+body.theme-white {
+  background:
+    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(220,228,248,0.72) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(210,222,245,0.62) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(215,225,248,0.52) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(205,218,242,0.55) 0%, transparent 52%),
+    linear-gradient(155deg, #dde4f2 0%, #e5ecf8 28%, #edf3fc 55%, #e2e8f5 78%, #d8dff0 100%);
+}
+
+/* Light theme variable overrides */
+body.theme-yellow,
+body.theme-white {
+  --text-color:   rgba(30,25,15,0.85);
+  --text-shadow:  0 1px 3px rgba(255,255,255,0.45);
+  --glass:        rgba(0,0,0,0.07);
+  --glass-border: rgba(0,0,0,0.14);
+  --overlay-bg:   rgba(0,0,0,0.3);
+  --add-btn-bg:   rgba(0,0,0,0.07);
+  --add-btn-border: rgba(0,0,0,0.22);
+  --add-btn-color:  rgba(30,25,15,0.75);
+}
+
+body.theme-yellow #add-btn:hover,
+body.theme-white  #add-btn:hover {
+  background: rgba(0,0,0,0.12);
+  border-color: rgba(0,0,0,0.35);
+}
+
+/* ─── Theme Picker ─── */
+#theme-picker {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#theme-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--add-btn-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  transition: background 0.2s, transform 0.15s;
+}
+
+#theme-btn:hover {
+  background: var(--glass-border);
+  transform: scale(1.08);
+}
+
+#theme-btn:active { transform: scale(0.93); }
+
+#theme-swatches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 8px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  animation: swatchesIn 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+#theme-swatches.hidden { display: none; }
+
+@keyframes swatchesIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.swatch:hover { transform: scale(1.18); }
+
+.swatch.active {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 0 4px rgba(255,255,255,0.3);
+}
+
+body.theme-white  .swatch.active,
+body.theme-yellow .swatch.active {
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.55), 0 0 0 4px rgba(0,0,0,0.18);
+}
+
+.swatch[data-theme="pink"] {
+  background: linear-gradient(135deg, #c8729a, #a24a6e);
+}
+.swatch[data-theme="blue"] {
+  background: linear-gradient(135deg, #3090d8, #1460a0);
+}
+.swatch[data-theme="yellow"] {
+  background: linear-gradient(135deg, #e0aa20, #be8c08);
+}
+.swatch[data-theme="dark"] {
+  background: linear-gradient(135deg, #1e1e30, #08080f);
+}
+.swatch[data-theme="white"] {
+  background: linear-gradient(135deg, #edf3fc, #d8dff0);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
 }
