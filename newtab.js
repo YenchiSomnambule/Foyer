@@ -331,8 +331,7 @@ function _applyReorderPreview(tgtEl, insertBefore) {
 
   const others = [...grid.querySelectorAll('.tile')].filter(t => t !== pdSrcEl);
 
-  // Freeze any in-flight animations into inline style so FIRST = current visual position,
-  // not the snapped-to-final-value that a plain transform:'' clear would give.
+  // Freeze any in-flight animations so FIRST = current visual position (not final target)
   others.forEach(t => {
     t.getAnimations().forEach(a => { try { a.commitStyles(); a.cancel(); } catch {} });
   });
@@ -343,28 +342,31 @@ function _applyReorderPreview(tgtEl, insertBefore) {
   // Clear transforms/transitions so the DOM move lands on clean layout positions
   others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
 
-  // Move the ghost placeholder in the DOM
+  // Move the ghost placeholder
   if (insertBefore) grid.insertBefore(pdSrcEl, tgtEl);
   else              grid.insertBefore(pdSrcEl, tgtEl.nextSibling);
 
-  grid.offsetHeight; // settle layout
+  // LAST: new layout positions after DOM move (read all before writing any)
+  grid.offsetHeight;
+  const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  // INVERT: each tile appears at its visual position, will animate to new layout
+  // INVERT: apply all inverse transforms (write-only pass, no interleaved reads)
   others.forEach(t => {
-    const f = firsts.get(t); if (!f) return;
-    const l = t.getBoundingClientRect(); // new layout, no transform
+    const f = firsts.get(t), l = lasts.get(t);
+    if (!f || !l) return;
     const dx = f.left - l.left, dy = f.top - l.top;
     if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
       t.style.transform = `translate(${dx}px,${dy}px)`;
   });
 
-  // PLAY
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    others.forEach(t => {
-      t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
-      t.style.transform  = '';
-    });
-  }));
+  // PLAY: second flush locks in the inverse positions so the browser "sees" them
+  // as the transition start value. Tiles then animate from their visual positions
+  // rather than flashing at the inverse state for two render frames (double-RAF bug).
+  grid.offsetHeight;
+  others.forEach(t => {
+    t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
+    t.style.transform  = '';
+  });
 }
 
 function _commitDrag() {
@@ -561,11 +563,12 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
 
   const others = [...page.querySelectorAll('.group-site-tile')].filter(t => t !== gpDragSrcEl);
 
-  // Freeze any in-flight animations into inline style so we animate FROM the visual position
+  // Freeze any in-flight animations so FIRST = current visual position
   others.forEach(t => {
     t.getAnimations().forEach(a => { try { a.commitStyles(); a.cancel(); } catch {} });
   });
 
+  // FIRST: visual positions (layout + any committed mid-animation offset)
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
   others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
@@ -573,22 +576,25 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   if (insertBefore) page.insertBefore(gpDragSrcEl, tgtEl);
   else              page.insertBefore(gpDragSrcEl, tgtEl.nextSibling);
 
+  // LAST: new layout positions after DOM move (read all before writing any)
   page.offsetHeight;
+  const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
+  // INVERT: write-only pass, no interleaved reads
   others.forEach(t => {
-    const f = firsts.get(t); if (!f) return;
-    const l = t.getBoundingClientRect();
+    const f = firsts.get(t), l = lasts.get(t);
+    if (!f || !l) return;
     const dx = f.left - l.left, dy = f.top - l.top;
     if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
       t.style.transform = `translate(${dx}px,${dy}px)`;
   });
 
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    others.forEach(t => {
-      t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
-      t.style.transform  = '';
-    });
-  }));
+  // PLAY: second flush locks in inverse positions; transition starts this JS task
+  page.offsetHeight;
+  others.forEach(t => {
+    t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
+    t.style.transform  = '';
+  });
 }
 
 function _gpCommitDrag(groupId) {
