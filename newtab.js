@@ -276,35 +276,43 @@ function _moveDrag(cx, cy) {
   if (cy < ZONE) app.scrollTop -= SPEED;
   else if (cy > window.innerHeight - ZONE) app.scrollTop += SPEED;
 
-  // Find tile under cursor (hide clone first so it doesn't block elementFromPoint)
-  pdClone.style.visibility = 'hidden';
-  const hovEl = document.elementFromPoint(cx, cy);
-  pdClone.style.visibility = '';
+  // Use the floating clone's CENTER as the collision point (icon body, not cursor tip)
+  const cr    = pdClone.getBoundingClientRect();
+  const cloneCX = cr.left + cr.width  / 2;
+  const cloneCY = cr.top  + cr.height / 2;
 
-  const hovTile = hovEl?.closest?.('.tile');
-  if (!hovTile || hovTile === pdSrcEl) return;
-  const hovId = hovTile.dataset.id;
-  if (!hovId) return;
+  // Find the nearest tile by center-to-center distance
+  const grid     = document.getElementById('grid');
+  const allTiles = [...grid.querySelectorAll('.tile')].filter(t => t !== pdSrcEl);
 
-  const rect = hovTile.getBoundingClientRect();
-  const relX = (cx - rect.left) / rect.width;
-  const relY = (cy - rect.top)  / rect.height;
-  const dist = Math.sqrt((relX - 0.5) ** 2 + (relY - 0.5) ** 2);
+  let nearestTile = null, nearestDist = Infinity;
+  for (const t of allTiles) {
+    const r = t.getBoundingClientRect();
+    const d = Math.hypot(cloneCX - (r.left + r.width / 2), cloneCY - (r.top + r.height / 2));
+    if (d < nearestDist) { nearestDist = d; nearestTile = t; }
+  }
+  if (!nearestTile) return;
 
-  if (dist < 0.28) {
-    // Center zone → group mode: show glow, no tile movement
+  const hovId = nearestTile.dataset.id;
+  const rect  = nearestTile.getBoundingClientRect();
+  const relX  = (cloneCX - rect.left) / rect.width;
+  const relY  = (cloneCY - rect.top)  / rect.height;
+  const dist  = Math.hypot(relX - 0.5, relY - 0.5);
+
+  if (dist < 0.28 && nearestDist < rect.width * 0.6) {
+    // Clone center is squarely on top of a tile → group merge
     document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
-    hovTile.classList.add('drag-group-target');
+    nearestTile.classList.add('drag-group-target');
     pdDropTgt  = hovId;
     pdDropMode = 'group';
   } else {
-    // Edge zone → reorder with FLIP preview
+    // Reorder: insert before/after based on clone center vs tile center X
     document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
-    const before = relX < 0.5;
+    const before = cloneCX < rect.left + rect.width / 2;
     if (pdDropTgt === hovId && pdDropMode === (before ? 'before' : 'after')) return;
     pdDropTgt  = hovId;
     pdDropMode = before ? 'before' : 'after';
-    _applyReorderPreview(hovTile, before);
+    _applyReorderPreview(nearestTile, before);
   }
 }
 
