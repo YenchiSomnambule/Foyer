@@ -79,6 +79,11 @@ let groupCurrentPage  = 0;
 let groupTotalPages   = 0;
 let cleanupGroupDrag  = null;
 
+// Group tile drag state
+let groupDragSrcId = null;
+let groupDropTgtId = null;
+let groupDropMode  = null;
+
 let _saveTimer = null;
 function debouncedSave() {
   clearTimeout(_saveTimer);
@@ -361,9 +366,30 @@ function doGroup(srcId, tgtId) {
 
 // ─── Group Overlay ────────────────────────────────────────────────────────────
 
+function clearGroupDragIndicators() {
+  document.querySelectorAll('.group-site-tile.drop-before, .group-site-tile.drop-after')
+    .forEach(el => el.classList.remove('drop-before', 'drop-after'));
+}
+
+function doGroupReorder(groupId, srcSiteId, tgtSiteId, insertBefore) {
+  const group = items.find(i => i.id === groupId);
+  if (!group) return;
+  const srcIdx = group.items.findIndex(s => s.id === srcSiteId);
+  const tgtIdx = group.items.findIndex(s => s.id === tgtSiteId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  const [src] = group.items.splice(srcIdx, 1);
+  const newTgtIdx = group.items.findIndex(s => s.id === tgtSiteId);
+  group.items.splice(insertBefore ? newTgtIdx : newTgtIdx + 1, 0, src);
+  const savedPage = groupCurrentPage;
+  save();
+  openGroup(groupId);
+  if (savedPage > 0) goToGroupPage(savedPage);
+}
+
 function buildGroupSiteTile(site, groupId) {
   const tile = document.createElement('div');
   tile.className = 'group-site-tile';
+  tile.setAttribute('draggable', 'true');
   const letter   = (site.name[0] ?? '?').toUpperCase();
   const gradient = tileGradient(site.url);
   tile.innerHTML = `
@@ -387,6 +413,46 @@ function buildGroupSiteTile(site, groupId) {
     e.preventDefault();
     showGroupSiteCtx(e, groupId, site.id);
   });
+
+  tile.addEventListener('dragstart', e => {
+    groupDragSrcId = site.id;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => tile.classList.add('dragging'), 0);
+  });
+
+  tile.addEventListener('dragend', () => {
+    tile.classList.remove('dragging');
+    clearGroupDragIndicators();
+    groupDragSrcId = null;
+    groupDropTgtId = null;
+    groupDropMode  = null;
+  });
+
+  tile.addEventListener('dragover', e => {
+    if (!groupDragSrcId || groupDragSrcId === site.id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect    = tile.getBoundingClientRect();
+    const newMode = (e.clientX - rect.left) / rect.width < 0.5 ? 'before' : 'after';
+    if (groupDropTgtId === site.id && groupDropMode === newMode) return;
+    clearGroupDragIndicators();
+    groupDropTgtId = site.id;
+    groupDropMode  = newMode;
+    tile.classList.add(newMode === 'before' ? 'drop-before' : 'drop-after');
+  });
+
+  tile.addEventListener('dragleave', e => {
+    if (!tile.contains(e.relatedTarget)) {
+      tile.classList.remove('drop-before', 'drop-after');
+    }
+  });
+
+  tile.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!groupDragSrcId || groupDragSrcId === site.id) return;
+    doGroupReorder(groupId, groupDragSrcId, site.id, groupDropMode === 'before');
+  });
+
   return tile;
 }
 
