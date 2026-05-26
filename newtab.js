@@ -79,10 +79,17 @@ let groupCurrentPage  = 0;
 let groupTotalPages   = 0;
 let cleanupGroupDrag  = null;
 
-// Group tile drag state
-let groupDragSrcId = null;
-let groupDropTgtId = null;
-let groupDropMode  = null;
+// Group tile pointer drag state
+let gpDragSrcId = null;
+let gpDragSrcEl = null;
+let gpDragClone = null;
+let gpOffX = 0, gpOffY = 0;
+let gpActive = false;
+let gpSX = 0, gpSY = 0;
+let gpDropTgt  = null;   // target tile element
+let gpDropMode = null;
+let _gpSuppressClick = false;
+const _GP_DIST = 6;
 
 let _saveTimer = null;
 function debouncedSave() {
@@ -343,7 +350,7 @@ function _applyReorderPreview(tgtEl, insertBefore) {
   // PLAY: animate all tiles to their real (transformed-to-zero) positions
   requestAnimationFrame(() => requestAnimationFrame(() => {
     others.forEach(t => {
-      t.style.transition = 'transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transition = 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)';
       t.style.transform  = '';
     });
   }));
@@ -419,11 +426,6 @@ function doGroup(srcId, tgtId) {
 
 // ─── Group Overlay ────────────────────────────────────────────────────────────
 
-function clearGroupDragIndicators() {
-  document.querySelectorAll('.group-site-tile.drop-before, .group-site-tile.drop-after')
-    .forEach(el => el.classList.remove('drop-before', 'drop-after'));
-}
-
 function doGroupReorder(groupId, srcSiteId, tgtSiteId, insertBefore) {
   const group = items.find(i => i.id === groupId);
   if (!group) return;
@@ -442,7 +444,7 @@ function doGroupReorder(groupId, srcSiteId, tgtSiteId, insertBefore) {
 function buildGroupSiteTile(site, groupId) {
   const tile = document.createElement('div');
   tile.className = 'group-site-tile';
-  tile.setAttribute('draggable', 'true');
+  tile.dataset.siteId = site.id;
   const letter   = (site.name[0] ?? '?').toUpperCase();
   const gradient = tileGradient(site.url);
   tile.innerHTML = `
@@ -459,54 +461,148 @@ function buildGroupSiteTile(site, groupId) {
     ...getFaviconSources(site.url),
   ].filter((v, i, a) => a.indexOf(v) === i);
   tryFaviconChain(img, fallback, sources);
+
   tile.addEventListener('click', e => {
-    if (!e.defaultPrevented) window.location.href = site.url;
+    if (!e.defaultPrevented && !_gpSuppressClick) window.location.href = site.url;
   });
   tile.addEventListener('contextmenu', e => {
     e.preventDefault();
     showGroupSiteCtx(e, groupId, site.id);
   });
 
-  tile.addEventListener('dragstart', e => {
-    groupDragSrcId = site.id;
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => tile.classList.add('dragging'), 0);
-  });
+  tile.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    gpSX = e.clientX; gpSY = e.clientY;
+    const rect = tile.getBoundingClientRect();
+    gpOffX = e.clientX - rect.left;
+    gpOffY = e.clientY - rect.top;
 
-  tile.addEventListener('dragend', () => {
-    tile.classList.remove('dragging');
-    clearGroupDragIndicators();
-    groupDragSrcId = null;
-    groupDropTgtId = null;
-    groupDropMode  = null;
-  });
-
-  tile.addEventListener('dragover', e => {
-    if (!groupDragSrcId || groupDragSrcId === site.id) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const rect    = tile.getBoundingClientRect();
-    const newMode = (e.clientX - rect.left) / rect.width < 0.5 ? 'before' : 'after';
-    if (groupDropTgtId === site.id && groupDropMode === newMode) return;
-    clearGroupDragIndicators();
-    groupDropTgtId = site.id;
-    groupDropMode  = newMode;
-    tile.classList.add(newMode === 'before' ? 'drop-before' : 'drop-after');
-  });
-
-  tile.addEventListener('dragleave', e => {
-    if (!tile.contains(e.relatedTarget)) {
-      tile.classList.remove('drop-before', 'drop-after');
+    function onMove(ev) {
+      if (!gpActive) {
+        if (Math.hypot(ev.clientX - gpSX, ev.clientY - gpSY) < _GP_DIST) return;
+        gpActive = true; gpDragSrcId = site.id; gpDragSrcEl = tile;
+        _gpInitDrag(tile, rect);
+      }
+      _gpMoveDrag(ev.clientX, ev.clientY);
     }
-  });
-
-  tile.addEventListener('drop', e => {
-    e.preventDefault();
-    if (!groupDragSrcId || groupDragSrcId === site.id) return;
-    doGroupReorder(groupId, groupDragSrcId, site.id, groupDropMode === 'before');
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (gpActive) _gpCommitDrag(groupId);
+      else { gpActive = false; gpDragSrcId = null; gpDragSrcEl = null; }
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 
   return tile;
+}
+
+function _gpInitDrag(el, rect) {
+  gpDragClone = el.cloneNode(true);
+  Object.assign(gpDragClone.style, {
+    position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+    width: rect.width + 'px', height: rect.height + 'px',
+    pointerEvents: 'none', zIndex: '2000',
+    opacity: '0.92', transform: 'scale(1.12)',
+    transformOrigin: 'center center',
+    transition: 'transform 0.15s ease',
+    filter: 'drop-shadow(0 12px 28px rgba(0,0,0,0.5))',
+  });
+  document.body.appendChild(gpDragClone);
+  el.style.opacity = '0';
+}
+
+function _gpMoveDrag(cx, cy) {
+  if (!gpDragClone) return;
+  gpDragClone.style.left = (cx - gpOffX) + 'px';
+  gpDragClone.style.top  = (cy - gpOffY) + 'px';
+
+  // Use clone center as collision point (icon body, not cursor tip)
+  const cr = gpDragClone.getBoundingClientRect();
+  const cloneCX = cr.left + cr.width  / 2;
+  const cloneCY = cr.top  + cr.height / 2;
+
+  // Find nearest group-site-tile by center-to-center distance
+  let nearestTile = null, nearestDist = Infinity;
+  for (const t of document.querySelectorAll('.group-site-tile')) {
+    if (t === gpDragSrcEl) continue;
+    const r = t.getBoundingClientRect();
+    const d = Math.hypot(cloneCX - (r.left + r.width / 2), cloneCY - (r.top + r.height / 2));
+    if (d < nearestDist) { nearestDist = d; nearestTile = t; }
+  }
+  if (!nearestTile) return;
+
+  const rect   = nearestTile.getBoundingClientRect();
+  const before = cloneCX < rect.left + rect.width / 2;
+  if (gpDropTgt === nearestTile && gpDropMode === (before ? 'before' : 'after')) return;
+  gpDropTgt  = nearestTile;
+  gpDropMode = before ? 'before' : 'after';
+  _gpApplyReorderPreview(nearestTile, before);
+}
+
+function _gpApplyReorderPreview(tgtEl, insertBefore) {
+  if (!gpDragSrcEl) return;
+  const page = tgtEl.closest('.group-page');
+  if (!page) return;
+
+  const others = [...page.querySelectorAll('.group-site-tile')].filter(t => t !== gpDragSrcEl);
+  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+  const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
+
+  if (insertBefore) page.insertBefore(gpDragSrcEl, tgtEl);
+  else              page.insertBefore(gpDragSrcEl, tgtEl.nextSibling);
+
+  page.offsetHeight;
+
+  others.forEach(t => {
+    const f = firsts.get(t); if (!f) return;
+    const l = t.getBoundingClientRect();
+    const dx = f.left - l.left, dy = f.top - l.top;
+    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
+      t.style.transform = `translate(${dx}px,${dy}px)`;
+  });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    others.forEach(t => {
+      t.style.transition = 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transform  = '';
+    });
+  }));
+}
+
+function _gpCommitDrag(groupId) {
+  gpDragClone?.remove(); gpDragClone = null;
+  if (gpDragSrcEl) gpDragSrcEl.style.opacity = '';
+
+  document.querySelectorAll('.group-site-tile').forEach(t => {
+    t.style.transition = '';
+    t.style.transform  = '';
+  });
+
+  // Sync group.items from DOM order for the affected page
+  const group = items.find(i => i.id === groupId);
+  if (group && gpDragSrcEl) {
+    const page = gpDragSrcEl.closest('.group-page');
+    if (page) {
+      const pageIdx   = [...document.querySelectorAll('.group-page')].indexOf(page);
+      const pageStart = pageIdx * 9;
+      const domSiteIds = [...page.querySelectorAll('.group-site-tile')].map(t => t.dataset.siteId);
+      const reordered  = domSiteIds.map(sid => group.items.find(s => s.id === sid)).filter(Boolean);
+      group.items.splice(pageStart, reordered.length, ...reordered);
+    }
+  }
+
+  _gpSuppressClick = true;
+  requestAnimationFrame(() => { _gpSuppressClick = false; });
+
+  const savedPage = groupCurrentPage;
+  gpDragSrcId = null; gpDragSrcEl = null;
+  gpDropTgt = null; gpDropMode = null; gpActive = false;
+
+  save();
+  openGroup(groupId);
+  if (savedPage > 0) goToGroupPage(savedPage);
 }
 
 function openGroup(groupId) {

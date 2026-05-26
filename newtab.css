@@ -360,27 +360,6 @@ body {
 
 .group-site-tile:active { transform: scale(0.88); }
 
-.group-site-tile.dragging {
-  opacity: 0.15;
-  pointer-events: none;
-}
-
-.group-site-tile.drop-before::before,
-.group-site-tile.drop-after::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 18px;
-  width: 3px;
-  border-radius: 2px;
-  background: rgba(80,160,255,0.9);
-  box-shadow: 0 0 8px rgba(80,160,255,0.6);
-  pointer-events: none;
-}
-
-.group-site-tile.drop-before::before { left: -11px; }
-.group-site-tile.drop-after::after   { right: -11px; }
-
 .group-site-icon {
   width: 54px;
   height: 54px;
