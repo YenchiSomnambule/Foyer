@@ -851,7 +851,7 @@ function saveTheme(theme) {
 async function loadTheme() {
   return new Promise(resolve => {
     chrome.storage.local.get(['theme'], r => {
-      const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'pink';
+      const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'yellow';
       applyTheme(theme);
       resolve(theme);
     });
