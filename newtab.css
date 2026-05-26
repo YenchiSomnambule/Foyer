@@ -30,14 +30,16 @@ html, body {
 
 body {
   background:
-    /* sun burst — warm gold from upper-centre */
-    radial-gradient(ellipse at 50% 8%,  rgba(245,185,55,0.55)  0%, transparent 48%),
-    /* left-side horizon haze — amber orange */
-    radial-gradient(ellipse at 12% 55%, rgba(210,100,30,0.30)  0%, transparent 52%),
-    /* right-side mountain shadow — deep violet */
-    radial-gradient(ellipse at 88% 60%, rgba(70,30,110,0.40)   0%, transparent 50%),
-    /* base — dark warm dusk gradient: deep burgundy-purple → near-black brown */
-    linear-gradient(168deg, #12061e 0%, #1e0c08 35%, #180f28 65%, #0c0e1a 100%);
+    /* sun: white-hot core → yellow ring */
+    radial-gradient(ellipse at 50% 8%,  rgba(255,253,215,1)    0%, rgba(252,218,30,0.85) 10%, rgba(240,195,20,0.35) 26%, transparent 48%),
+    /* sky-blue ambient fill */
+    radial-gradient(ellipse at 50% 40%, rgba(75,158,230,0.45)  0%, transparent 68%),
+    /* grass-green glow — bottom-left mountain slope */
+    radial-gradient(ellipse at 16% 100%, rgba(58,138,38,0.55) 0%, transparent 38%),
+    /* grass-green glow — bottom-right mountain slope */
+    radial-gradient(ellipse at 84% 100%, rgba(52,128,34,0.5)  0%, transparent 38%),
+    /* base: deep sky-blue */
+    linear-gradient(178deg, #0d3d72 0%, #195c9e 28%, #2270b0 55%, #154e8a 78%, #0b2e60 100%);
   background-attachment: fixed;
 }
 
