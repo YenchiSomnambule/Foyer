@@ -629,13 +629,19 @@ function _gpCommitDrag(groupId) {
   _gpSuppressClick = true;
   requestAnimationFrame(() => { _gpSuppressClick = false; });
 
-  const savedPage = groupCurrentPage;
   gpDragSrcId = null; gpDragSrcEl = null;
   gpDropTgt = null; gpDropMode = null; gpActive = false;
 
   save();
-  openGroup(groupId);
-  if (savedPage > 0) goToGroupPage(savedPage);
+  _refreshGroupTile(groupId);
+}
+
+function _refreshGroupTile(groupId) {
+  const group = items.find(i => i.id === groupId);
+  if (!group) return;
+  const old = document.querySelector(`#grid .tile[data-id="${groupId}"]`);
+  if (!old) return;
+  old.replaceWith(buildGroupTile(group));
 }
 
 function openGroup(groupId) {
