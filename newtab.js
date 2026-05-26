@@ -124,7 +124,6 @@ function buildSiteTile(item) {
   const tile = document.createElement('div');
   tile.className = 'tile site-tile';
   tile.dataset.id = item.id;
-  tile.draggable = true;
 
   const letter = (item.name[0] ?? '?').toUpperCase();
   tile.innerHTML = `
@@ -153,7 +152,7 @@ function buildSiteTile(item) {
   });
 
   tile.addEventListener('click', e => {
-    if (e.defaultPrevented) return;
+    if (e.defaultPrevented || _suppressClick) return;
     window.location.href = item.url;
   });
 
@@ -166,7 +165,6 @@ function buildGroupTile(item) {
   const tile = document.createElement('div');
   tile.className = 'tile group-tile';
   tile.dataset.id = item.id;
-  tile.draggable = true;
 
   const sites = (item.items ?? []).slice(0, 9);
 
@@ -203,7 +201,7 @@ function buildGroupTile(item) {
   });
 
   tile.addEventListener('click', e => {
-    if (e.defaultPrevented) return;
+    if (e.defaultPrevented || _suppressClick) return;
     openGroup(item.id);
   });
 
@@ -212,119 +210,166 @@ function buildGroupTile(item) {
   return tile;
 }
 
-// ─── Drag & Drop ─────────────────────────────────────────────────────────────
-// Three modes:
-//   reorder-before  – drop indicator left of target  → insert before target
-//   reorder-after   – drop indicator right of target → insert after target
-//   group           – merge src into/with target tile
+// ─── Drag & Drop (pointer-events + FLIP live preview) ────────────────────────
 
-let dragSrcId  = null;
-let dropTgtId  = null;
-let dropMode   = null;   // 'before' | 'after' | 'group'
-
-function clearDragIndicators() {
-  document.querySelectorAll(
-    '.drag-group-target, .drop-before, .drop-after'
-  ).forEach(el => el.classList.remove('drag-group-target', 'drop-before', 'drop-after'));
-}
+let pdSrcId   = null;   // item id being dragged
+let pdSrcEl   = null;   // ghost tile in DOM (opacity 0, moves as placeholder)
+let pdClone   = null;   // floating visual clone that follows the cursor
+let pdOffX    = 0, pdOffY = 0;
+let pdActive  = false;
+let pdSX      = 0, pdSY  = 0;
+let pdDropTgt = null;   // current hovered item id
+let pdDropMode= null;   // 'before' | 'after' | 'group' | null
+let _suppressClick = false;
+const _PD_DIST = 6;    // px threshold before drag activates
 
 function attachDrag(tile, id) {
-  tile.addEventListener('dragstart', e => {
-    dragSrcId = id;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-    // Defer so the drag image captures normal tile, not the dimmed state
-    requestAnimationFrame(() => tile.classList.add('dragging'));
-  });
-
-  tile.addEventListener('dragend', () => {
-    tile.classList.remove('dragging');
-    clearDragIndicators();
-    dragSrcId = null;
-    dropTgtId = null;
-    dropMode  = null;
-    render(); // ensure clean state if drop was handled or cancelled
-  });
-
-  tile.addEventListener('dragover', e => {
-    if (!dragSrcId || dragSrcId === id) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-
-    // Auto-scroll #app when near the top/bottom edge
-    const app = document.getElementById('app');
-    const ZONE = 80, SPEED = 10;
-    if (e.clientY < ZONE) app.scrollTop -= SPEED;
-    else if (e.clientY > window.innerHeight - ZONE) app.scrollTop += SPEED;
-
+  tile.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    pdSX = e.clientX; pdSY = e.clientY;
     const rect = tile.getBoundingClientRect();
-    const relX  = (e.clientX - rect.left)  / rect.width;
-    const relY  = (e.clientY - rect.top)   / rect.height;
-    const dist  = Math.sqrt((relX - 0.5) ** 2 + (relY - 0.5) ** 2);
+    pdOffX = e.clientX - rect.left;
+    pdOffY = e.clientY - rect.top;
 
-    clearDragIndicators();
-
-    if (dist < 0.28) {
-      // Center zone → group merge
-      dropTgtId = id;
-      dropMode  = 'group';
-      tile.classList.add('drag-group-target');
-    } else {
-      // Edge zone → reorder
-      dropTgtId = id;
-      dropMode  = relX < 0.5 ? 'before' : 'after';
-      tile.classList.add(dropMode === 'before' ? 'drop-before' : 'drop-after');
+    function onMove(ev) {
+      if (!pdActive) {
+        if (Math.hypot(ev.clientX - pdSX, ev.clientY - pdSY) < _PD_DIST) return;
+        pdActive = true; pdSrcId = id; pdSrcEl = tile;
+        _initDrag(tile, rect);
+      }
+      _moveDrag(ev.clientX, ev.clientY);
     }
-  });
-
-  tile.addEventListener('dragleave', e => {
-    if (!tile.contains(e.relatedTarget)) {
-      tile.classList.remove('drag-group-target', 'drop-before', 'drop-after');
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (pdActive) _commitDrag();
+      else { pdActive = false; pdSrcId = null; pdSrcEl = null; }
     }
-  });
-
-  tile.addEventListener('drop', e => {
-    e.preventDefault();
-    if (!dragSrcId || dragSrcId === id) return;
-
-    if (dropMode === 'group') {
-      doGroup(dragSrcId, id);
-    } else {
-      doReorder(dragSrcId, id, dropMode === 'before');
-    }
-    // dragend will clean up and re-render
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 }
 
-// Also handle drop on empty grid space → move src to end
-document.getElementById('grid').addEventListener('dragover', e => {
-  if (!dragSrcId) return;
-  if (e.target.closest && e.target.closest('.tile')) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-});
+function _initDrag(el, rect) {
+  pdClone = el.cloneNode(true);
+  Object.assign(pdClone.style, {
+    position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+    width: rect.width + 'px', height: rect.height + 'px',
+    pointerEvents: 'none', zIndex: '1000',
+    opacity: '0.92', transform: 'scale(1.1)',
+    transformOrigin: 'center center',
+    transition: 'transform 0.15s ease',
+    filter: 'drop-shadow(0 18px 38px rgba(0,0,0,0.55))',
+  });
+  document.body.appendChild(pdClone);
+  el.style.opacity = '0';
+}
 
-document.getElementById('grid').addEventListener('drop', e => {
-  if (!dragSrcId) return;
-  if (e.target.closest && e.target.closest('.tile')) return;
-  e.preventDefault();
-  const srcIdx = items.findIndex(i => i.id === dragSrcId);
-  if (srcIdx >= 0) {
-    const [src] = items.splice(srcIdx, 1);
-    items.push(src);
+function _moveDrag(cx, cy) {
+  if (!pdClone) return;
+  pdClone.style.left = (cx - pdOffX) + 'px';
+  pdClone.style.top  = (cy - pdOffY) + 'px';
+
+  // Auto-scroll #app
+  const app = document.getElementById('app');
+  const ZONE = 80, SPEED = 10;
+  if (cy < ZONE) app.scrollTop -= SPEED;
+  else if (cy > window.innerHeight - ZONE) app.scrollTop += SPEED;
+
+  // Find tile under cursor (hide clone first so it doesn't block elementFromPoint)
+  pdClone.style.visibility = 'hidden';
+  const hovEl = document.elementFromPoint(cx, cy);
+  pdClone.style.visibility = '';
+
+  const hovTile = hovEl?.closest?.('.tile');
+  if (!hovTile || hovTile === pdSrcEl) return;
+  const hovId = hovTile.dataset.id;
+  if (!hovId) return;
+
+  const rect = hovTile.getBoundingClientRect();
+  const relX = (cx - rect.left) / rect.width;
+  const relY = (cy - rect.top)  / rect.height;
+  const dist = Math.sqrt((relX - 0.5) ** 2 + (relY - 0.5) ** 2);
+
+  if (dist < 0.28) {
+    // Center zone → group mode: show glow, no tile movement
+    document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
+    hovTile.classList.add('drag-group-target');
+    pdDropTgt  = hovId;
+    pdDropMode = 'group';
+  } else {
+    // Edge zone → reorder with FLIP preview
+    document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
+    const before = relX < 0.5;
+    if (pdDropTgt === hovId && pdDropMode === (before ? 'before' : 'after')) return;
+    pdDropTgt  = hovId;
+    pdDropMode = before ? 'before' : 'after';
+    _applyReorderPreview(hovTile, before);
+  }
+}
+
+function _applyReorderPreview(tgtEl, insertBefore) {
+  const grid = document.getElementById('grid');
+  if (!pdSrcEl) return;
+
+  // Cancel any running animations first, record FIRST positions
+  const others = [...grid.querySelectorAll('.tile')].filter(t => t !== pdSrcEl);
+  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+  const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
+
+  // Move the ghost placeholder in the DOM (CHANGE step)
+  if (insertBefore) grid.insertBefore(pdSrcEl, tgtEl);
+  else              grid.insertBefore(pdSrcEl, tgtEl.nextSibling);
+
+  grid.offsetHeight; // force reflow so LAST positions are fresh
+
+  // Compute delta and apply inverse transform (INVERT step)
+  others.forEach(t => {
+    const f = firsts.get(t); if (!f) return;
+    const l = t.getBoundingClientRect();
+    const dx = f.left - l.left, dy = f.top - l.top;
+    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
+      t.style.transform = `translate(${dx}px,${dy}px)`;
+  });
+
+  // PLAY: animate all tiles to their real (transformed-to-zero) positions
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    others.forEach(t => {
+      t.style.transition = 'transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94)';
+      t.style.transform  = '';
+    });
+  }));
+}
+
+function _commitDrag() {
+  pdClone?.remove(); pdClone = null;
+  if (pdSrcEl) pdSrcEl.style.opacity = '';
+
+  // Clear all drag decorations and transforms
+  document.querySelectorAll('.tile').forEach(t => {
+    t.classList.remove('drag-group-target');
+    t.style.transition = '';
+    t.style.transform  = '';
+  });
+
+  if (pdDropMode === 'group' && pdDropTgt) {
+    doGroup(pdSrcId, pdDropTgt);
+  } else {
+    // DOM order already reflects the live preview → sync items[]
+    const grid = document.getElementById('grid');
+    const domOrder = [...grid.querySelectorAll('.tile')].map(t => t.dataset.id);
+    items = domOrder.map(did => items.find(i => i.id === did)).filter(Boolean);
     save();
   }
-  // dragend will re-render
-});
 
-function doReorder(srcId, tgtId, insertBefore) {
-  const srcIdx = items.findIndex(i => i.id === srcId);
-  const tgtIdx = items.findIndex(i => i.id === tgtId);
-  if (srcIdx < 0 || tgtIdx < 0) return;
-  const [src] = items.splice(srcIdx, 1);
-  const newTgtIdx = items.findIndex(i => i.id === tgtId);
-  items.splice(insertBefore ? newTgtIdx : newTgtIdx + 1, 0, src);
-  save();
+  // Suppress the click that fires after mouseup on the same element
+  _suppressClick = true;
+  requestAnimationFrame(() => { _suppressClick = false; });
+
+  pdSrcId = null; pdSrcEl = null;
+  pdDropTgt = null; pdDropMode = null; pdActive = false;
+
+  render();
 }
 
 function doGroup(srcId, tgtId) {

@@ -177,33 +177,12 @@ body {
 }
 
 /* ─── Drag states ─── */
-.tile.dragging {
-  opacity: 0.15;
-  pointer-events: none;
-}
 
 /* Group target: tile glows when dragging another tile onto its center */
 .tile.drag-group-target .tile-icon {
   box-shadow: 0 0 0 3px rgba(100,180,255,0.85), 0 6px 24px rgba(0,0,0,0.5);
   transform: scale(1.12);
 }
-
-/* Reorder drop indicator: thin blue line left or right of the target tile */
-.tile.drop-before::before,
-.tile.drop-after::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: var(--tile-name-h);
-  width: 3px;
-  border-radius: 2px;
-  background: rgba(80,160,255,0.9);
-  box-shadow: 0 0 8px rgba(80,160,255,0.6);
-  pointer-events: none;
-}
-
-.tile.drop-before::before { left: calc(var(--gap-x) / -2 - 1px); }
-.tile.drop-after::after   { right: calc(var(--gap-x) / -2 - 1px); }
 
 /* ─── Fixed Add Button ─── */
 #add-btn {
