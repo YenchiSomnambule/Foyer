@@ -1128,179 +1128,15 @@ async function loadTheme() {
   });
 }
 
-// ─── Tasks ────────────────────────────────────────────────────────────────────
-
-let tasks = [];
-let taskDefaultDays = 7;
-let _taskPanelOpen = false;
-let _taskDaysEditorOpen = false;
-
-async function loadTaskData() {
-  return new Promise(resolve => {
-    chrome.storage.local.get(['tasks', 'taskDefaultDays'], r => {
-      tasks = Array.isArray(r.tasks) ? r.tasks : [];
-      const d = r.taskDefaultDays;
-      taskDefaultDays = (typeof d === 'number' && d >= 1 && d <= 99) ? d : 7;
-      resolve();
-    });
-  });
-}
-
-function saveTaskData() {
-  chrome.storage.local.set({ tasks, taskDefaultDays });
-}
-
-function addTask(text) {
-  if (!text.trim()) return;
-  const due = new Date();
-  due.setHours(0, 0, 0, 0);
-  due.setDate(due.getDate() + taskDefaultDays);
-  tasks.push({ id: uid(), text: text.trim(), due: due.toISOString().slice(0, 10) });
-  saveTaskData();
-  renderTasks();
-}
-
-function deleteTask(id) {
-  tasks = tasks.filter(t => t.id !== id);
-  saveTaskData();
-  renderTasks();
-}
-
-function _dueLabel(dateStr) {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const due   = new Date(dateStr + 'T00:00:00');
-  const diff  = Math.round((due - today) / 86400000);
-  if (diff <  0) return { text: `${-diff}d late`, cls: 'due-overdue' };
-  if (diff === 0) return { text: 'Today',          cls: 'due-today'   };
-  if (diff <= 3) return { text: `${diff}d`,         cls: 'due-soon'    };
-  if (diff <= 7) return { text: `${diff}d`,         cls: 'due-week'    };
-  return { text: due.toLocaleDateString('en', { month: 'short', day: 'numeric' }), cls: 'due-far' };
-}
-
-function renderTasks() {
-  const list = document.getElementById('task-items');
-  if (!list) return;
-  list.innerHTML = '';
-  const sorted = [...tasks].sort((a, b) => a.due.localeCompare(b.due));
-  if (!sorted.length) {
-    list.innerHTML = '<div class="task-empty">No tasks yet</div>';
-    return;
-  }
-  sorted.forEach(task => {
-    const { text: dueText, cls } = _dueLabel(task.due);
-    const item = document.createElement('div');
-    item.className = 'task-item';
-    item.innerHTML = `
-      <button class="task-check"></button>
-      <span class="task-text">${escHtml(task.text)}</span>
-      <span class="task-due ${cls}">${escHtml(dueText)}</span>
-      <button class="task-del">✕</button>
-    `;
-    item.querySelector('.task-check').addEventListener('click', () => {
-      item.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
-      item.style.opacity = '0';
-      item.style.transform = 'translateX(10px) scale(0.94)';
-      setTimeout(() => deleteTask(task.id), 240);
-    });
-    item.querySelector('.task-del').addEventListener('click', () => deleteTask(task.id));
-    list.appendChild(item);
-  });
-}
-
-function _updateDefaultBtn() {
-  const btn = document.getElementById('task-default-btn');
-  if (btn) btn.textContent = `${taskDefaultDays}d`;
-}
-
-function openTaskPanel() {
-  _taskPanelOpen = true;
-  document.getElementById('task-panel').classList.remove('hidden');
-  renderTasks();
-  setTimeout(() => document.getElementById('task-input')?.focus(), 40);
-}
-
-function closeTaskPanel() {
-  _taskPanelOpen = false;
-  _hideDaysEditor();
-  document.getElementById('task-panel').classList.add('hidden');
-}
-
-function _hideDaysEditor() {
-  _taskDaysEditorOpen = false;
-  document.getElementById('task-days-editor')?.remove();
-}
-
-function toggleDaysEditor() {
-  if (_taskDaysEditorOpen) { _hideDaysEditor(); return; }
-  _taskDaysEditorOpen = true;
-
-  const editor = document.createElement('div');
-  editor.id = 'task-days-editor';
-  editor.innerHTML = `
-    <label>Default deadline</label>
-    <div class="task-days-row">
-      <input type="number" id="task-days-val" min="1" max="99" value="${taskDefaultDays}">
-      <span>days from now</span>
-    </div>
-  `;
-  document.getElementById('task-panel-header').insertAdjacentElement('afterend', editor);
-
-  const inp = editor.querySelector('#task-days-val');
-  inp.focus(); inp.select();
-
-  function commit() {
-    let v = parseInt(inp.value, 10);
-    if (isNaN(v) || v < 1) v = 1;
-    if (v > 99) v = 99;
-    inp.value = v;
-    taskDefaultDays = v;
-    saveTaskData();
-    _updateDefaultBtn();
-  }
-
-  inp.addEventListener('input', () => {
-    const v = parseInt(inp.value, 10);
-    if (!isNaN(v) && v > 99) inp.value = 99;
-  });
-  inp.addEventListener('blur', commit);
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter')  { e.preventDefault(); commit(); _hideDaysEditor(); }
-    if (e.key === 'Escape') { _hideDaysEditor(); }
-    e.stopPropagation();
-  });
-}
-
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   await load();
   await loadTheme();
-  await loadTaskData();
   render();
-  _updateDefaultBtn();
 
   // Add button (fixed, bottom-right)
   document.getElementById('add-btn').addEventListener('click', openAddModal);
-
-  // Task panel
-  document.getElementById('task-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    _taskPanelOpen ? closeTaskPanel() : openTaskPanel();
-  });
-  document.getElementById('task-panel-close').addEventListener('click', closeTaskPanel);
-  document.getElementById('task-default-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    toggleDaysEditor();
-  });
-  document.getElementById('task-add-form').addEventListener('submit', e => {
-    e.preventDefault();
-    const inp = document.getElementById('task-input');
-    addTask(inp.value);
-    inp.value = '';
-  });
-  document.getElementById('task-input').addEventListener('keydown', e => {
-    if (e.key === 'Escape') { e.stopPropagation(); closeTaskPanel(); }
-  });
 
   // Double-click on empty grid background opens add modal
   document.getElementById('app').addEventListener('dblclick', e => {
@@ -1376,16 +1212,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('theme-picker').contains(e.target)) {
       document.getElementById('theme-swatches').classList.add('hidden');
     }
-    if (_taskPanelOpen &&
-        !document.getElementById('task-panel').contains(e.target) &&
-        !document.getElementById('task-btn').contains(e.target)) {
-      closeTaskPanel();
-    }
   });
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal(); closeTaskPanel();
+      closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
     }
   });
