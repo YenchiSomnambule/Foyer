@@ -527,29 +527,35 @@ function _gpInitDrag(el, rect) {
   el.style.opacity = '0';
 }
 
+function _gpIconRect(tileEl) {
+  const icon = tileEl.querySelector('.group-site-icon');
+  return (icon ?? tileEl).getBoundingClientRect();
+}
+
 function _gpMoveDrag(cx, cy) {
   if (!gpDragClone) return;
   gpDragClone.style.left = (cx - gpOffX) + 'px';
   gpDragClone.style.top  = (cy - gpOffY) + 'px';
 
-  // Use clone center as collision point (icon body, not cursor tip)
-  const cr = gpDragClone.getBoundingClientRect();
+  // Use the clone's icon element center as collision point — matches the 54×54 px visual icon
+  const cloneIcon = gpDragClone.querySelector('.group-site-icon') ?? gpDragClone;
+  const cr = cloneIcon.getBoundingClientRect();
   const cloneCX = cr.left + cr.width  / 2;
   const cloneCY = cr.top  + cr.height / 2;
 
-  // Find nearest group-site-tile by center-to-center distance
+  // Find nearest tile by icon-center-to-icon-center distance
   // Scope to .group-page to exclude the floating clone (also has the same class)
   let nearestTile = null, nearestDist = Infinity;
   for (const t of document.querySelectorAll('.group-page .group-site-tile')) {
     if (t === gpDragSrcEl) continue;
-    const r = t.getBoundingClientRect();
+    const r = _gpIconRect(t);
     const d = Math.hypot(cloneCX - (r.left + r.width / 2), cloneCY - (r.top + r.height / 2));
     if (d < nearestDist) { nearestDist = d; nearestTile = t; }
   }
   if (!nearestTile) return;
 
-  const rect   = nearestTile.getBoundingClientRect();
-  const before = cloneCX < rect.left + rect.width / 2;
+  const iconRect = _gpIconRect(nearestTile);
+  const before   = cloneCX < iconRect.left + iconRect.width / 2;
   if (gpDropTgt === nearestTile && gpDropMode === (before ? 'before' : 'after')) return;
   gpDropTgt  = nearestTile;
   gpDropMode = before ? 'before' : 'after';
