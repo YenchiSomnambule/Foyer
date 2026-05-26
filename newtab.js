@@ -840,7 +840,11 @@ function loadModalFaviconPreview(rawValue) {
   // Auto-fill name from hostname if name field is still empty
   const nameInput = document.getElementById('name-input');
   if (!nameInput.value.trim()) {
-    try { nameInput.value = new URL(url).hostname.replace(/^www\./, ''); } catch {}
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      const base = host.split('.')[0];
+      nameInput.value = base.charAt(0).toUpperCase() + base.slice(1);
+    } catch {}
   }
 
   // Increment epoch so any stale chain is ignored
@@ -888,7 +892,11 @@ function addSite() {
   if (!url) return;
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   const siteName = name || (() => {
-    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      const base = host.split('.')[0];
+      return base.charAt(0).toUpperCase() + base.slice(1);
+    } catch { return url; }
   })();
   items.push({
     id: uid(), type: 'site', name: siteName, url,
