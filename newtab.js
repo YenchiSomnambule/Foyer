@@ -652,8 +652,11 @@ function _gpFlipToPage(newPage, placeAtEnd) {
   if (newPage < 0 || newPage >= pages.length || !gpDragSrcEl) return;
   const targetPage = pages[newPage];
 
-  // Clear all in-flight FLIP animations so layout is clean
-  document.querySelectorAll('.group-site-tile').forEach(t => {
+  // Clear all in-flight FLIP animations so layout is clean.
+  // Scope to #group-pages-track so the body-level drag clone (which also
+  // carries .group-site-tile) is not touched — clearing its zIndex would
+  // make it disappear behind the group panel.
+  document.querySelectorAll('#group-pages-track .group-site-tile').forEach(t => {
     t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.style.transition = '';
     t.style.transform  = '';
