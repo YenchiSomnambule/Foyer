@@ -587,7 +587,7 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   // FIRST: visual positions (layout + any committed mid-animation offset)
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; t.style.zIndex = ''; });
 
   if (insertBefore) page.insertBefore(gpDragSrcEl, tgtEl);
   else              page.insertBefore(gpDragSrcEl, tgtEl.nextSibling);
@@ -597,18 +597,25 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
   // INVERT: write-only pass, no interleaved reads
+  // Track tiles that cross rows (non-zero dy) — they get staggered below.
+  const crossRowSet = new Set();
   others.forEach(t => {
     const f = firsts.get(t), l = lasts.get(t);
     if (!f || !l) return;
     const dx = f.left - l.left, dy = f.top - l.top;
     if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
       t.style.transform = `translate(${dx}px,${dy}px)`;
+    if (Math.abs(dy) > 20) crossRowSet.add(t);
   });
 
-  // PLAY: second flush locks in inverse positions; transition starts this JS task
+  // PLAY: second flush locks in inverse positions; transition starts this JS task.
+  // Cross-row tiles are delayed by 0.1 s so same-row tiles clear the path first,
+  // and elevated (z-index 10) so they visually fly over tiles they briefly overlap.
   page.offsetHeight;
   others.forEach(t => {
-    t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
+    const xr = crossRowSet.has(t);
+    t.style.zIndex    = xr ? '10' : '';
+    t.style.transition = `transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94) ${xr ? '0.1s' : '0s'}`;
     t.style.transform  = '';
   });
 
@@ -629,6 +636,7 @@ function _gpCommitDrag(groupId) {
     t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.style.transition = '';
     t.style.transform  = '';
+    t.style.zIndex     = '';
   });
 
   // Sync group.items from DOM order for the affected page
