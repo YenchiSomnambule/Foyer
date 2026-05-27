@@ -646,11 +646,13 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
 }
 
 function _gpFlipToPage(newPage, placeAtEnd) {
-  const pages = [...document.querySelectorAll('#group-pages-track .group-page')];
+  const track = document.getElementById('group-pages-track');
+  const dots  = document.getElementById('group-dots');
+  const pages = [...track.querySelectorAll('.group-page')];
   if (newPage < 0 || newPage >= pages.length || !gpDragSrcEl) return;
   const targetPage = pages[newPage];
 
-  // Clear all in-flight FLIP animations on both pages so layout is clean
+  // Clear all in-flight FLIP animations so layout is clean
   document.querySelectorAll('.group-site-tile').forEach(t => {
     t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.style.transition = '';
@@ -658,7 +660,32 @@ function _gpFlipToPage(newPage, placeAtEnd) {
     t.style.zIndex     = '';
   });
 
-  // Move the invisible source placeholder to the new page
+  // Enforce 9-per-page: if the target page is full, cascade its last tile
+  // forward (to the first position of the next page) before we add our icon.
+  // This keeps every page at ≤ 9 icons at all times.
+  const targetTiles = [...targetPage.querySelectorAll('.group-site-tile')]
+    .filter(t => t !== gpDragSrcEl);
+  if (targetTiles.length >= 9) {
+    const overflow = targetTiles[targetTiles.length - 1]; // last icon of target page
+    let nextPage = pages[newPage + 1];
+    if (!nextPage) {
+      // Target is the last page and it's full — create a new overflow page
+      nextPage = document.createElement('div');
+      nextPage.className = 'group-page';
+      track.appendChild(nextPage);
+      groupTotalPages++;
+      const dot = document.createElement('div');
+      dot.className = 'group-dot';
+      dot.addEventListener('click', () => {
+        const idx = [...track.querySelectorAll('.group-page')].indexOf(nextPage);
+        if (idx >= 0) goToGroupPage(idx);
+      });
+      dots.appendChild(dot);
+    }
+    nextPage.prepend(overflow); // overflow lands at FIRST position of next page
+  }
+
+  // Move the invisible source placeholder to the (now ≤8-item) target page
   if (placeAtEnd) targetPage.appendChild(gpDragSrcEl);
   else            targetPage.prepend(gpDragSrcEl);
 
@@ -674,6 +701,11 @@ function _gpFlipToPage(newPage, placeAtEnd) {
     _gpEdgeCooldown = false;
     _gpEdgeCooldownTimer = null;
   }, 700);
+
+  // Sync dot active states (new page may have been added)
+  dots.querySelectorAll('.group-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === groupCurrentPage)
+  );
 
   goToGroupPage(newPage);
 }
