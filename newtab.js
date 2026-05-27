@@ -89,6 +89,7 @@ let gpSX = 0, gpSY = 0;
 let gpDropTgt  = null;   // target tile element
 let gpDropMode = null;
 let _gpSuppressClick = false;
+let gpNaturalPositions = null; // Map<el,{cx,cy}> of tile icon-centers at natural layout positions, cached after each FLIP
 const _GP_DIST = 6;
 
 let _addTargetGroupId = null;  // non-null when the add modal is adding into a group
@@ -513,6 +514,7 @@ function buildGroupSiteTile(site, groupId) {
 }
 
 function _gpInitDrag(el, rect) {
+  gpNaturalPositions = null;
   gpDragClone = el.cloneNode(true);
   Object.assign(gpDragClone.style, {
     position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
@@ -532,6 +534,15 @@ function _gpIconRect(tileEl) {
   return (icon ?? tileEl).getBoundingClientRect();
 }
 
+// Returns the logical (natural layout) icon center for t, falling back to visual if not cached.
+// Using natural positions prevents animated tiles from causing oscillation in collision detection.
+function _gpNatCenter(t) {
+  const n = gpNaturalPositions?.get(t);
+  if (n) return n;
+  const r = _gpIconRect(t);
+  return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+}
+
 function _gpMoveDrag(cx, cy) {
   if (!gpDragClone) return;
   gpDragClone.style.left = (cx - gpOffX) + 'px';
@@ -548,14 +559,13 @@ function _gpMoveDrag(cx, cy) {
   let nearestTile = null, nearestDist = Infinity;
   for (const t of document.querySelectorAll('.group-page .group-site-tile')) {
     if (t === gpDragSrcEl) continue;
-    const r = _gpIconRect(t);
-    const d = Math.hypot(cloneCX - (r.left + r.width / 2), cloneCY - (r.top + r.height / 2));
+    const { cx, cy } = _gpNatCenter(t);
+    const d = Math.hypot(cloneCX - cx, cloneCY - cy);
     if (d < nearestDist) { nearestDist = d; nearestTile = t; }
   }
   if (!nearestTile) return;
 
-  const iconRect = _gpIconRect(nearestTile);
-  const before   = cloneCX < iconRect.left + iconRect.width / 2;
+  const before = cloneCX < _gpNatCenter(nearestTile).cx;
   if (gpDropTgt === nearestTile && gpDropMode === (before ? 'before' : 'after')) return;
   gpDropTgt  = nearestTile;
   gpDropMode = before ? 'before' : 'after';
@@ -601,9 +611,17 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
     t.style.transition = 'transform 0.62s cubic-bezier(0.25,0.46,0.45,0.94)';
     t.style.transform  = '';
   });
+
+  // Cache natural icon-centers from lasts so _gpMoveDrag uses stable positions
+  // (not mid-animation visual positions) for collision detection.
+  gpNaturalPositions = new Map(others.map(t => {
+    const r = lasts.get(t);
+    return [t, { cx: r.left + r.width / 2, cy: r.top + 27 }];
+  }));
 }
 
 function _gpCommitDrag(groupId) {
+  gpNaturalPositions = null;
   gpDragClone?.remove(); gpDragClone = null;
   if (gpDragSrcEl) gpDragSrcEl.style.opacity = '';
 
