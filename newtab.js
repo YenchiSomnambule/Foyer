@@ -90,6 +90,8 @@ let gpDropTgt  = null;   // target tile element
 let gpDropMode = null;
 let _gpSuppressClick = false;
 let gpNaturalPositions = null; // Map<el,{cx,cy}> of tile icon-centers at natural layout positions, cached after each FLIP
+let _gpEdgeCooldown = false;   // prevents rapid page-flip while dragging to panel edges
+let _gpEdgeCooldownTimer = null;
 const _GP_DIST = 6;
 
 let _addTargetGroupId = null;  // non-null when the add modal is adding into a group
@@ -515,6 +517,8 @@ function buildGroupSiteTile(site, groupId) {
 
 function _gpInitDrag(el, rect) {
   gpNaturalPositions = null;
+  if (_gpEdgeCooldownTimer) { clearTimeout(_gpEdgeCooldownTimer); _gpEdgeCooldownTimer = null; }
+  _gpEdgeCooldown = false;
   gpDragClone = el.cloneNode(true);
   Object.assign(gpDragClone.style, {
     position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
@@ -547,6 +551,20 @@ function _gpMoveDrag(cx, cy) {
   if (!gpDragClone) return;
   gpDragClone.style.left = (cx - gpOffX) + 'px';
   gpDragClone.style.top  = (cy - gpOffY) + 'px';
+
+  // Edge-flip: dragging toward a panel edge moves the icon to the adjacent page
+  if (!_gpEdgeCooldown) {
+    const pr   = document.getElementById('group-panel').getBoundingClientRect();
+    const EDGE = 56; // px from panel edge that triggers a page flip
+    if (cx < pr.left + EDGE && groupCurrentPage > 0) {
+      _gpFlipToPage(groupCurrentPage - 1, true);  // → previous page, place at end
+      return;
+    }
+    if (cx > pr.right - EDGE && groupCurrentPage < groupTotalPages - 1) {
+      _gpFlipToPage(groupCurrentPage + 1, false); // → next page, place at start
+      return;
+    }
+  }
 
   // Use the clone's icon element center as collision point — matches the 54×54 px visual icon
   const cloneIcon = gpDragClone.querySelector('.group-site-icon') ?? gpDragClone;
@@ -627,8 +645,43 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   }));
 }
 
+function _gpFlipToPage(newPage, placeAtEnd) {
+  const pages = [...document.querySelectorAll('#group-pages-track .group-page')];
+  if (newPage < 0 || newPage >= pages.length || !gpDragSrcEl) return;
+  const targetPage = pages[newPage];
+
+  // Clear all in-flight FLIP animations on both pages so layout is clean
+  document.querySelectorAll('.group-site-tile').forEach(t => {
+    t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
+    t.style.transition = '';
+    t.style.transform  = '';
+    t.style.zIndex     = '';
+  });
+
+  // Move the invisible source placeholder to the new page
+  if (placeAtEnd) targetPage.appendChild(gpDragSrcEl);
+  else            targetPage.prepend(gpDragSrcEl);
+
+  // Reset FLIP + collision state for the new page
+  gpNaturalPositions = null;
+  gpDropTgt  = null;
+  gpDropMode = null;
+
+  // Cooldown: prevent re-flip until page transition + brief settle completes
+  if (_gpEdgeCooldownTimer) clearTimeout(_gpEdgeCooldownTimer);
+  _gpEdgeCooldown = true;
+  _gpEdgeCooldownTimer = setTimeout(() => {
+    _gpEdgeCooldown = false;
+    _gpEdgeCooldownTimer = null;
+  }, 700);
+
+  goToGroupPage(newPage);
+}
+
 function _gpCommitDrag(groupId) {
   gpNaturalPositions = null;
+  if (_gpEdgeCooldownTimer) { clearTimeout(_gpEdgeCooldownTimer); _gpEdgeCooldownTimer = null; }
+  _gpEdgeCooldown = false;
   gpDragClone?.remove(); gpDragClone = null;
   if (gpDragSrcEl) gpDragSrcEl.style.opacity = '';
 
@@ -639,17 +692,12 @@ function _gpCommitDrag(groupId) {
     t.style.zIndex     = '';
   });
 
-  // Sync group.items from DOM order for the affected page
+  // Sync group.items from full DOM order across all pages (handles cross-page moves)
   const group = items.find(i => i.id === groupId);
-  if (group && gpDragSrcEl) {
-    const page = gpDragSrcEl.closest('.group-page');
-    if (page) {
-      const pageIdx   = [...document.querySelectorAll('.group-page')].indexOf(page);
-      const pageStart = pageIdx * 9;
-      const domSiteIds = [...page.querySelectorAll('.group-site-tile')].map(t => t.dataset.siteId);
-      const reordered  = domSiteIds.map(sid => group.items.find(s => s.id === sid)).filter(Boolean);
-      group.items.splice(pageStart, reordered.length, ...reordered);
-    }
+  if (group) {
+    const allDomIds = [...document.querySelectorAll('#group-pages-track .group-site-tile')]
+      .map(t => t.dataset.siteId);
+    group.items = allDomIds.map(sid => group.items.find(s => s.id === sid)).filter(Boolean);
   }
 
   _gpSuppressClick = true;
