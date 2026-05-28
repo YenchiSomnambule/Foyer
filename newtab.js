@@ -334,41 +334,43 @@ function _applyReorderPreview(tgtEl, insertBefore) {
 
   const others = [...grid.querySelectorAll('.tile')].filter(t => t !== pdSrcEl);
 
-  // Freeze any in-flight animations so FIRST = current visual position (not final target)
+  // Capture each tile's current COMPOSITED transform via getComputedStyle() BEFORE
+  // cancelling so mid-animation positions are used as FIRST, not the stale layout pos.
   others.forEach(t => {
-    t.getAnimations().forEach(a => { try { a.commitStyles(); a.cancel(); } catch {} });
+    const anims = t.getAnimations();
+    if (anims.length === 0) return;
+    const ct = getComputedStyle(t).transform;
+    anims.forEach(a => { try { a.cancel(); } catch {} });
+    t.style.transform = (ct && ct !== 'none') ? ct : '';
   });
 
-  // FIRST: visual positions (layout + any committed mid-animation offset)
+  // FIRST: current visual positions
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  // Clear transforms/transitions so the DOM move lands on clean layout positions
-  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; });
+  // Clear inline overrides so the DOM move lands on clean layout positions
+  others.forEach(t => { t.style.transition = ''; t.style.transform = ''; });
 
   // Move the ghost placeholder
   if (insertBefore) grid.insertBefore(pdSrcEl, tgtEl);
   else              grid.insertBefore(pdSrcEl, tgtEl.nextSibling);
 
-  // LAST: new layout positions after DOM move (read all before writing any)
+  // LAST: new layout positions after DOM move
   grid.offsetHeight;
   const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  // INVERT: apply all inverse transforms (write-only pass, no interleaved reads)
+  // Animate each tile from FIRST to LAST using explicit start keyframes
   others.forEach(t => {
     const f = firsts.get(t), l = lasts.get(t);
     if (!f || !l) return;
     const dx = f.left - l.left, dy = f.top - l.top;
-    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
-      t.style.transform = `translate(${dx}px,${dy}px)`;
-  });
-
-  // PLAY: second flush locks in the inverse positions so the browser "sees" them
-  // as the transition start value. Tiles then animate from their visual positions
-  // rather than flashing at the inverse state for two render frames (double-RAF bug).
-  grid.offsetHeight;
-  others.forEach(t => {
-    t.style.transition = 'transform 0.4s linear';
-    t.style.transform  = '';
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    t.animate(
+      [
+        { transform: `translate(${dx}px,${dy}px)` },
+        { transform: 'translate(0,0)' }
+      ],
+      { duration: 400, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)', fill: 'forwards' }
+    );
   });
 }
 
@@ -597,16 +599,20 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
 
   const others = [...page.querySelectorAll('.group-site-tile')].filter(t => t !== gpDragSrcEl);
 
-  // Commit then cancel any in-flight animations so FIRST = current visual position.
-  // Split into separate try/catch so cancel() always runs even if commitStyles() throws.
+  // For each tile with running animations, read its current COMPOSITED transform via
+  // getComputedStyle() BEFORE cancelling. This captures mid-animation visual positions
+  // reliably — getComputedStyle() includes the Web Animation layer, whereas commitStyles()
+  // can miss for CSSTransition objects in some browsers. Pin the captured value as an
+  // inline style so the subsequent getBoundingClientRect() returns the correct FIRST pos.
   others.forEach(t => {
-    t.getAnimations().forEach(a => {
-      try { a.commitStyles(); } catch {}
-      try { a.cancel(); } catch {}
-    });
+    const anims = t.getAnimations();
+    if (anims.length === 0) return;
+    const ct = getComputedStyle(t).transform;
+    anims.forEach(a => { try { a.cancel(); } catch {} });
+    t.style.transform = (ct && ct !== 'none') ? ct : '';
   });
 
-  // FIRST: visual positions (including any committed mid-animation offset)
+  // FIRST: current visual positions (mid-animation tiles are now frozen above as inline styles)
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
   // Clear inline overrides so the DOM move lands on clean layout positions
@@ -620,9 +626,8 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
   // Animate each tile from its old visual position (FIRST) to its new layout position (LAST).
-  // Using element.animate() with an explicit start keyframe avoids the CSS-transition
-  // INVERT+double-flush trick, which silently fails when commitStyles() throws for
-  // CSSTransition objects and leaves the old animation running and overriding the INVERT.
+  // fill:'forwards' holds the end-keyframe so the tile stays visually at the destination
+  // even before the next style flush.
   others.forEach(t => {
     const f = firsts.get(t), l = lasts.get(t);
     if (!f || !l) return;
@@ -633,8 +638,16 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
     if (xr) t.style.zIndex = '10';
 
     const anim = t.animate(
-      [{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0,0)' }],
-      { duration: 400, delay: xr ? 100 : 0, easing: 'linear', fill: 'none' }
+      [
+        { transform: `translate(${dx}px,${dy}px)` },
+        { transform: 'translate(0,0)' }
+      ],
+      {
+        duration: 400,
+        delay: xr ? 100 : 0,
+        easing: 'cubic-bezier(0.25,0.46,0.45,0.94)',
+        fill: 'forwards'
+      }
     );
     if (xr) anim.onfinish = () => { if (t.style.zIndex === '10') t.style.zIndex = ''; };
   });
