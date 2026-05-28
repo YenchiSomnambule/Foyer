@@ -367,7 +367,7 @@ function _applyReorderPreview(tgtEl, insertBefore) {
   // rather than flashing at the inverse state for two render frames (double-RAF bug).
   grid.offsetHeight;
   others.forEach(t => {
-    t.style.transition = 'transform 0.42s cubic-bezier(0.4,0,0.2,1)';
+    t.style.transition = 'transform 0.9s linear';
     t.style.transform  = '';
   });
 }
@@ -633,7 +633,7 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
   others.forEach(t => {
     const xr = crossRowSet.has(t);
     t.style.zIndex    = xr ? '10' : '';
-    t.style.transition = `transform 0.42s cubic-bezier(0.4,0,0.2,1) ${xr ? '0.1s' : '0s'}`;
+    t.style.transition = `transform 0.9s linear ${xr ? '0.1s' : '0s'}`;
     t.style.transform  = '';
   });
 
