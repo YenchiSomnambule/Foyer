@@ -1118,7 +1118,10 @@ function saveEdit() {
 
 function isValidUrl(url) {
   try {
-    return Boolean(new URL(url).hostname);
+    const { hostname } = new URL(url);
+    return hostname === 'localhost'
+      || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)
+      || hostname.includes('.');
   } catch {
     return false;
   }
@@ -1292,11 +1295,74 @@ function addSite() {
 const THEMES = ['pink', 'blue', 'yellow', 'dark', 'white'];
 
 function applyTheme(theme) {
+  document.body.style.removeProperty('background');
+  ['--text-color','--text-shadow','--glass','--glass-border',
+   '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color']
+    .forEach(p => document.body.style.removeProperty(p));
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
+  document.body.classList.remove('theme-custom');
   document.body.classList.add(`theme-${theme}`);
   document.querySelectorAll('.swatch').forEach(s => {
     s.classList.toggle('active', s.dataset.theme === theme);
   });
+}
+
+function hexToHsl(hex) {
+  const r = parseInt(hex.slice(1,3), 16) / 255;
+  const g = parseInt(hex.slice(3,5), 16) / 255;
+  const b = parseInt(hex.slice(5,7), 16) / 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function applyCustomColor(hex) {
+  const [h, s, l] = hexToHsl(hex);
+  const blobS = Math.max(s - 10, 25);
+  const blobL = Math.min(l + 32, 92);
+  const baseL = Math.max(l - 8, 12);
+
+  document.body.style.background = [
+    `radial-gradient(ellipse 80% 60% at 28% 22%, hsla(${h},${blobS}%,${blobL}%,0.72) 0%, transparent 60%)`,
+    `radial-gradient(ellipse 70% 55% at 72% 65%, hsla(${(h+10)%360},${blobS}%,${Math.max(blobL-3,30)}%,0.62) 0%, transparent 55%)`,
+    `radial-gradient(ellipse 50% 45% at 14% 78%, hsla(${h},${Math.min(blobS+5,100)}%,${Math.max(blobL-1,30)}%,0.52) 0%, transparent 50%)`,
+    `radial-gradient(ellipse 55% 50% at 86% 18%, hsla(${(h-5+360)%360},${Math.max(blobS-3,20)}%,${Math.max(blobL-2,30)}%,0.55) 0%, transparent 52%)`,
+    `linear-gradient(155deg, hsl(${h},${s}%,${baseL}%) 0%, hsl(${(h+5)%360},${s}%,${baseL+5}%) 28%, hsl(${h},${s}%,${baseL+8}%) 55%, hsl(${(h+5)%360},${s}%,${baseL+5}%) 78%, hsl(${h},${s}%,${baseL}%) 100%)`
+  ].join(', ');
+
+  THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
+  document.body.classList.add('theme-custom');
+
+  if (l > 65) {
+    document.body.style.setProperty('--text-color', 'rgba(30,25,15,0.85)');
+    document.body.style.setProperty('--text-shadow', '0 1px 3px rgba(255,255,255,0.45)');
+    document.body.style.setProperty('--glass', 'rgba(0,0,0,0.07)');
+    document.body.style.setProperty('--glass-border', 'rgba(0,0,0,0.14)');
+    document.body.style.setProperty('--overlay-bg', 'rgba(0,0,0,0.3)');
+    document.body.style.setProperty('--add-btn-bg', 'rgba(0,0,0,0.07)');
+    document.body.style.setProperty('--add-btn-border', 'rgba(0,0,0,0.22)');
+    document.body.style.setProperty('--add-btn-color', 'rgba(30,25,15,0.75)');
+  } else {
+    ['--text-color','--text-shadow','--glass','--glass-border',
+     '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color']
+      .forEach(p => document.body.style.removeProperty(p));
+  }
+
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  document.getElementById('swatch-custom')?.classList.add('active');
+}
+
+function saveCustomColor(hex) {
+  chrome.storage.local.set({ theme: 'custom', customColor: hex });
 }
 
 function saveTheme(theme) {
@@ -1305,10 +1371,17 @@ function saveTheme(theme) {
 
 async function loadTheme() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['theme'], r => {
-      const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'yellow';
-      applyTheme(theme);
-      resolve(theme);
+    chrome.storage.local.get(['theme', 'customColor'], r => {
+      if (r.theme === 'custom' && r.customColor) {
+        applyCustomColor(r.customColor);
+        const inp = document.getElementById('custom-color-input');
+        if (inp) inp.value = r.customColor;
+        resolve('custom');
+      } else {
+        const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'yellow';
+        applyTheme(theme);
+        resolve(theme);
+      }
     });
   });
 }
@@ -1413,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.stopPropagation();
     themeSwatches.classList.toggle('hidden');
   });
-  document.querySelectorAll('.swatch').forEach(swatch => {
+  document.querySelectorAll('.swatch[data-theme]').forEach(swatch => {
     swatch.addEventListener('click', e => {
       e.stopPropagation();
       const theme = swatch.dataset.theme;
@@ -1421,5 +1494,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       saveTheme(theme);
       themeSwatches.classList.add('hidden');
     });
+  });
+
+  const swatchCustom = document.getElementById('swatch-custom');
+  const colorInput   = document.getElementById('custom-color-input');
+  swatchCustom.addEventListener('click', e => {
+    e.stopPropagation();
+    colorInput.click();
+  });
+  colorInput.addEventListener('input', e => {
+    applyCustomColor(e.target.value);
+    saveCustomColor(e.target.value);
   });
 });

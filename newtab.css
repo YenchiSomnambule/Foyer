@@ -771,3 +771,16 @@ body.theme-yellow .swatch.active {
   background: linear-gradient(135deg, #edf3fc, #d8dff0);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
 }
+
+.swatch-custom {
+  background: conic-gradient(
+    hsl(0,100%,62%), hsl(40,100%,62%), hsl(80,100%,55%),
+    hsl(140,100%,48%), hsl(200,100%,58%), hsl(260,100%,66%),
+    hsl(310,100%,62%), hsl(360,100%,62%)
+  );
+}
+
+body.theme-custom .swatch-custom.active,
+.swatch-custom.active {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 0 4px rgba(255,255,255,0.35);
+}
