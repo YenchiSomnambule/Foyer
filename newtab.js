@@ -597,44 +597,46 @@ function _gpApplyReorderPreview(tgtEl, insertBefore) {
 
   const others = [...page.querySelectorAll('.group-site-tile')].filter(t => t !== gpDragSrcEl);
 
-  // Freeze any in-flight animations so FIRST = current visual position
+  // Commit then cancel any in-flight animations so FIRST = current visual position.
+  // Split into separate try/catch so cancel() always runs even if commitStyles() throws.
   others.forEach(t => {
-    t.getAnimations().forEach(a => { try { a.commitStyles(); a.cancel(); } catch {} });
+    t.getAnimations().forEach(a => {
+      try { a.commitStyles(); } catch {}
+      try { a.cancel(); } catch {}
+    });
   });
 
-  // FIRST: visual positions (layout + any committed mid-animation offset)
+  // FIRST: visual positions (including any committed mid-animation offset)
   const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  others.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; t.style.zIndex = ''; });
+  // Clear inline overrides so the DOM move lands on clean layout positions
+  others.forEach(t => { t.style.transition = ''; t.style.transform = ''; t.style.zIndex = ''; });
 
   if (insertBefore) page.insertBefore(gpDragSrcEl, tgtEl);
   else              page.insertBefore(gpDragSrcEl, tgtEl.nextSibling);
 
-  // LAST: new layout positions after DOM move (read all before writing any)
+  // LAST: new natural layout positions after DOM move
   page.offsetHeight;
   const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
 
-  // INVERT: write-only pass, no interleaved reads
-  // Track tiles that cross rows (non-zero dy) — they get staggered below.
-  const crossRowSet = new Set();
+  // Animate each tile from its old visual position (FIRST) to its new layout position (LAST).
+  // Using element.animate() with an explicit start keyframe avoids the CSS-transition
+  // INVERT+double-flush trick, which silently fails when commitStyles() throws for
+  // CSSTransition objects and leaves the old animation running and overriding the INVERT.
   others.forEach(t => {
     const f = firsts.get(t), l = lasts.get(t);
     if (!f || !l) return;
     const dx = f.left - l.left, dy = f.top - l.top;
-    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)
-      t.style.transform = `translate(${dx}px,${dy}px)`;
-    if (Math.abs(dy) > 20) crossRowSet.add(t);
-  });
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
 
-  // PLAY: second flush locks in inverse positions; transition starts this JS task.
-  // Cross-row tiles are delayed by 0.1 s so same-row tiles clear the path first,
-  // and elevated (z-index 10) so they visually fly over tiles they briefly overlap.
-  page.offsetHeight;
-  others.forEach(t => {
-    const xr = crossRowSet.has(t);
-    t.style.zIndex    = xr ? '10' : '';
-    t.style.transition = `transform 0.4s linear ${xr ? '0.1s' : '0s'}`;
-    t.style.transform  = '';
+    const xr = Math.abs(dy) > 20;
+    if (xr) t.style.zIndex = '10';
+
+    const anim = t.animate(
+      [{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0,0)' }],
+      { duration: 400, delay: xr ? 100 : 0, easing: 'linear', fill: 'none' }
+    );
+    if (xr) anim.onfinish = () => { if (t.style.zIndex === '10') t.style.zIndex = ''; };
   });
 
   // Cache natural icon-centers from lasts so _gpMoveDrag uses stable positions
