@@ -998,8 +998,10 @@ function openEditModal(id) {
   editTargetId = id;
   pendingEditFavicon = item.favicon ?? null;
 
-  document.getElementById('edit-url-input').value  = item.url;
+  const editUrlEl = document.getElementById('edit-url-input');
+  editUrlEl.value  = item.url;
   document.getElementById('edit-name-input').value = item.name;
+  clearUrlError(editUrlEl);
 
   // Show existing favicon in preview
   const img    = document.getElementById('edit-favicon-preview-img');
@@ -1096,10 +1098,12 @@ function saveEdit() {
   const item = items.find(i => i.id === editTargetId);
   if (!item) return;
 
-  let url  = document.getElementById('edit-url-input').value.trim();
+  const editUrlInput = document.getElementById('edit-url-input');
+  let url  = editUrlInput.value.trim();
   const name = document.getElementById('edit-name-input').value.trim();
-  if (!url) return;
+  if (!url) { showUrlError(editUrlInput, 'Please enter a website URL.'); return; }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  if (!isValidUrl(url)) { showUrlError(editUrlInput, 'That doesn\'t look like a valid URL.'); return; }
 
   item.url  = url;
   item.name = name || item.name;
@@ -1110,26 +1114,64 @@ function saveEdit() {
   closeEditModal();
 }
 
+// ─── URL Validation ──────────────────────────────────────────────────────────
+
+function isValidUrl(url) {
+  try {
+    return Boolean(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function showUrlError(inputEl, msg) {
+  inputEl.classList.add('input-invalid');
+  let errEl = inputEl.parentElement.querySelector('.input-error');
+  if (!errEl) {
+    errEl = document.createElement('span');
+    errEl.className = 'input-error';
+    inputEl.insertAdjacentElement('afterend', errEl);
+  }
+  errEl.textContent = msg;
+  const clear = () => {
+    inputEl.classList.remove('input-invalid');
+    errEl.textContent = '';
+    inputEl.removeEventListener('input', clear);
+  };
+  inputEl.addEventListener('input', clear);
+  inputEl.focus();
+}
+
+function clearUrlError(inputEl) {
+  inputEl.classList.remove('input-invalid');
+  const errEl = inputEl.parentElement?.querySelector('.input-error');
+  if (errEl) errEl.textContent = '';
+}
+
 // ─── Add Site ─────────────────────────────────────────────────────────────────
 
 function openAddModal() {
   _addTargetGroupId = null;
-  document.getElementById('url-input').value  = '';
+  const urlInput = document.getElementById('url-input');
+  urlInput.value  = '';
   document.getElementById('name-input').value = '';
+  clearUrlError(urlInput);
   resetFaviconPreview();
   pendingFavicon = null;
   document.getElementById('add-modal').classList.remove('hidden');
-  document.getElementById('url-input').focus();
+  urlInput.focus();
 }
 
 function openAddModalForGroup(groupId) {
   _addTargetGroupId = groupId;
-  document.getElementById('url-input').value  = '';
+  const urlInput = document.getElementById('url-input');
+  urlInput.value  = '';
   document.getElementById('name-input').value = '';
+  clearUrlError(urlInput);
   resetFaviconPreview();
   pendingFavicon = null;
   document.getElementById('add-modal').classList.remove('hidden');
-  document.getElementById('url-input').focus();
+  urlInput.focus();
 }
 
 function closeAddModal() {
@@ -1210,10 +1252,12 @@ function loadModalFaviconPreview(rawValue) {
 }
 
 function addSite() {
-  let url  = document.getElementById('url-input').value.trim();
+  const urlInput = document.getElementById('url-input');
+  let url  = urlInput.value.trim();
   const name = document.getElementById('name-input').value.trim();
-  if (!url) return;
+  if (!url) { showUrlError(urlInput, 'Please enter a website URL.'); return; }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  if (!isValidUrl(url)) { showUrlError(urlInput, 'That doesn\'t look like a valid URL.'); return; }
   const siteName = name || (() => {
     try {
       const host = new URL(url).hostname.replace(/^www\./, '');
