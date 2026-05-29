@@ -651,11 +651,28 @@ body.theme-dark {
 
 body.theme-cream {
   background:
-    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(240,224,188,0.58) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(232,215,172,0.48) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(238,220,180,0.42) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(235,218,176,0.45) 0%, transparent 52%),
-    linear-gradient(155deg, #e8dcc6 0%, #ede4ce 28%, #f2e9d5 55%, #ece2cb 78%, #e6dac0 100%);
+    /* 頂部主高光 — 像絲綢正對光源 */
+    radial-gradient(ellipse 58% 48% at 46% 10%, rgba(255,253,242,0.96) 0%, rgba(252,244,224,0.65) 38%, transparent 62%),
+    /* 左側暖光暈 — 側面反光 */
+    radial-gradient(ellipse 52% 70% at 2% 50%, rgba(238,216,168,0.60) 0%, transparent 58%),
+    /* 右上副高光 — 二次反射 */
+    radial-gradient(ellipse 44% 38% at 91% 16%, rgba(252,240,212,0.84) 0%, transparent 50%),
+    /* 右下金棕陰影 — 布料折疊暗部 */
+    radial-gradient(ellipse 62% 55% at 85% 84%, rgba(205,185,142,0.62) 0%, transparent 54%),
+    /* 下方冷米色深影 — 最暗處 */
+    radial-gradient(ellipse 70% 42% at 42% 98%, rgba(200,192,170,0.55) 0%, transparent 50%),
+    /* 中左暖霧 — 填充漫反射 */
+    radial-gradient(ellipse 48% 50% at 18% 62%, rgba(242,226,188,0.50) 0%, transparent 52%),
+    /* 底部基色：邊緣深棕金 → 中心亮奶油 → 邊緣深棕金 */
+    linear-gradient(135deg,
+      #cfc3a2 0%,
+      #dfd4b6 18%,
+      #ece3ca 36%,
+      #f5eddb 52%,
+      #ece3ca 68%,
+      #ddd1b5 84%,
+      #cfc3a2 100%
+    );
 }
 
 /* Light theme variable overrides */
