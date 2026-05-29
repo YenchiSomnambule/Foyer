@@ -1300,7 +1300,7 @@ function addSite() {
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
-const THEMES = ['pink', 'blue', 'yellow', 'dark', 'white'];
+const THEMES = ['pink', 'blue', 'yellow', 'dark', 'cream'];
 
 function applyTheme(theme) {
   document.body.style.removeProperty('background');
@@ -1400,7 +1400,7 @@ async function loadTheme() {
         if (inp) inp.value = r.customColor;
         resolve('custom');
       } else {
-        const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'yellow';
+        const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
         applyTheme(theme);
         resolve(theme);
       }

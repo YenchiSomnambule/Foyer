@@ -649,18 +649,18 @@ body.theme-dark {
     linear-gradient(155deg, #08080f 0%, #0e0e1a 28%, #12121e 55%, #0c0c18 78%, #080810 100%);
 }
 
-body.theme-white {
+body.theme-cream {
   background:
-    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(220,228,248,0.72) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(210,222,245,0.62) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(215,225,248,0.52) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(205,218,242,0.55) 0%, transparent 52%),
-    linear-gradient(155deg, #dde4f2 0%, #e5ecf8 28%, #edf3fc 55%, #e2e8f5 78%, #d8dff0 100%);
+    radial-gradient(ellipse 80% 60% at 28% 22%, rgba(240,224,188,0.58) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 72% 65%, rgba(232,215,172,0.48) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 14% 78%, rgba(238,220,180,0.42) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 50% at 86% 18%, rgba(235,218,176,0.45) 0%, transparent 52%),
+    linear-gradient(155deg, #e8dcc6 0%, #ede4ce 28%, #f2e9d5 55%, #ece2cb 78%, #e6dac0 100%);
 }
 
 /* Light theme variable overrides */
 body.theme-yellow,
-body.theme-white {
+body.theme-cream {
   --text-color:   rgba(30,25,15,0.85);
   --text-shadow:  0 1px 3px rgba(255,255,255,0.45);
   --glass:        rgba(0,0,0,0.07);
@@ -672,7 +672,7 @@ body.theme-white {
 }
 
 body.theme-yellow #add-btn:hover,
-body.theme-white  #add-btn:hover {
+body.theme-cream  #add-btn:hover {
   background: rgba(0,0,0,0.12);
   border-color: rgba(0,0,0,0.35);
 }
@@ -750,7 +750,7 @@ body.theme-white  #add-btn:hover {
   box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 0 4px rgba(255,255,255,0.3);
 }
 
-body.theme-white  .swatch.active,
+body.theme-cream  .swatch.active,
 body.theme-yellow .swatch.active {
   box-shadow: 0 0 0 2px rgba(0,0,0,0.55), 0 0 0 4px rgba(0,0,0,0.18);
 }
@@ -767,9 +767,9 @@ body.theme-yellow .swatch.active {
 .swatch[data-theme="dark"] {
   background: linear-gradient(135deg, #1e1e30, #08080f);
 }
-.swatch[data-theme="white"] {
-  background: linear-gradient(135deg, #edf3fc, #d8dff0);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+.swatch[data-theme="cream"] {
+  background: linear-gradient(135deg, #f2e9d5, #e0d4b6);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
 }
 
 .swatch-custom {
