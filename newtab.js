@@ -1411,7 +1411,7 @@ async function loadTheme() {
 // ─── Tutorial ────────────────────────────────────────────────────────────────
 
 const TUT_STEPS = [
-  { sel: null,         title: 'Welcome to Foyer',  body: "Your websites, organised like an iPhone home screen. Here's a quick tour — or tap Skip to jump straight in." },
+  { sel: null,         title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in." },
   { sel: '#add-btn',   title: 'Add a website',      body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
   { sel: '.tile',      title: 'Open or manage',     body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
   { sel: '#grid',      title: 'Drag to organise',   body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },

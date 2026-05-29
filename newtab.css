@@ -219,7 +219,7 @@ body {
   transform: scale(0.93);
 }
 
-/* ─── Group Overlay (iPhone folder) ─── */
+/* ─── Group Overlay ─── */
 #group-overlay {
   position: fixed;
   inset: 0;
