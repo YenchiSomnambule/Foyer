@@ -86,13 +86,15 @@ let gpDragClone = null;
 let gpOffX = 0, gpOffY = 0;
 let gpActive = false;
 let gpSX = 0, gpSY = 0;
-let gpDropTgt  = null;   // target tile element
-let gpDropMode = null;
 let _gpSuppressClick = false;
-let gpNaturalPositions = null; // Map<el,{cx,cy}> of tile icon-centers at natural layout positions, cached after each FLIP
-let _gpEdgeCooldown = false;   // prevents rapid page-flip while dragging to panel edges
+let gpSlotRects  = null;   // Natural bounding rects of every tile captured at drag-start (no transforms)
+let gpInsertSlot = -1;     // Slot index where the dragged icon would land if dropped now
+let gpDragPage   = null;   // The .group-page element we're currently reordering within
+let _gpEdgeCooldown = false;
 let _gpEdgeCooldownTimer = null;
 const _GP_DIST = 6;
+const _GP_EASE = 'cubic-bezier(0.25,0.46,0.45,0.94)';
+const _GP_DUR  = 380; // ms
 
 let _addTargetGroupId = null;  // non-null when the add modal is adding into a group
 
@@ -518,9 +520,29 @@ function buildGroupSiteTile(site, groupId) {
 }
 
 function _gpInitDrag(el, rect) {
-  gpNaturalPositions = null;
   if (_gpEdgeCooldownTimer) { clearTimeout(_gpEdgeCooldownTimer); _gpEdgeCooldownTimer = null; }
   _gpEdgeCooldown = false;
+
+  gpDragPage = el.closest('.group-page');
+  const tiles = [...gpDragPage.querySelectorAll('.group-site-tile')];
+
+  // Ensure no leftover transforms/animations from a prior drag before snapshotting positions
+  tiles.forEach(t => {
+    t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
+    t.style.transition = '';
+    t.style.transform  = '';
+    t.style.zIndex     = '';
+  });
+  gpDragPage.offsetHeight; // flush so getBoundingClientRect reads clean layout
+
+  // Snapshot natural slot positions ONCE — these are reused for the entire drag
+  gpSlotRects  = tiles.map(t => t.getBoundingClientRect());
+  gpInsertSlot = tiles.indexOf(el); // starts at its own slot (no visual change)
+
+  // Enable CSS transitions on all tiles — browser handles all animation automatically,
+  // including smooth re-targeting mid-animation when the cursor changes direction
+  tiles.forEach(t => { t.style.transition = `transform ${_GP_DUR}ms ${_GP_EASE}`; });
+
   gpDragClone = el.cloneNode(true);
   Object.assign(gpDragClone.style, {
     position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
@@ -535,18 +557,37 @@ function _gpInitDrag(el, rect) {
   el.style.opacity = '0';
 }
 
-function _gpIconRect(tileEl) {
-  const icon = tileEl.querySelector('.group-site-icon');
-  return (icon ?? tileEl).getBoundingClientRect();
-}
+// Sets each tile's CSS transform so that the drag icon appears at insertSlot
+// while all other icons shift to fill the remaining slots — no DOM mutation.
+// CSS transitions automatically interpolate from whatever transform is currently
+// applied, so mid-drag direction changes always animate from the current visual
+// position rather than snapping back to natural positions.
+function _gpSetOrder(insertSlot) {
+  if (!gpDragSrcEl || !gpDragPage || !gpSlotRects) return;
+  const tiles = [...gpDragPage.querySelectorAll('.group-site-tile')];
+  const dragIdx = tiles.indexOf(gpDragSrcEl);
+  if (dragIdx < 0) return;
+  const n = tiles.length;
+  const slot = Math.max(0, Math.min(insertSlot, n - 1));
+  if (slot === gpInsertSlot) return; // no change
+  gpInsertSlot = slot;
 
-// Returns the logical (natural layout) icon center for t, falling back to visual if not cached.
-// Using natural positions prevents animated tiles from causing oscillation in collision detection.
-function _gpNatCenter(t) {
-  const n = gpNaturalPositions?.get(t);
-  if (n) return n;
-  const r = _gpIconRect(t);
-  return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+  // Build visual order: visualOrder[slotIndex] = tile index
+  const others = Array.from({length: n}, (_, i) => i).filter(i => i !== dragIdx);
+  const visualOrder = [];
+  let oi = 0;
+  for (let s = 0; s < n; s++) {
+    visualOrder.push(s === slot ? dragIdx : others[oi++]);
+  }
+
+  // Apply transforms — drag source stays invisible at natural pos, others shift
+  tiles.forEach((tile, ti) => {
+    if (ti === dragIdx) return;
+    const targetSlot = visualOrder.indexOf(ti);
+    const src = gpSlotRects[ti];
+    const tgt = gpSlotRects[targetSlot];
+    tile.style.transform = `translate(${tgt.left - src.left}px,${tgt.top - src.top}px)`;
+  });
 }
 
 function _gpMoveDrag(cx, cy) {
@@ -557,108 +598,35 @@ function _gpMoveDrag(cx, cy) {
   // Edge-flip: dragging toward a panel edge moves the icon to the adjacent page
   if (!_gpEdgeCooldown) {
     const pr   = document.getElementById('group-panel').getBoundingClientRect();
-    const EDGE = 56; // px from panel edge that triggers a page flip
+    const EDGE = 56;
     if (cx < pr.left + EDGE && groupCurrentPage > 0) {
-      _gpFlipToPage(groupCurrentPage - 1, true);  // → previous page, place at end
+      _gpFlipToPage(groupCurrentPage - 1, true);
       return;
     }
     if (cx > pr.right - EDGE && groupCurrentPage < groupTotalPages - 1) {
-      _gpFlipToPage(groupCurrentPage + 1, false); // → next page, place at start
+      _gpFlipToPage(groupCurrentPage + 1, false);
       return;
     }
   }
 
-  // Use the clone's icon element center as collision point — matches the 54×54 px visual icon
+  if (!gpSlotRects) return;
+
+  // Find the slot whose natural center is closest to the clone's icon center
   const cloneIcon = gpDragClone.querySelector('.group-site-icon') ?? gpDragClone;
   const cr = cloneIcon.getBoundingClientRect();
   const cloneCX = cr.left + cr.width  / 2;
   const cloneCY = cr.top  + cr.height / 2;
 
-  // Find nearest tile by icon-center-to-icon-center distance
-  // Scope to .group-page to exclude the floating clone (also has the same class)
-  let nearestTile = null, nearestDist = Infinity;
-  for (const t of document.querySelectorAll('.group-page .group-site-tile')) {
-    if (t === gpDragSrcEl) continue;
-    const { cx, cy } = _gpNatCenter(t);
-    const d = Math.hypot(cloneCX - cx, cloneCY - cy);
-    if (d < nearestDist) { nearestDist = d; nearestTile = t; }
-  }
-  if (!nearestTile) return;
-
-  const before = cloneCX < _gpNatCenter(nearestTile).cx;
-  if (gpDropTgt === nearestTile && gpDropMode === (before ? 'before' : 'after')) return;
-  gpDropTgt  = nearestTile;
-  gpDropMode = before ? 'before' : 'after';
-  _gpApplyReorderPreview(nearestTile, before);
-}
-
-function _gpApplyReorderPreview(tgtEl, insertBefore) {
-  if (!gpDragSrcEl) return;
-  const page = tgtEl.closest('.group-page');
-  if (!page) return;
-
-  const others = [...page.querySelectorAll('.group-site-tile')].filter(t => t !== gpDragSrcEl);
-
-  // For each tile with running animations, read its current COMPOSITED transform via
-  // getComputedStyle() BEFORE cancelling. This captures mid-animation visual positions
-  // reliably — getComputedStyle() includes the Web Animation layer, whereas commitStyles()
-  // can miss for CSSTransition objects in some browsers. Pin the captured value as an
-  // inline style so the subsequent getBoundingClientRect() returns the correct FIRST pos.
-  others.forEach(t => {
-    const anims = t.getAnimations();
-    if (anims.length === 0) return;
-    const ct = getComputedStyle(t).transform;
-    anims.forEach(a => { try { a.cancel(); } catch {} });
-    t.style.transform = (ct && ct !== 'none') ? ct : '';
+  let nearestSlot = 0, nearestDist = Infinity;
+  gpSlotRects.forEach((r, i) => {
+    const d = Math.hypot(cloneCX - (r.left + r.width / 2), cloneCY - (r.top + r.height / 2));
+    if (d < nearestDist) { nearestDist = d; nearestSlot = i; }
   });
 
-  // FIRST: current visual positions (mid-animation tiles are now frozen above as inline styles)
-  const firsts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
-
-  // Clear inline overrides so the DOM move lands on clean layout positions
-  others.forEach(t => { t.style.transition = ''; t.style.transform = ''; t.style.zIndex = ''; });
-
-  if (insertBefore) page.insertBefore(gpDragSrcEl, tgtEl);
-  else              page.insertBefore(gpDragSrcEl, tgtEl.nextSibling);
-
-  // LAST: new natural layout positions after DOM move
-  page.offsetHeight;
-  const lasts = new Map(others.map(t => [t, t.getBoundingClientRect()]));
-
-  // Animate each tile from its old visual position (FIRST) to its new layout position (LAST).
-  // fill:'forwards' holds the end-keyframe so the tile stays visually at the destination
-  // even before the next style flush.
-  others.forEach(t => {
-    const f = firsts.get(t), l = lasts.get(t);
-    if (!f || !l) return;
-    const dx = f.left - l.left, dy = f.top - l.top;
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-
-    const xr = Math.abs(dy) > 20;
-    if (xr) t.style.zIndex = '10';
-
-    const anim = t.animate(
-      [
-        { transform: `translate(${dx}px,${dy}px)` },
-        { transform: 'translate(0,0)' }
-      ],
-      {
-        duration: 400,
-        delay: xr ? 100 : 0,
-        easing: 'cubic-bezier(0.25,0.46,0.45,0.94)',
-        fill: 'forwards'
-      }
-    );
-    if (xr) anim.onfinish = () => { if (t.style.zIndex === '10') t.style.zIndex = ''; };
-  });
-
-  // Cache natural icon-centers from lasts so _gpMoveDrag uses stable positions
-  // (not mid-animation visual positions) for collision detection.
-  gpNaturalPositions = new Map(others.map(t => {
-    const r = lasts.get(t);
-    return [t, { cx: r.left + r.width / 2, cy: r.top + 27 }];
-  }));
+  _gpSetOrder(nearestSlot);
 }
+
+
 
 function _gpFlipToPage(newPage, placeAtEnd) {
   const track = document.getElementById('group-pages-track');
@@ -667,27 +635,29 @@ function _gpFlipToPage(newPage, placeAtEnd) {
   if (newPage < 0 || newPage >= pages.length || !gpDragSrcEl) return;
   const targetPage = pages[newPage];
 
-  // Clear all in-flight FLIP animations so layout is clean.
-  // Scope to #group-pages-track so the body-level drag clone (which also
-  // carries .group-site-tile) is not touched — clearing its zIndex would
-  // make it disappear behind the group panel.
-  document.querySelectorAll('#group-pages-track .group-site-tile').forEach(t => {
+  // Clear transforms on old page (no DOM mutations, just reset visuals)
+  if (gpDragPage) {
+    [...gpDragPage.querySelectorAll('.group-site-tile')].forEach(t => {
+      t.style.transition = '';
+      t.style.transform  = '';
+      t.style.zIndex     = '';
+    });
+  }
+  // Clean any stragglers on the target page
+  [...targetPage.querySelectorAll('.group-site-tile')].forEach(t => {
     t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.style.transition = '';
     t.style.transform  = '';
     t.style.zIndex     = '';
   });
 
-  // Enforce 9-per-page: if the target page is full, cascade its last tile
-  // forward (to the first position of the next page) before we add our icon.
-  // This keeps every page at ≤ 9 icons at all times.
+  // Enforce 9-per-page
   const targetTiles = [...targetPage.querySelectorAll('.group-site-tile')]
     .filter(t => t !== gpDragSrcEl);
   if (targetTiles.length >= 9) {
-    const overflow = targetTiles[targetTiles.length - 1]; // last icon of target page
+    const overflow = targetTiles[targetTiles.length - 1];
     let nextPage = pages[newPage + 1];
     if (!nextPage) {
-      // Target is the last page and it's full — create a new overflow page
       nextPage = document.createElement('div');
       nextPage.className = 'group-page';
       track.appendChild(nextPage);
@@ -700,19 +670,22 @@ function _gpFlipToPage(newPage, placeAtEnd) {
       });
       dots.appendChild(dot);
     }
-    nextPage.prepend(overflow); // overflow lands at FIRST position of next page
+    nextPage.prepend(overflow);
   }
 
-  // Move the invisible source placeholder to the (now ≤8-item) target page
   if (placeAtEnd) targetPage.appendChild(gpDragSrcEl);
   else            targetPage.prepend(gpDragSrcEl);
 
-  // Reset FLIP + collision state for the new page
-  gpNaturalPositions = null;
-  gpDropTgt  = null;
-  gpDropMode = null;
+  // Switch drag page and re-snapshot slot rects for the new page
+  gpDragPage = targetPage;
+  targetPage.offsetHeight; // flush so rects are accurate
+  const newTiles = [...targetPage.querySelectorAll('.group-site-tile')];
+  gpSlotRects  = newTiles.map(t => t.getBoundingClientRect());
+  gpInsertSlot = newTiles.indexOf(gpDragSrcEl); // placed at start or end, no visual shift needed
 
-  // Cooldown: prevent re-flip until page transition + brief settle completes
+  // Enable transitions on new page tiles
+  newTiles.forEach(t => { t.style.transition = `transform ${_GP_DUR}ms ${_GP_EASE}`; });
+
   if (_gpEdgeCooldownTimer) clearTimeout(_gpEdgeCooldownTimer);
   _gpEdgeCooldown = true;
   _gpEdgeCooldownTimer = setTimeout(() => {
@@ -720,7 +693,6 @@ function _gpFlipToPage(newPage, placeAtEnd) {
     _gpEdgeCooldownTimer = null;
   }, 700);
 
-  // Sync dot active states (new page may have been added)
   dots.querySelectorAll('.group-dot').forEach((d, i) =>
     d.classList.toggle('active', i === groupCurrentPage)
   );
@@ -729,20 +701,40 @@ function _gpFlipToPage(newPage, placeAtEnd) {
 }
 
 function _gpCommitDrag(groupId) {
-  gpNaturalPositions = null;
   if (_gpEdgeCooldownTimer) { clearTimeout(_gpEdgeCooldownTimer); _gpEdgeCooldownTimer = null; }
   _gpEdgeCooldown = false;
   gpDragClone?.remove(); gpDragClone = null;
   if (gpDragSrcEl) gpDragSrcEl.style.opacity = '';
 
-  document.querySelectorAll('.group-site-tile').forEach(t => {
+  // Commit the visual order to the DOM: re-append tiles in the order they're
+  // currently displayed, then clear all transforms so layout matches DOM order.
+  if (gpDragPage && gpDragSrcEl && gpInsertSlot >= 0) {
+    const tiles    = [...gpDragPage.querySelectorAll('.group-site-tile')];
+    const dragIdx  = tiles.indexOf(gpDragSrcEl);
+    if (dragIdx >= 0) {
+      const n      = tiles.length;
+      const slot   = Math.max(0, Math.min(gpInsertSlot, n - 1));
+      const others = Array.from({length: n}, (_, i) => i).filter(i => i !== dragIdx);
+      const order  = [];
+      let oi = 0;
+      for (let s = 0; s < n; s++) order.push(s === slot ? dragIdx : others[oi++]);
+
+      // Disable transitions before DOM reorder so tiles snap to their new natural positions
+      tiles.forEach(t => { t.style.transition = 'none'; t.style.transform = ''; t.style.zIndex = ''; });
+      order.forEach(ti => gpDragPage.appendChild(tiles[ti]));
+      gpDragPage.offsetHeight;
+    }
+  }
+
+  // Clean up the rest of the track (other pages, any leftovers)
+  document.querySelectorAll('#group-pages-track .group-site-tile').forEach(t => {
     t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
     t.style.transition = '';
     t.style.transform  = '';
     t.style.zIndex     = '';
   });
 
-  // Sync group.items from full DOM order across all pages (handles cross-page moves)
+  // Sync group.items from full DOM order across all pages
   const group = items.find(i => i.id === groupId);
   if (group) {
     const allDomIds = [...document.querySelectorAll('#group-pages-track .group-site-tile')]
@@ -754,7 +746,8 @@ function _gpCommitDrag(groupId) {
   requestAnimationFrame(() => { _gpSuppressClick = false; });
 
   gpDragSrcId = null; gpDragSrcEl = null;
-  gpDropTgt = null; gpDropMode = null; gpActive = false;
+  gpSlotRects = null; gpInsertSlot = -1; gpDragPage = null;
+  gpActive = false;
 
   save();
   _refreshGroupTile(groupId);
