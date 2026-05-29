@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Foyer",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Your websites, organized like your iPhone home screen.",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
