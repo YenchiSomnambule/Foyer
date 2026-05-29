@@ -11,7 +11,7 @@ const CHROME_MOCK = `
 window.chrome = {
   storage: {
     local: {
-      _data: {},
+      _data: { tutorialDone: true },
       get(keys, cb) {
         const result = {};
         const k = Array.isArray(keys) ? keys : (typeof keys==='string'?[keys]:Object.keys(keys));

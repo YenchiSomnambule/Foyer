@@ -784,3 +784,106 @@ body.theme-custom .swatch-custom.active,
 .swatch-custom.active {
   box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px rgba(0,0,0,0.35);
 }
+
+/* ─── Tutorial ─── */
+#tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+}
+#tutorial-overlay.hidden { display: none; }
+
+#tutorial-spotlight {
+  position: fixed;
+  border-radius: 18px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
+  pointer-events: none;
+  z-index: 9991;
+  opacity: 0;
+  transition:
+    left   .3s cubic-bezier(.4,0,.2,1),
+    top    .3s cubic-bezier(.4,0,.2,1),
+    width  .3s cubic-bezier(.4,0,.2,1),
+    height .3s cubic-bezier(.4,0,.2,1),
+    opacity .22s ease;
+}
+
+#tutorial-card {
+  position: fixed;
+  width: 300px;
+  background: rgba(14,14,22,0.97);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 18px;
+  padding: 22px 24px 18px;
+  z-index: 9992;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.65);
+  pointer-events: all;
+}
+
+#tutorial-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+#tutorial-body {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+
+#tutorial-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.t-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.28);
+  transition: background .2s ease, transform .2s ease;
+}
+.t-dot.on {
+  background: #fff;
+  transform: scale(1.3);
+}
+
+#tutorial-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+#tutorial-skip {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: color .15s ease;
+}
+#tutorial-skip:hover { color: rgba(255,255,255,0.7); }
+
+#tutorial-next {
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 18px;
+  border-radius: 10px;
+  transition: background .15s ease;
+}
+#tutorial-next:hover { background: rgba(255,255,255,0.24); }

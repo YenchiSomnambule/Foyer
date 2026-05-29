@@ -1408,12 +1408,99 @@ async function loadTheme() {
   });
 }
 
+// ─── Tutorial ────────────────────────────────────────────────────────────────
+
+const TUT_STEPS = [
+  { sel: null,         title: 'Welcome to Foyer',  body: "Your websites, organised like an iPhone home screen. Here's a quick tour — or tap Skip to jump straight in." },
+  { sel: '#add-btn',   title: 'Add a website',      body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
+  { sel: '.tile',      title: 'Open or manage',     body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
+  { sel: '#grid',      title: 'Drag to organise',   body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },
+  { sel: '#theme-btn', title: 'Change the look',    body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
+];
+
+let _tutStep = 0;
+
+function _startTutorial() {
+  _tutStep = 0;
+  const spot = document.getElementById('tutorial-spotlight');
+  // Pre-position to first real target so step 1's reveal is instant (no sliding from nowhere)
+  const firstReal = TUT_STEPS.find(s => s.sel);
+  if (firstReal) {
+    const el = document.querySelector(firstReal.sel);
+    if (el) {
+      const r = el.getBoundingClientRect(), PAD = 14;
+      Object.assign(spot.style, {
+        left: `${r.left - PAD}px`, top: `${r.top - PAD}px`,
+        width: `${r.width + PAD * 2}px`, height: `${r.height + PAD * 2}px`,
+      });
+    }
+  }
+  spot.style.opacity = '0';
+  document.getElementById('tutorial-overlay').classList.remove('hidden');
+  _renderTutStep();
+}
+
+function _renderTutStep() {
+  const step   = TUT_STEPS[_tutStep];
+  const spot   = document.getElementById('tutorial-spotlight');
+  const card   = document.getElementById('tutorial-card');
+  const isLast = _tutStep === TUT_STEPS.length - 1;
+
+  document.getElementById('tutorial-title').textContent = step.title;
+  document.getElementById('tutorial-body').textContent  = step.body;
+  document.getElementById('tutorial-next').textContent  = isLast ? 'Done ✓' : 'Next →';
+  document.getElementById('tutorial-dots').innerHTML    = TUT_STEPS.map((_, i) =>
+    `<span class="t-dot${i === _tutStep ? ' on' : ''}"></span>`).join('');
+
+  const target = step.sel ? document.querySelector(step.sel) : null;
+  const PAD = 14, CW = 300;
+
+  if (!target) {
+    spot.style.opacity = '0';
+    Object.assign(card.style, { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' });
+    return;
+  }
+
+  const r = target.getBoundingClientRect();
+  Object.assign(spot.style, {
+    opacity: '1',
+    left:   `${r.left  - PAD}px`,
+    top:    `${r.top   - PAD}px`,
+    width:  `${r.width  + PAD * 2}px`,
+    height: `${r.height + PAD * 2}px`,
+  });
+
+  const cx       = r.left + r.width / 2;
+  const cardLeft = Math.max(12, Math.min(cx - CW / 2, window.innerWidth - CW - 12));
+  const cardTop  = window.innerHeight - r.bottom - PAD - 20 > 160
+    ? r.bottom + PAD + 20
+    : Math.max(12, r.top - PAD - 20 - 170);
+
+  Object.assign(card.style, { top: `${cardTop}px`, left: `${cardLeft}px`, transform: 'none' });
+}
+
+function _tutNext() {
+  _tutStep++;
+  if (_tutStep >= TUT_STEPS.length) { _tutDone(); return; }
+  _renderTutStep();
+}
+
+function _tutDone() {
+  document.getElementById('tutorial-overlay').classList.add('hidden');
+  chrome.storage.local.set({ tutorialDone: true });
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   await load();
   await loadTheme();
   render();
+
+  // Tutorial: wire buttons first, then check if first launch
+  document.getElementById('tutorial-next').addEventListener('click', _tutNext);
+  document.getElementById('tutorial-skip').addEventListener('click', _tutDone);
+  chrome.storage.local.get('tutorialDone', r => { if (!r.tutorialDone) _startTutorial(); });
 
   // Add button (fixed, bottom-right)
   document.getElementById('add-btn').addEventListener('click', openAddModal);
@@ -1496,6 +1583,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone(); return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
     }
