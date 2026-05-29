@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foyer · App Icon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #16130D;
+  --surface: #201C14;
+  --fg:      rgba(255,248,234,0.90);
+  --fg-4:    rgba(255,248,234,0.22);
+  --line:    rgba(255,248,234,0.07);
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 68px 48px 110px;
+}
+.wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 64px; width: 100%; max-width: 880px;
+}
+.pg-header {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+}
+.mono-sm {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--fg-4);
+}
+.hero { display: flex; flex-direction: column; align-items: center; gap: 44px; }
+.wordmark { display: flex; align-items: center; gap: 20px; }
+.app-name { font-size: 36px; font-weight: 600; letter-spacing: -0.045em; line-height: 1; }
+.app-sub {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.11em; text-transform: uppercase; color: var(--fg-4); margin-top: 7px;
+}
+.divider { width: 100%; height: 1px; background: var(--line); }
+.section { display: flex; flex-direction: column; width: 100%; gap: 24px; }
+.size-row { display: flex; align-items: flex-end; gap: 22px; flex-wrap: wrap; }
+.size-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.size-text { font-family: var(--font-mono); font-size: 10px; color: var(--fg-4); letter-spacing: 0.04em; }
+.ctx-row { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
+.ctx-card {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 13px; padding: 24px 18px; border-radius: 14px; flex: 1; min-width: 108px;
+}
+.c-d0 { background: #090705; }
+.c-d1 { background: #1A1710; border: 1px solid rgba(255,248,234,0.06); }
+.c-d2 { background: #2C2820; }
+.c-w1 { background: #EAE2D8; }
+.c-w2 { background: #F5F1EA; }
+.c-w3 { background: #FFFFFF; }
+.ctx-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; }
+.c-d0 .ctx-lbl, .c-d1 .ctx-lbl, .c-d2 .ctx-lbl { color: rgba(255,248,234,0.22); }
+.c-w1 .ctx-lbl, .c-w2 .ctx-lbl, .c-w3 .ctx-lbl { color: rgba(28,18,8,0.30); }
+.spec-strip {
+  display: flex; gap: 28px; flex-wrap: wrap; width: 100%;
+  padding: 20px 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.spec-item { display: flex; flex-direction: column; gap: 5px; }
+.spec-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--fg-4); }
+.spec-value { font-family: var(--font-mono); font-size: 12px; color: rgba(255,248,234,0.60); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="pg-header">
+    <span class="mono-sm">── Foyer · App Icon</span>
+    <span class="mono-sm">May 2026</span>
+  </div>
+
+  <div class="hero" id="hero"></div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <span class="mono-sm">Size specimens</span>
+    <div class="size-row" id="sizes"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <span class="mono-sm">On surface</span>
+    <div class="ctx-row" id="ctxs"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <span class="mono-sm">Design spec</span>
+    <div class="spec-strip" id="spec"></div>
+  </div>
+
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────
+   FOYER ICON  v2 — warm, minimal, architectural
+   Inspired by the reference image: a Roman arch foyer with cream
+   plaster walls, warm stone frame, and golden afternoon light
+   flooding through an inner arched door.
+
+   Composition (1024 × 1024):
+   ① Warm cream radial background
+   ② Arch interior — luminous pale cream, brighter at top
+   ③ Inner arched door — warm amber-gold (afternoon light through glass)
+   ④ Main arch frame — warm taupe/stone gradient, lighter at apex
+   ⑤ Soffit highlight — thin bright edge at inner arch intrados
+   ⑥ Floor threshold — very subtle warm line
+   ─────────────────────────────────────────────────────────────────
+   Arch geometry (all radii are true semicircles for clean proportion):
+     Arch center    (512, 460)
+     Outer radius   235  →  feet at x = 277 / 747
+     Inner radius   168  →  feet at x = 344 / 680
+     Frame thickness  67 px  (uniform at keystone & pillar sides)
+     Outer apex     y = 225
+     Inner apex     y = 292
+     Pillar legs    y = 800 ↑ y = 460
+     Floor          y = 800
+   Inner door (in perspective, centred in opening):
+     Door center    (512, 612)
+     Radius         68  →  feet at x = 444 / 580
+     Legs           y = 800 ↑ y = 612
+     Door apex      y = 544
+   ───────────────────────────────────────────────────────────────── */
+
+let _n = 0;
+
+function icon(w, h) {
+  const n = ++_n;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 1024 1024"
+    xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
+<defs>
+
+  <!-- Rounded square — rx/1024 = 270/1024 ≈ 26% (soft, app-icon feel) -->
+  <clipPath id="cp${n}">
+    <rect width="1024" height="1024" rx="270" ry="270"/>
+  </clipPath>
+
+  <!-- ① Warm cream background — slightly lighter in centre -->
+  <radialGradient id="bg${n}" cx="50%" cy="46%" r="68%">
+    <stop offset="0%"   stop-color="#F7F1E7"/>
+    <stop offset="100%" stop-color="#E4D9C6"/>
+  </radialGradient>
+
+  <!-- ② Arch interior — overhead light brightens the top of the space -->
+  <radialGradient id="ai${n}" cx="512" cy="320" r="360"
+      gradientUnits="userSpaceOnUse">
+    <stop offset="0%"   stop-color="#FEFAF3"/>
+    <stop offset="100%" stop-color="#EEE4D6"/>
+  </radialGradient>
+
+  <!-- ④ Arch frame — lighter at apex (sky-facing), deeper at base -->
+  <linearGradient id="af${n}" x1="0" y1="225" x2="0" y2="800"
+      gradientUnits="userSpaceOnUse">
+    <stop offset="0%"   stop-color="#D6C8AA"/>
+    <stop offset="50%"  stop-color="#C4B38E"/>
+    <stop offset="100%" stop-color="#AE9870"/>
+  </linearGradient>
+
+</defs>
+
+<g clip-path="url(#cp${n})">
+
+  <!-- ① Background -->
+  <rect width="1024" height="1024" fill="url(#bg${n})"/>
+
+  <!-- ② Arch interior space — luminous overhead light -->
+  <path d="M 344,800 L 344,460 A 168,168 0 0,1 680,460 L 680,800 Z"
+        fill="url(#ai${n})"/>
+
+  <!-- ④ Main arch frame (even-odd: outer minus inner = the stone frame) -->
+  <path d="M 277,800 L 277,460 A 235,235 0 0,1 747,460 L 747,800 Z
+           M 344,800 L 344,460 A 168,168 0 0,1 680,460 L 680,800 Z"
+        fill="url(#af${n})" fill-rule="evenodd"/>
+
+  <!-- ⑤ Inner arch soffit highlight — thin bright crest at intrados -->
+  <path d="M 344,460 A 168,168 0 0,1 680,460"
+        fill="none" stroke="#EAD9BE" stroke-width="3.5"
+        opacity="0.70" stroke-linecap="round"/>
+
+  <!-- Outer arch crest — very faint, frames the arch top -->
+  <path d="M 277,460 A 235,235 0 0,1 747,460"
+        fill="none" stroke="#DDD0B8" stroke-width="2"
+        opacity="0.28" stroke-linecap="round"/>
+
+  <!-- ⑥ Floor threshold line -->
+  <line x1="196" y1="800" x2="828" y2="800"
+        stroke="#BEAC8A" stroke-width="2.5" opacity="0.36"
+        stroke-linecap="round"/>
+
+</g>
+</svg>`;
+}
+
+/* ─── Hero ─── */
+document.getElementById('hero').innerHTML = `
+  ${icon(280, 280)}
+  <div class="wordmark">
+    ${icon(52, 52)}
+    <div>
+      <div class="app-name">foyer</div>
+      <div class="app-sub">gather · connect · belong</div>
+    </div>
+  </div>`;
+
+/* ─── Size specimens ─── */
+document.getElementById('sizes').innerHTML = [
+  [196,'1024px'],[128,'512px'],[84,'256px'],
+  [62,'128px'],[46,'64px'],[34,'40px'],[24,'29px']
+].map(([s,l]) => `<div class="size-item">${icon(s,s)}<span class="size-text">${l}</span></div>`).join('');
+
+/* ─── Context swatches ─── */
+document.getElementById('ctxs').innerHTML = [
+  ['c-d0','Midnight'],['c-d1','Dark'],['c-d2','Dim'],
+  ['c-w1','Warm'],['c-w2','Light'],['c-w3','White']
+].map(([c,l]) => `<div class="ctx-card ${c}">${icon(76,76)}<span class="ctx-lbl">${l}</span></div>`).join('');
+
+/* ─── Spec strip ─── */
+document.getElementById('spec').innerHTML = `
+  <div class="spec-item">
+    <span class="spec-label">Canvas</span>
+    <span class="spec-value">1024 × 1024 px</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Corner radius</span>
+    <span class="spec-value">rx = 270 (26.4%)</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Arch outer r</span>
+    <span class="spec-value">235 px</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Arch inner r</span>
+    <span class="spec-value">168 px · 67 px frame</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Frame top</span>
+    <span class="spec-value"><span class="dot" style="background:#D6C8AA"></span>#D6C8AA</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Frame base</span>
+    <span class="spec-value"><span class="dot" style="background:#AE9870"></span>#AE9870</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Interior</span>
+    <span class="spec-value"><span class="dot" style="background:#FEFAF3"></span>Warm cream</span>
+  </div>
+  <div class="spec-item">
+    <span class="spec-label">Inner door</span>
+    <span class="spec-value"><span class="dot" style="background:#F5E6BE"></span>Amber gold</span>
+  </div>`;
+</script>
+</body>
+</html>
