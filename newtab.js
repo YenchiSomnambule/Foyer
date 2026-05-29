@@ -1313,6 +1313,8 @@ function applyTheme(theme) {
   document.querySelectorAll('.swatch').forEach(s => {
     s.classList.toggle('active', s.dataset.theme === theme);
   });
+  // Restore rainbow when switching away from custom
+  document.getElementById('swatch-custom')?.style.removeProperty('background');
 }
 
 function hexToHsl(hex) {
@@ -1336,21 +1338,23 @@ function hexToHsl(hex) {
 function applyCustomColor(hex) {
   const [h, s, l] = hexToHsl(hex);
   const blobS = Math.max(s - 10, 25);
-  const blobL = Math.min(l + 32, 92);
-  const baseL = Math.max(l - 8, 12);
+  // Ensure blobs are always visible: minimum 35% lightness so they show on very dark picks
+  const blobL = Math.min(Math.max(l + 28, 35), 92);
+  const baseL = Math.max(l - 8, 10);
 
   document.body.style.background = [
     `radial-gradient(ellipse 80% 60% at 28% 22%, hsla(${h},${blobS}%,${blobL}%,0.72) 0%, transparent 60%)`,
-    `radial-gradient(ellipse 70% 55% at 72% 65%, hsla(${(h+10)%360},${blobS}%,${Math.max(blobL-3,30)}%,0.62) 0%, transparent 55%)`,
-    `radial-gradient(ellipse 50% 45% at 14% 78%, hsla(${h},${Math.min(blobS+5,100)}%,${Math.max(blobL-1,30)}%,0.52) 0%, transparent 50%)`,
-    `radial-gradient(ellipse 55% 50% at 86% 18%, hsla(${(h-5+360)%360},${Math.max(blobS-3,20)}%,${Math.max(blobL-2,30)}%,0.55) 0%, transparent 52%)`,
+    `radial-gradient(ellipse 70% 55% at 72% 65%, hsla(${(h+10)%360},${blobS}%,${Math.max(blobL-3,32)}%,0.62) 0%, transparent 55%)`,
+    `radial-gradient(ellipse 50% 45% at 14% 78%, hsla(${h},${Math.min(blobS+5,100)}%,${Math.max(blobL-1,33)}%,0.52) 0%, transparent 50%)`,
+    `radial-gradient(ellipse 55% 50% at 86% 18%, hsla(${(h-5+360)%360},${Math.max(blobS-3,20)}%,${Math.max(blobL-2,33)}%,0.55) 0%, transparent 52%)`,
     `linear-gradient(155deg, hsl(${h},${s}%,${baseL}%) 0%, hsl(${(h+5)%360},${s}%,${baseL+5}%) 28%, hsl(${h},${s}%,${baseL+8}%) 55%, hsl(${(h+5)%360},${s}%,${baseL+5}%) 78%, hsl(${h},${s}%,${baseL}%) 100%)`
   ].join(', ');
 
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
   document.body.classList.add('theme-custom');
 
-  if (l > 65) {
+  // Threshold 55: light backgrounds (l>=55) get dark text; dark gets explicit white
+  if (l >= 55) {
     document.body.style.setProperty('--text-color', 'rgba(30,25,15,0.85)');
     document.body.style.setProperty('--text-shadow', '0 1px 3px rgba(255,255,255,0.45)');
     document.body.style.setProperty('--glass', 'rgba(0,0,0,0.07)');
@@ -1360,13 +1364,23 @@ function applyCustomColor(hex) {
     document.body.style.setProperty('--add-btn-border', 'rgba(0,0,0,0.22)');
     document.body.style.setProperty('--add-btn-color', 'rgba(30,25,15,0.75)');
   } else {
-    ['--text-color','--text-shadow','--glass','--glass-border',
-     '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color']
-      .forEach(p => document.body.style.removeProperty(p));
+    // Explicitly set white-text dark-mode values rather than relying on :root defaults
+    document.body.style.setProperty('--text-color', 'rgba(255,255,255,0.92)');
+    document.body.style.setProperty('--text-shadow', '0 1px 4px rgba(0,0,0,0.5)');
+    document.body.style.setProperty('--glass', 'rgba(255,255,255,0.14)');
+    document.body.style.setProperty('--glass-border', 'rgba(255,255,255,0.22)');
+    document.body.style.setProperty('--overlay-bg', 'rgba(0,0,0,0.45)');
+    document.body.style.setProperty('--add-btn-bg', 'rgba(255,255,255,0.14)');
+    document.body.style.setProperty('--add-btn-border', 'rgba(255,255,255,0.22)');
+    document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
   }
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-  document.getElementById('swatch-custom')?.classList.add('active');
+  const customSwatch = document.getElementById('swatch-custom');
+  if (customSwatch) {
+    customSwatch.classList.add('active');
+    customSwatch.style.background = hex;  // Show chosen color instead of rainbow
+  }
 }
 
 function saveCustomColor(hex) {
