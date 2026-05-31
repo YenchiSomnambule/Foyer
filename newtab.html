@@ -120,8 +120,18 @@
       <button class="swatch" data-theme="dark"   title="Dark"></button>
       <button class="swatch" data-theme="cream"  title="Cream"></button>
       <button class="swatch swatch-custom" id="swatch-custom" title="Custom color"></button>
+      <div class="swatch-separator"></div>
+      <button class="swatch swatch-image" id="swatch-image" title="Background image">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </button>
     </div>
     <input type="color" id="custom-color-input" value="#4a90d9"
+           style="position:fixed;opacity:0;pointer-events:none;width:0;height:0">
+    <input type="file" id="bg-image-input" accept="image/*"
            style="position:fixed;opacity:0;pointer-events:none;width:0;height:0">
   </div>
 

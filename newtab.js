@@ -1303,18 +1303,20 @@ function addSite() {
 const THEMES = ['pink', 'blue', 'yellow', 'dark', 'cream'];
 
 function applyTheme(theme) {
-  document.body.style.removeProperty('background');
+  ['background','background-image','background-size','background-position','background-repeat']
+    .forEach(p => document.body.style.removeProperty(p));
   ['--text-color','--text-shadow','--glass','--glass-border',
    '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color']
     .forEach(p => document.body.style.removeProperty(p));
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
   document.body.classList.remove('theme-custom');
+  document.body.classList.remove('theme-image');
   document.body.classList.add(`theme-${theme}`);
   document.querySelectorAll('.swatch').forEach(s => {
     s.classList.toggle('active', s.dataset.theme === theme);
   });
-  // Restore rainbow when switching away from custom
   document.getElementById('swatch-custom')?.style.removeProperty('background');
+  _resetImageSwatch();
 }
 
 function hexToHsl(hex) {
@@ -1351,7 +1353,9 @@ function applyCustomColor(hex) {
   ].join(', ');
 
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
+  document.body.classList.remove('theme-image');
   document.body.classList.add('theme-custom');
+  _resetImageSwatch();
 
   // Threshold 55: light backgrounds (l>=55) get dark text; dark gets explicit white
   if (l >= 55) {
@@ -1393,12 +1397,15 @@ function saveTheme(theme) {
 
 async function loadTheme() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['theme', 'customColor'], r => {
+    chrome.storage.local.get(['theme', 'customColor', 'bgImage'], r => {
       if (r.theme === 'custom' && r.customColor) {
         applyCustomColor(r.customColor);
         const inp = document.getElementById('custom-color-input');
         if (inp) inp.value = r.customColor;
         resolve('custom');
+      } else if (r.theme === 'image' && r.bgImage) {
+        applyBgImage(r.bgImage);
+        resolve('image');
       } else {
         const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
         applyTheme(theme);
@@ -1406,6 +1413,70 @@ async function loadTheme() {
       }
     });
   });
+}
+
+// ─── Image background ────────────────────────────────────────────────────────
+
+function compressImage(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1920;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        const r = Math.min(MAX / width, MAX / height);
+        width  = Math.round(width * r);
+        height = Math.round(height * r);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+function _resetImageSwatch() {
+  const btn = document.getElementById('swatch-image');
+  if (btn) {
+    btn.style.removeProperty('background-image');
+    btn.style.removeProperty('background-size');
+    btn.style.removeProperty('background-position');
+  }
+}
+
+function applyBgImage(dataUrl) {
+  document.body.style.background = `url("${dataUrl}") center/cover no-repeat`;
+  THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
+  document.body.classList.remove('theme-custom');
+  document.body.classList.add('theme-image');
+
+  // White-text vars — readable over arbitrary photos
+  document.body.style.setProperty('--text-color',    'rgba(255,255,255,0.92)');
+  document.body.style.setProperty('--text-shadow',   '0 1px 4px rgba(0,0,0,0.6)');
+  document.body.style.setProperty('--glass',         'rgba(255,255,255,0.18)');
+  document.body.style.setProperty('--glass-border',  'rgba(255,255,255,0.28)');
+  document.body.style.setProperty('--overlay-bg',    'rgba(0,0,0,0.5)');
+  document.body.style.setProperty('--add-btn-bg',    'rgba(255,255,255,0.18)');
+  document.body.style.setProperty('--add-btn-border','rgba(255,255,255,0.28)');
+  document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
+
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  const btn = document.getElementById('swatch-image');
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.backgroundImage  = `url("${dataUrl}")`;
+    btn.style.backgroundSize   = 'cover';
+    btn.style.backgroundPosition = 'center';
+  }
+}
+
+function saveBgImage(dataUrl) {
+  chrome.storage.local.set({ theme: 'image', bgImage: dataUrl });
 }
 
 // ─── Tutorial ────────────────────────────────────────────────────────────────
@@ -1615,5 +1686,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   colorInput.addEventListener('input', e => {
     applyCustomColor(e.target.value);
     saveCustomColor(e.target.value);
+  });
+
+  // Image background picker
+  const swatchImage  = document.getElementById('swatch-image');
+  const bgImageInput = document.getElementById('bg-image-input');
+  swatchImage.addEventListener('click', e => {
+    e.stopPropagation();
+    bgImageInput.click();
+  });
+  bgImageInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const dataUrl = await compressImage(file);
+    if (!dataUrl) return;
+    applyBgImage(dataUrl);
+    saveBgImage(dataUrl);
+    themeSwatches.classList.add('hidden');
+    e.target.value = ''; // reset so same file can be re-picked
   });
 });

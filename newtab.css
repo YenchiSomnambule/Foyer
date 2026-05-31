@@ -802,6 +802,39 @@ body.theme-custom .swatch-custom.active,
   box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px rgba(0,0,0,0.35);
 }
 
+.swatch-separator {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 2px 0;
+  flex-shrink: 0;
+}
+
+.swatch-image {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color);
+  opacity: 0.60;
+  overflow: hidden;
+  position: relative;
+}
+.swatch-image svg {
+  pointer-events: none;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.swatch-image:hover { opacity: 1; }
+
+.swatch-image.active {
+  opacity: 1;
+  box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px rgba(0,0,0,0.35);
+}
+
 /* ─── Tutorial ─── */
 #tutorial-overlay {
   position: fixed;
