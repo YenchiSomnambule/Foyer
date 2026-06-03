@@ -882,11 +882,12 @@ function showGroupSiteCtx(e, groupId, siteId) {
     const site = group.items.find(s => s.id === siteId);
     if (!site) return;
 
+    // Remove site from group and put it back on the main grid
     group.items = group.items.filter(s => s.id !== siteId);
     items.push({ id: uid(), type: 'site', name: site.name, url: site.url, favicon: site.favicon });
 
+    // Dissolve group if fewer than 2 items remain
     if (group.items.length <= 1) {
-      // Group dissolves: unpack the last item (if any) and close
       if (group.items.length === 1) {
         const rem = group.items[0];
         items = items.filter(i => i.id !== groupId);
@@ -894,21 +895,12 @@ function showGroupSiteCtx(e, groupId, siteId) {
       } else {
         items = items.filter(i => i.id !== groupId);
       }
-      save().then(render);
-      closeCtxMenu();
-      closeGroup();
-      return;
     }
 
-    // Group still has 2+ icons — stay on the same page
-    const tileDom = document.querySelector(
-      `#group-pages-track .group-site-tile[data-site-id="${siteId}"]`
-    );
-    if (tileDom) tileDom.remove();
-
-    _refreshGroupTile(groupId); // update mini-preview on main grid immediately
-    save().then(render);        // persist and refresh standalone icon on main grid
+    save();
+    render();
     closeCtxMenu();
+    closeGroup();
   });
   positionAndShow(menu, e.clientX, e.clientY);
 }
