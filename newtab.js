@@ -92,6 +92,7 @@ let gpInsertSlot = -1;     // Slot index where the dragged icon would land if dr
 let gpDragPage   = null;   // The .group-page element we're currently reordering within
 let _gpEdgeCooldown = false;
 let _gpEdgeCooldownTimer = null;
+let _gpDraggingOut = false;   // true when the drag clone is outside the group panel
 const _GP_DIST = 6;
 const _GP_EASE = 'cubic-bezier(0.25,0.46,0.45,0.94)';
 const _GP_DUR  = 380; // ms
@@ -522,6 +523,7 @@ function buildGroupSiteTile(site, groupId) {
 function _gpInitDrag(el, rect) {
   if (_gpEdgeCooldownTimer) { clearTimeout(_gpEdgeCooldownTimer); _gpEdgeCooldownTimer = null; }
   _gpEdgeCooldown = false;
+  _gpDraggingOut  = false;
 
   gpDragPage = el.closest('.group-page');
   const tiles = [...gpDragPage.querySelectorAll('.group-site-tile')];
@@ -595,9 +597,32 @@ function _gpMoveDrag(cx, cy) {
   gpDragClone.style.left = (cx - gpOffX) + 'px';
   gpDragClone.style.top  = (cy - gpOffY) + 'px';
 
+  // Detect whether the cursor is outside the group panel
+  const pr     = document.getElementById('group-panel').getBoundingClientRect();
+  const wasOut = _gpDraggingOut;
+  _gpDraggingOut = cx < pr.left || cx > pr.right || cy < pr.top || cy > pr.bottom;
+
+  if (_gpDraggingOut) {
+    // Shrink clone to signal "release here = back to main grid"
+    gpDragClone.style.transform = 'scale(0.85)';
+    gpDragClone.style.opacity   = '0.7';
+    // Reset any reorder previews so group tiles snap back to their natural positions
+    if (!wasOut && gpDragPage) {
+      [...gpDragPage.querySelectorAll('.group-site-tile')].forEach(t => {
+        t.style.transform = '';
+      });
+    }
+    return;
+  }
+
+  // Re-entering the panel: restore clone appearance
+  if (wasOut) {
+    gpDragClone.style.transform = 'scale(1.12)';
+    gpDragClone.style.opacity   = '0.92';
+  }
+
   // Edge-flip: dragging toward a panel edge moves the icon to the adjacent page
   if (!_gpEdgeCooldown) {
-    const pr   = document.getElementById('group-panel').getBoundingClientRect();
     const EDGE = 56;
     if (cx < pr.left + EDGE && groupCurrentPage > 0) {
       _gpFlipToPage(groupCurrentPage - 1, true);
@@ -705,6 +730,40 @@ function _gpCommitDrag(groupId) {
   _gpEdgeCooldown = false;
   gpDragClone?.remove(); gpDragClone = null;
   if (gpDragSrcEl) gpDragSrcEl.style.opacity = '';
+
+  // Dropped outside the group panel → move site back to main grid
+  const wasDraggingOut = _gpDraggingOut;
+  _gpDraggingOut = false;
+
+  if (wasDraggingOut && gpDragSrcId) {
+    const group = items.find(i => i.id === groupId);
+    if (group) {
+      const site = group.items.find(s => s.id === gpDragSrcId);
+      if (site) {
+        group.items = group.items.filter(s => s.id !== gpDragSrcId);
+        items.push({ id: uid(), type: 'site', name: site.name, url: site.url, favicon: site.favicon });
+
+        if (group.items.length <= 1) {
+          if (group.items.length === 1) {
+            const rem = group.items[0];
+            items = items.filter(i => i.id !== groupId);
+            items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
+          } else {
+            items = items.filter(i => i.id !== groupId);
+          }
+        }
+      }
+    }
+    _gpSuppressClick = true;
+    requestAnimationFrame(() => { _gpSuppressClick = false; });
+    gpDragSrcId = null; gpDragSrcEl = null;
+    gpSlotRects = null; gpInsertSlot = -1; gpDragPage = null;
+    gpActive = false;
+    save();
+    render();
+    closeGroup();
+    return;
+  }
 
   // Commit the visual order to the DOM: re-append tiles in the order they're
   // currently displayed, then clear all transforms so layout matches DOM order.
