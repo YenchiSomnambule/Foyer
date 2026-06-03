@@ -875,16 +875,13 @@ function initGroupPageDrag(container, track, dots) {
 
 function showGroupSiteCtx(e, groupId, siteId) {
   const menu = document.getElementById('context-menu');
-  menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="remove">Remove from group</button>`;
-  menu.querySelector('[data-action="remove"]').addEventListener('click', () => {
+  menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="delete">Delete</button>`;
+  menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
     const group = items.find(i => i.id === groupId);
     if (!group) return;
-    const site = group.items.find(s => s.id === siteId);
-    if (!site) return;
 
-    // Remove site from group and put it back on the main grid
+    // Permanently delete the site from the group
     group.items = group.items.filter(s => s.id !== siteId);
-    items.push({ id: uid(), type: 'site', name: site.name, url: site.url, favicon: site.favicon });
 
     // Dissolve group if fewer than 2 items remain
     if (group.items.length <= 1) {
