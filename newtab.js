@@ -109,21 +109,22 @@ function debouncedSave() {
 
 // ─── Undo ─────────────────────────────────────────────────────────────────────
 
-let _undoSnapshot = null;
+const _undoStack  = [];   // newest at end
+const UNDO_LIMIT  = 10;
 let _toastTimer   = null;
 const _isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 function _snapshotForUndo() {
-  _undoSnapshot = JSON.parse(JSON.stringify(items));
+  _undoStack.push(JSON.parse(JSON.stringify(items)));
+  if (_undoStack.length > UNDO_LIMIT) _undoStack.shift();
 }
 
 function doUndo() {
-  if (!_undoSnapshot) return;
-  items = _undoSnapshot;
-  _undoSnapshot = null;
+  if (!_undoStack.length) return;
+  items = _undoStack.pop();
   save();
   render();
-  _showToast('Restored');
+  _showToast(_undoStack.length ? `Restored · ${_undoStack.length} more` : 'Restored');
 }
 
 function _showToast(msg) {
@@ -549,13 +550,9 @@ const TILE_SIZES = {
 };
 const SIZE_KEYS = ['xs', 's', 'm', 'l', 'xl'];
 
-const GOOGLE_SEARCH_URL = 'https://www.google.com/search?q=';
-
 function _engineUrl(q) {
-  return GOOGLE_SEARCH_URL + encodeURIComponent(q);
+  return 'https://www.google.com/search?q=' + encodeURIComponent(q);
 }
-
-async function loadEngine() {}
 
 let _currentTileSize = 'm';
 
@@ -912,6 +909,20 @@ function _commitDrag() {
   render();
 }
 
+// Returns true if the group was dissolved (removed or replaced), false if it survives.
+function _dissolveGroupIfNeeded(groupId) {
+  const group = items.find(i => i.id === groupId);
+  if (!group || group.items.length > 1) return false;
+  if (group.items.length === 1) {
+    const rem = group.items[0];
+    items = items.filter(i => i.id !== groupId);
+    items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
+  } else {
+    items = items.filter(i => i.id !== groupId);
+  }
+  return true;
+}
+
 function _newGroupName() {
   const names = new Set(items.filter(i => i.type === 'group').map(i => i.name));
   if (!names.has('New Group')) return 'New Group';
@@ -1259,15 +1270,7 @@ function _gpCommitDrag(groupId) {
         group.items = group.items.filter(s => s.id !== gpDragSrcId);
         items.push({ id: uid(), type: 'site', name: site.name, url: site.url, favicon: site.favicon });
 
-        if (group.items.length <= 1) {
-          if (group.items.length === 1) {
-            const rem = group.items[0];
-            items = items.filter(i => i.id !== groupId);
-            items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
-          } else {
-            items = items.filter(i => i.id !== groupId);
-          }
-        }
+        _dissolveGroupIfNeeded(groupId);
       }
     }
     _gpSuppressClick = true;
@@ -1447,6 +1450,7 @@ function initGroupPageDrag(container, track, dots) {
     dots.querySelectorAll('.group-dot').forEach((d, i) =>
       d.classList.toggle('active', i === groupCurrentPage)
     );
+    _updateGroupHints();
   }
 
   container.addEventListener('mousedown', onStart);
@@ -1471,17 +1475,7 @@ function showGroupSiteCtx(e, groupId, siteId) {
     // Permanently delete the site from the group
     group.items = group.items.filter(s => s.id !== siteId);
 
-    // Dissolve group if fewer than 2 items remain
-    if (group.items.length <= 1) {
-      if (group.items.length === 1) {
-        const rem = group.items[0];
-        items = items.filter(i => i.id !== groupId);
-        items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
-      } else {
-        items = items.filter(i => i.id !== groupId);
-      }
-    }
-
+    _dissolveGroupIfNeeded(groupId);
     save();
     render();
     closeCtxMenu();
@@ -2655,13 +2649,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadTheme();
   await loadTileSize();
   await loadModalDark();
-  await loadEngine();
+
   await loadShortcuts();
   render();
 
-  // Clock — tick immediately then every second
+  // Clock — tick immediately; pause when tab is hidden to save CPU
   _tickClock();
-  setInterval(_tickClock, 1000);
+  let _clockInterval = setInterval(_tickClock, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInterval(_clockInterval);
+    } else {
+      _tickClock();
+      _clockInterval = setInterval(_tickClock, 1000);
+    }
+  });
 
   // Weather — fire and forget (updates UI async)
   _loadWeather();
@@ -2828,14 +2830,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tileIdx = tiles.findIndex(t => t.dataset.siteId === _gpFocusedSiteId);
         _snapshotForUndo();
         group.items = group.items.filter(s => s.id !== _gpFocusedSiteId);
-        if (group.items.length <= 1) {
-          if (group.items.length === 1) {
-            const rem = group.items[0];
-            items = items.filter(i => i.id !== openGroupId);
-            items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
-          } else {
-            items = items.filter(i => i.id !== openGroupId);
-          }
+        if (_dissolveGroupIfNeeded(openGroupId)) {
           save(); render(); closeGroup();
         } else {
           const savedGroupId  = openGroupId;
