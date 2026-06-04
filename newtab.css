@@ -1092,3 +1092,29 @@ body.theme-custom .swatch-custom.active,
   color: var(--sb-muted);
   font-size: 14px;
 }
+
+/* ─── Toast / Undo notification ─────────────────────────────────────────────── */
+
+#toast {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(22,22,28,0.97);
+  color: rgba(255,255,255,0.88);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 700;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

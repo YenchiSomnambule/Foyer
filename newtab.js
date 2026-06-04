@@ -105,6 +105,33 @@ function debouncedSave() {
   _saveTimer = setTimeout(() => save(), 400);
 }
 
+// ─── Undo ─────────────────────────────────────────────────────────────────────
+
+let _undoSnapshot = null;
+let _toastTimer   = null;
+const _isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+function _snapshotForUndo() {
+  _undoSnapshot = JSON.parse(JSON.stringify(items));
+}
+
+function doUndo() {
+  if (!_undoSnapshot) return;
+  items = _undoSnapshot;
+  _undoSnapshot = null;
+  save();
+  render();
+  _showToast('Restored');
+}
+
+function _showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 async function load() {
@@ -938,6 +965,7 @@ function showGroupSiteCtx(e, groupId, siteId) {
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
     const group = items.find(i => i.id === groupId);
     if (!group) return;
+    _snapshotForUndo();
 
     // Permanently delete the site from the group
     group.items = group.items.filter(s => s.id !== siteId);
@@ -957,6 +985,7 @@ function showGroupSiteCtx(e, groupId, siteId) {
     render();
     closeCtxMenu();
     closeGroup();
+    _showToast(`Deleted · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
   });
   positionAndShow(menu, e.clientX, e.clientY);
 }
@@ -992,9 +1021,11 @@ function showCtxMenu(x, y, id) {
     openEditModal(id);
   });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    _snapshotForUndo();
     items = items.filter(i => i.id !== id);
     save().then(render);
     closeCtxMenu();
+    _showToast(`Deleted · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
   });
   positionAndShow(menu, x, y);
 }
@@ -1821,6 +1852,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
+      return;
+    }
+    // ⌘Z / Ctrl+Z → undo last delete
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      doUndo();
       return;
     }
     // ⌘K / Ctrl+K or "/" → open search (not when an input is focused or a modal is open)
