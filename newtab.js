@@ -1482,13 +1482,55 @@ function attachContextMenu(tile, id) {
   });
 }
 
+function _groupSelectedTiles(anchorId) {
+  _snapshotForUndo();
+  const selected = items.filter(i => _selectedIds.has(i.id));
+
+  // Build flat list of site entries from selected tiles (flatten any nested groups)
+  const groupItems = [];
+  selected.forEach(item => {
+    if (item.type === 'site') {
+      groupItems.push({ id: uid(), name: item.name, url: item.url, favicon: item.favicon });
+    } else if (item.type === 'group') {
+      (item.items ?? []).forEach(s =>
+        groupItems.push({ id: uid(), name: s.name, url: s.url, favicon: s.favicon })
+      );
+    }
+  });
+
+  // Determine insert position: where the anchor tile sits, accounting for removals
+  const anchorOrigIdx = items.findIndex(i => i.id === anchorId);
+  let insertIdx = 0;
+  for (let i = 0; i < anchorOrigIdx; i++) {
+    if (!_selectedIds.has(items[i].id)) insertIdx++;
+  }
+
+  const newGroup = { id: uid(), type: 'group', name: 'New Group', items: groupItems };
+  items = items.filter(i => !_selectedIds.has(i.id));
+  items.splice(insertIdx, 0, newGroup);
+
+  _clearSel();
+  closeCtxMenu();
+  save().then(() => {
+    render();
+    setTimeout(() => promptRename(newGroup.id), 50);
+  });
+  _showToast(`Grouped ${selected.length} tiles · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+}
+
 function showCtxMenu(x, y, id) {
   const menu = document.getElementById('context-menu');
 
-  // Bulk-delete: right-clicked tile is part of a multi-tile selection
+  // Multi-select actions: right-clicked tile is part of a multi-tile selection
   if (_selectedIds.size > 1 && _selectedIds.has(id)) {
     const count = _selectedIds.size;
-    menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="delete-sel">Delete ${count} tiles</button>`;
+    menu.innerHTML = `
+      <button class="ctx-item" data-action="group-sel">Group ${count} tiles</button>
+      <button class="ctx-item ctx-danger" data-action="delete-sel">Delete ${count} tiles</button>
+    `;
+    menu.querySelector('[data-action="group-sel"]').addEventListener('click', () => {
+      _groupSelectedTiles(id);
+    });
     menu.querySelector('[data-action="delete-sel"]').addEventListener('click', () => {
       _snapshotForUndo();
       items = items.filter(i => !_selectedIds.has(i.id));
