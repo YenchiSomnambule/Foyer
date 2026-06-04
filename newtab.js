@@ -1931,6 +1931,41 @@ function _showConfirm(title, body, labelOk, onOk) {
   canBtn.addEventListener('click', close);
 }
 
+function doExportBookmarksHtml() {
+  let inner = '';
+  for (const item of items) {
+    if (item.type === 'group') {
+      inner += `    <DT><H3>${escHtml(item.name)}</H3>\n    <DL><p>\n`;
+      for (const site of (item.items ?? [])) {
+        inner += `        <DT><A HREF="${escHtml(site.url)}">${escHtml(site.name)}</A>\n`;
+      }
+      inner += `    </DL><p>\n`;
+    } else if (item.type === 'site') {
+      inner += `    <DT><A HREF="${escHtml(item.url)}">${escHtml(item.name)}</A>\n`;
+    }
+  }
+
+  const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- Exported from Foyer on ${new Date().toISOString().slice(0,10)} -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3>Foyer</H3>
+    <DL><p>
+${inner}    </DL><p>
+</DL><p>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `foyer-bookmarks-${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+  _showToast('Bookmarks HTML downloaded');
+}
+
 function doImportJson(file) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -2312,6 +2347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('swatch-export-json').addEventListener('click', e => {
     e.stopPropagation();
     doExportJson();
+    themeSwatches.classList.add('hidden');
+  });
+  document.getElementById('swatch-export-html').addEventListener('click', e => {
+    e.stopPropagation();
+    doExportBookmarksHtml();
     themeSwatches.classList.add('hidden');
   });
   const jsonImportInput = document.getElementById('json-import-input');
