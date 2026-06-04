@@ -133,7 +133,6 @@ body {
 #weather-temp:hover { opacity: 0.6; }
 
 #weather-city-btn {
-  all: unset;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -148,6 +147,14 @@ body {
   opacity: 0.42;
   white-space: nowrap;
   transition: opacity 0.15s;
+  /* explicit button reset */
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
 }
 
 #weather-city-btn:hover { opacity: 0.68; }
@@ -166,7 +173,6 @@ body {
 #location-results:empty { display: none; }
 
 .loc-result {
-  all: unset;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -178,6 +184,14 @@ body {
   border-radius: 10px;
   transition: background 0.12s;
   box-sizing: border-box;
+  /* explicit button reset (avoids all:unset color inheritance issues) */
+  background: none;
+  border: none;
+  margin: 0;
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
 }
 
 .loc-result:hover { background: var(--glass-border); }
