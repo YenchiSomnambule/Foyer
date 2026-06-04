@@ -912,6 +912,14 @@ function _commitDrag() {
   render();
 }
 
+function _newGroupName() {
+  const names = new Set(items.filter(i => i.type === 'group').map(i => i.name));
+  if (!names.has('New Group')) return 'New Group';
+  let n = 1;
+  while (names.has(`New Group (${n})`)) n++;
+  return `New Group (${n})`;
+}
+
 function doGroup(srcId, tgtId) {
   const src = items.find(i => i.id === srcId);
   const tgt = items.find(i => i.id === tgtId);
@@ -931,7 +939,7 @@ function doGroup(srcId, tgtId) {
   } else if (src.type === 'site' && tgt.type === 'site') {
     // Create a new group from two sites
     const newGroup = {
-      id: uid(), type: 'group', name: 'New Group',
+      id: uid(), type: 'group', name: _newGroupName(),
       items: [
         { id: uid(), name: src.name, url: src.url },
         { id: uid(), name: tgt.name, url: tgt.url },
@@ -942,9 +950,6 @@ function doGroup(srcId, tgtId) {
     items = items.filter(i => i.id !== srcId);
     save();
     _showToast(`Grouped · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
-    // Prompt rename — dragend will render first, showing the "New Group" tile
-    // We delay slightly so render() has a chance to complete
-    setTimeout(() => promptRename(newGroup.id), 50);
   } else if (src.type === 'group' && tgt.type === 'site') {
     src.items = src.items ?? [];
     src.items.push({ id: uid(), name: tgt.name, url: tgt.url });
@@ -1510,16 +1515,13 @@ function _groupSelectedTiles(anchorId) {
     if (!_selectedIds.has(items[i].id)) insertIdx++;
   }
 
-  const newGroup = { id: uid(), type: 'group', name: 'New Group', items: groupItems };
+  const newGroup = { id: uid(), type: 'group', name: _newGroupName(), items: groupItems };
   items = items.filter(i => !_selectedIds.has(i.id));
   items.splice(insertIdx, 0, newGroup);
 
   _clearSel();
   closeCtxMenu();
-  save().then(() => {
-    render();
-    setTimeout(() => promptRename(newGroup.id), 50);
-  });
+  save().then(render);
   _showToast(`Grouped ${selected.length} tiles · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
 }
 
