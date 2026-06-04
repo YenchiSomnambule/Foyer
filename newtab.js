@@ -1682,14 +1682,14 @@ async function openImportModal() {
   btn.textContent = 'Import';
   document.getElementById('import-sel-count').textContent = '0 selected';
 
-  // Request permission on first use (must be called before any other await to retain user-gesture context)
-  let granted = false;
-  try {
-    granted = await chrome?.permissions?.request?.({ permissions: ['bookmarks'] }) ?? false;
-  } catch { /* non-extension or test context */ }
-
-  if (!granted || !chrome?.bookmarks) {
-    list.innerHTML = '<div class="bm-empty">Bookmark access not available.</div>';
+  if (!chrome?.bookmarks) {
+    list.innerHTML = `<div class="bm-empty" id="bm-no-access">
+      書籤 API 不可用。<br>
+      <button id="bm-reload-ext">重新載入擴充功能</button>
+    </div>`;
+    document.getElementById('bm-reload-ext').addEventListener('click', () => {
+      chrome?.runtime?.reload?.();
+    });
     return;
   }
 

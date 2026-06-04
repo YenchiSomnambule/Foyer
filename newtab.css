@@ -1006,7 +1006,23 @@ body.theme-custom .swatch-custom.active,
   text-align: center;
   color: rgba(255,255,255,0.35);
   font-size: 14px;
+  line-height: 1.7;
 }
+#bm-reload-ext {
+  margin-top: 12px;
+  padding: 7px 18px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font);
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+#bm-reload-ext:hover { opacity: 1; }
 
 /* ─── Tutorial ─── */
 #tutorial-overlay {
