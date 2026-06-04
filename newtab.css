@@ -263,6 +263,14 @@ body {
   pointer-events: none;
 }
 
+/* Keyboard focus ring */
+.tile.kb-focus .tile-icon {
+  box-shadow: 0 0 0 3px rgba(88, 150, 255, 1),
+              0 8px 28px rgba(0,0,0,0.45),
+              inset 0 1px 0 rgba(255,255,255,0.22);
+  transform: scale(1.06);
+}
+
 /* Marquee selection rectangle */
 #sel-box {
   position: fixed;

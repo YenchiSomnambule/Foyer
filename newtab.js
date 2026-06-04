@@ -68,6 +68,7 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 let items = [];
 let ctxTargetId = null;
 let openGroupId = null;
+let _focusedId  = null;   // keyboard-navigated tile id
 let pendingFavicon = null;
 let faviconEpoch   = 0;
 let editTargetId      = null;
@@ -347,6 +348,46 @@ async function _doLocationSearch(query) {
   }
 }
 
+// ─── Keyboard Navigation ──────────────────────────────────────────────────────
+
+function _getGridCols() {
+  const tpl = getComputedStyle(document.getElementById('grid')).gridTemplateColumns;
+  return tpl === 'none' ? 1 : tpl.trim().split(/\s+/).length;
+}
+
+function _focusTile(id) {
+  document.querySelectorAll('.tile.kb-focus').forEach(t => t.classList.remove('kb-focus'));
+  _focusedId = id;
+  if (!id) return;
+  const el = document.querySelector(`#grid [data-id="${id}"]`);
+  if (el) {
+    el.classList.add('kb-focus');
+    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function _navGrid(key) {
+  const tileEls = [...document.querySelectorAll('#grid .tile')];
+  if (!tileEls.length) return;
+
+  if (!_focusedId || !tileEls.some(t => t.dataset.id === _focusedId)) {
+    _focusTile(tileEls[0].dataset.id);
+    return;
+  }
+
+  const idx  = tileEls.findIndex(t => t.dataset.id === _focusedId);
+  const cols = _getGridCols();
+  const len  = tileEls.length;
+
+  let next = idx;
+  if (key === 'ArrowRight') next = Math.min(idx + 1, len - 1);
+  if (key === 'ArrowLeft')  next = Math.max(idx - 1, 0);
+  if (key === 'ArrowDown')  next = Math.min(idx + cols, len - 1);
+  if (key === 'ArrowUp')    next = Math.max(idx - cols, 0);
+
+  if (next !== idx) _focusTile(tileEls[next].dataset.id);
+}
+
 // ─── Tile Size ────────────────────────────────────────────────────────────────
 
 const TILE_SIZES = {
@@ -413,6 +454,12 @@ function render() {
   items.forEach(item => {
     grid.appendChild(item.type === 'group' ? buildGroupTile(item) : buildSiteTile(item));
   });
+  // Restore focus ring — clear stale id if the tile no longer exists
+  if (_focusedId) {
+    const el = grid.querySelector(`[data-id="${_focusedId}"]`);
+    if (el) el.classList.add('kb-focus');
+    else _focusedId = null;
+  }
 }
 
 function buildSiteTile(item) {
@@ -448,6 +495,7 @@ function buildSiteTile(item) {
 
   tile.addEventListener('click', e => {
     if (e.defaultPrevented || _suppressClick) return;
+    _focusTile(item.id);
     window.location.href = item.url;
   });
 
@@ -497,6 +545,7 @@ function buildGroupTile(item) {
 
   tile.addEventListener('click', e => {
     if (e.defaultPrevented || _suppressClick) return;
+    _focusTile(item.id);
     openGroup(item.id);
   });
 
@@ -2464,31 +2513,75 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.addEventListener('keydown', e => {
+    const tag      = document.activeElement?.tagName;
+    const isInput  = tag === 'INPUT' || tag === 'TEXTAREA';
+
+    const anyOverlayOpen = [
+      'add-modal','edit-modal','rename-modal',
+      'import-modal','location-modal','confirm-modal',
+      'search-overlay','tutorial-overlay',
+    ].some(id => !document.getElementById(id).classList.contains('hidden'));
+
+    const groupOpen = !document.getElementById('group-overlay').classList.contains('hidden');
+    // Grid navigation active when no overlay and no text input is focused
+    const navActive = !isInput && !anyOverlayOpen && !groupOpen;
+
+    // ── Escape ──
     if (e.key === 'Escape') {
-      if (_selectedIds.size > 0)                                                     { _clearSel();    return; }
-      if (!document.getElementById('search-overlay').classList.contains('hidden'))   { closeSearch();  return; }
-      if (!document.getElementById('import-modal').classList.contains('hidden'))     { closeImportModal(); return; }
+      if (_selectedIds.size > 0)                                                       { _clearSel();      return; }
+      if (_focusedId)                                                                  { _focusTile(null); return; }
+      if (!document.getElementById('search-overlay').classList.contains('hidden'))    { closeSearch();    return; }
+      if (!document.getElementById('import-modal').classList.contains('hidden'))      { closeImportModal(); return; }
       if (!document.getElementById('location-modal').classList.contains('hidden'))    { closeLocationModal(); return; }
-      if (!document.getElementById('confirm-modal').classList.contains('hidden'))    { document.getElementById('confirm-modal').classList.add('hidden'); return; }
-      if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
+      if (!document.getElementById('confirm-modal').classList.contains('hidden'))     { document.getElementById('confirm-modal').classList.add('hidden'); return; }
+      if (!document.getElementById('tutorial-overlay').classList.contains('hidden'))  { _tutDone();       return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
       return;
     }
-    // ⌘Z / Ctrl+Z → undo last delete
+
+    // ── Arrow keys: grid navigation ──
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && navActive) {
+      e.preventDefault();
+      _clearSel();
+      _navGrid(e.key);
+      return;
+    }
+
+    // ── Enter: open focused tile ──
+    if (e.key === 'Enter' && navActive && _focusedId) {
+      const item = items.find(i => i.id === _focusedId);
+      if (item?.type === 'site')  { window.location.href = item.url; return; }
+      if (item?.type === 'group') { openGroup(item.id);              return; }
+    }
+
+    // ── Delete / Backspace: delete focused tile ──
+    if ((e.key === 'Delete' || e.key === 'Backspace') && navActive && _focusedId) {
+      e.preventDefault();
+      const tileEls = [...document.querySelectorAll('#grid .tile')];
+      const idx     = tileEls.findIndex(t => t.dataset.id === _focusedId);
+      _snapshotForUndo();
+      items      = items.filter(i => i.id !== _focusedId);
+      _focusedId = null;
+      save();
+      render();
+      const remaining = [...document.querySelectorAll('#grid .tile')];
+      if (remaining.length) _focusTile(remaining[Math.min(idx, remaining.length - 1)].dataset.id);
+      _showToast('Deleted · ' + (_isMac ? '⌘' : 'Ctrl') + '+Z to undo');
+      return;
+    }
+
+    // ── ⌘Z / Ctrl+Z: undo ──
     if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       doUndo();
       return;
     }
-    // ⌘K / Ctrl+K or "/" → open search (not when an input is focused or a modal is open)
-    const tag = document.activeElement?.tagName;
-    const modalOpen = ['add-modal','edit-modal','rename-modal'].some(
-      id => !document.getElementById(id).classList.contains('hidden')
-    );
-    if (!modalOpen) {
+
+    // ── ⌘K / Ctrl+K or "/": open search ──
+    if (!anyOverlayOpen) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
-      if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') { e.preventDefault(); openSearch(); }
+      if (e.key === '/' && !isInput) { e.preventDefault(); openSearch(); }
     }
   });
 
@@ -2497,6 +2590,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.button !== 0) return;
     if (e.target.closest('.tile')) return; // tile drag handled separately
     _clearSel();
+    _focusTile(null);
     const anchor = { x: e.clientX, y: e.clientY };
     const selBox = document.getElementById('sel-box');
     Object.assign(selBox.style, { left: e.clientX+'px', top: e.clientY+'px', width: '0', height: '0', display: 'block' });
