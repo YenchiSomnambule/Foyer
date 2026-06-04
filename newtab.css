@@ -612,15 +612,15 @@ body {
 /* ─── Page Indicator Dots ─── */
 #group-dots {
   display: flex;
-  gap: 7px;
+  gap: 12px;
   justify-content: center;
-  min-height: 18px;
-  padding-top: 4px;
+  min-height: 26px;
+  padding-top: 6px;
 }
 
 .group-dot {
-  width: 7px;
-  height: 7px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: rgba(255,255,255,0.28);
   transition: background 0.2s, transform 0.2s;
@@ -629,7 +629,7 @@ body {
 
 .group-dot.active {
   background: rgba(255,255,255,0.9);
-  transform: scale(1.15);
+  transform: scale(1.2);
 }
 
 /* ─── Individual site tiles inside group overlay ─── */
