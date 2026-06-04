@@ -68,7 +68,8 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 let items = [];
 let ctxTargetId = null;
 let openGroupId = null;
-let _focusedId  = null;   // keyboard-navigated tile id
+let _focusedId     = null;   // keyboard-navigated tile id (main grid)
+let _gpFocusedSiteId = null; // keyboard-navigated site id (group overlay)
 let pendingFavicon = null;
 let faviconEpoch   = 0;
 let editTargetId      = null;
@@ -386,6 +387,81 @@ function _navGrid(key) {
   if (key === 'ArrowUp')    next = Math.max(idx - cols, 0);
 
   if (next !== idx) _focusTile(tileEls[next].dataset.id);
+}
+
+function _focusGroupTile(siteId) {
+  document.querySelectorAll('.group-site-tile.kb-focus').forEach(t => t.classList.remove('kb-focus'));
+  _gpFocusedSiteId = siteId;
+  if (!siteId) return;
+  const el = document.querySelector(`.group-site-tile[data-site-id="${siteId}"]`);
+  if (el) el.classList.add('kb-focus');
+}
+
+function _navGroupGrid(key) {
+  const GP_COLS = 3;
+  const pages = document.querySelectorAll('#group-pages-track .group-page');
+  if (!pages.length) return;
+  const curPage = pages[groupCurrentPage];
+  if (!curPage) return;
+  const tiles = [...curPage.querySelectorAll('.group-site-tile')];
+  if (!tiles.length) return;
+
+  if (!_gpFocusedSiteId || !tiles.some(t => t.dataset.siteId === _gpFocusedSiteId)) {
+    _focusGroupTile(tiles[0].dataset.siteId);
+    return;
+  }
+
+  const idx = tiles.findIndex(t => t.dataset.siteId === _gpFocusedSiteId);
+  const len = tiles.length;
+
+  if (key === 'ArrowRight') {
+    if (idx < len - 1) {
+      _focusGroupTile(tiles[idx + 1].dataset.siteId);
+    } else if (groupCurrentPage < groupTotalPages - 1) {
+      goToGroupPage(groupCurrentPage + 1);
+      const np = pages[groupCurrentPage];
+      const nt = [...np.querySelectorAll('.group-site-tile')];
+      if (nt.length) _focusGroupTile(nt[0].dataset.siteId);
+    }
+    return;
+  }
+  if (key === 'ArrowLeft') {
+    if (idx > 0) {
+      _focusGroupTile(tiles[idx - 1].dataset.siteId);
+    } else if (groupCurrentPage > 0) {
+      goToGroupPage(groupCurrentPage - 1);
+      const pp = pages[groupCurrentPage];
+      const pt = [...pp.querySelectorAll('.group-site-tile')];
+      if (pt.length) _focusGroupTile(pt[pt.length - 1].dataset.siteId);
+    }
+    return;
+  }
+  if (key === 'ArrowDown') {
+    if (idx + GP_COLS < len) {
+      _focusGroupTile(tiles[idx + GP_COLS].dataset.siteId);
+    } else if (groupCurrentPage < groupTotalPages - 1) {
+      goToGroupPage(groupCurrentPage + 1);
+      const np = pages[groupCurrentPage];
+      const nt = [...np.querySelectorAll('.group-site-tile')];
+      if (nt.length) _focusGroupTile(nt[Math.min(idx % GP_COLS, nt.length - 1)].dataset.siteId);
+    }
+    return;
+  }
+  if (key === 'ArrowUp') {
+    if (idx - GP_COLS >= 0) {
+      _focusGroupTile(tiles[idx - GP_COLS].dataset.siteId);
+    } else if (groupCurrentPage > 0) {
+      goToGroupPage(groupCurrentPage - 1);
+      const pp = pages[groupCurrentPage];
+      const pt = [...pp.querySelectorAll('.group-site-tile')];
+      if (pt.length) {
+        const col = idx % GP_COLS;
+        const lastRowStart = Math.floor((pt.length - 1) / GP_COLS) * GP_COLS;
+        _focusGroupTile(pt[Math.min(lastRowStart + col, pt.length - 1)].dataset.siteId);
+      }
+    }
+    return;
+  }
 }
 
 // ─── Tile Size ────────────────────────────────────────────────────────────────
@@ -814,7 +890,10 @@ function buildGroupSiteTile(site, groupId) {
   tryFaviconChain(img, fallback, sources);
 
   tile.addEventListener('click', e => {
-    if (!e.defaultPrevented && !_gpSuppressClick) window.location.href = site.url;
+    if (!e.defaultPrevented && !_gpSuppressClick) {
+      _focusGroupTile(site.id);
+      window.location.href = site.url;
+    }
   });
   tile.addEventListener('contextmenu', e => {
     e.preventDefault();
@@ -1154,6 +1233,7 @@ function openGroup(groupId) {
   if (!group || group.type !== 'group') return;
   openGroupId = groupId;
   groupCurrentPage = 0;
+  _gpFocusedSiteId = null;
 
   document.getElementById('group-title').textContent = group.name;
 
@@ -1196,6 +1276,7 @@ function closeGroup() {
   if (cleanupGroupDrag) { cleanupGroupDrag(); cleanupGroupDrag = null; }
   openGroupId = null;
   groupCurrentPage = 0;
+  _gpFocusedSiteId = null;
 }
 
 function goToGroupPage(page) {
@@ -2528,16 +2609,64 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Escape ──
     if (e.key === 'Escape') {
-      if (_selectedIds.size > 0)                                                       { _clearSel();      return; }
-      if (_focusedId)                                                                  { _focusTile(null); return; }
-      if (!document.getElementById('search-overlay').classList.contains('hidden'))    { closeSearch();    return; }
-      if (!document.getElementById('import-modal').classList.contains('hidden'))      { closeImportModal(); return; }
-      if (!document.getElementById('location-modal').classList.contains('hidden'))    { closeLocationModal(); return; }
-      if (!document.getElementById('confirm-modal').classList.contains('hidden'))     { document.getElementById('confirm-modal').classList.add('hidden'); return; }
-      if (!document.getElementById('tutorial-overlay').classList.contains('hidden'))  { _tutDone();       return; }
+      if (groupOpen)                                                                      { closeGroup();     return; }
+      if (_selectedIds.size > 0)                                                         { _clearSel();      return; }
+      if (_focusedId)                                                                     { _focusTile(null); return; }
+      if (!document.getElementById('search-overlay').classList.contains('hidden'))      { closeSearch();    return; }
+      if (!document.getElementById('import-modal').classList.contains('hidden'))        { closeImportModal(); return; }
+      if (!document.getElementById('location-modal').classList.contains('hidden'))      { closeLocationModal(); return; }
+      if (!document.getElementById('confirm-modal').classList.contains('hidden'))       { document.getElementById('confirm-modal').classList.add('hidden'); return; }
+      if (!document.getElementById('tutorial-overlay').classList.contains('hidden'))    { _tutDone();       return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
       return;
+    }
+
+    // ── Group overlay keyboard navigation ──
+    if (groupOpen && !isInput) {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        _navGroupGrid(e.key);
+        return;
+      }
+      if (e.key === 'Enter' && _gpFocusedSiteId) {
+        const group = items.find(i => i.id === openGroupId);
+        const site  = group?.items?.find(s => s.id === _gpFocusedSiteId);
+        if (site) { window.location.href = site.url; }
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && _gpFocusedSiteId) {
+        e.preventDefault();
+        const group = items.find(i => i.id === openGroupId);
+        if (!group) return;
+        const pages = document.querySelectorAll('#group-pages-track .group-page');
+        const curPage = pages[groupCurrentPage];
+        const tiles = curPage ? [...curPage.querySelectorAll('.group-site-tile')] : [];
+        const tileIdx = tiles.findIndex(t => t.dataset.siteId === _gpFocusedSiteId);
+        _snapshotForUndo();
+        group.items = group.items.filter(s => s.id !== _gpFocusedSiteId);
+        if (group.items.length <= 1) {
+          if (group.items.length === 1) {
+            const rem = group.items[0];
+            items = items.filter(i => i.id !== openGroupId);
+            items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
+          } else {
+            items = items.filter(i => i.id !== openGroupId);
+          }
+          save(); render(); closeGroup();
+        } else {
+          const savedGroupId  = openGroupId;
+          const savedPage     = groupCurrentPage;
+          save();
+          openGroup(savedGroupId);
+          if (savedPage > 0) goToGroupPage(savedPage);
+          const np = document.querySelectorAll('#group-pages-track .group-page')[groupCurrentPage];
+          const nt = np ? [...np.querySelectorAll('.group-site-tile')] : [];
+          if (nt.length) _focusGroupTile(nt[Math.min(tileIdx, nt.length - 1)].dataset.siteId);
+        }
+        _showToast('Deleted · ' + (_isMac ? '⌘' : 'Ctrl') + '+Z to undo');
+        return;
+      }
     }
 
     // ── Arrow keys: grid navigation ──

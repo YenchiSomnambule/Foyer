@@ -569,6 +569,12 @@ body {
 
 .group-site-tile:active { transform: scale(0.88); }
 
+.group-site-tile.kb-focus .group-site-icon {
+  box-shadow: 0 0 0 3px rgba(88, 150, 255, 1),
+              0 4px 16px rgba(0,0,0,0.45);
+  transform: scale(1.06);
+}
+
 .group-site-icon {
   width: 54px;
   height: 54px;
