@@ -152,9 +152,29 @@ function sampleItems() {
   ];
 }
 
+// ─── Marquee Selection ───────────────────────────────────────────────────────
+
+const _selectedIds = new Set();
+
+function _clearSel() {
+  _selectedIds.clear();
+  document.querySelectorAll('#grid .tile.sel').forEach(t => t.classList.remove('sel'));
+}
+
+function _updateTileSel(x1, y1, x2, y2) {
+  _selectedIds.clear();
+  document.querySelectorAll('#grid .tile').forEach(tile => {
+    const r = tile.getBoundingClientRect();
+    const hit = r.left < x2 && r.right > x1 && r.top < y2 && r.bottom > y1;
+    tile.classList.toggle('sel', hit);
+    if (hit) _selectedIds.add(tile.dataset.id);
+  });
+}
+
 // ─── Render ──────────────────────────────────────────────────────────────────
 
 function render() {
+  _clearSel();
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
   items.forEach(item => {
@@ -1002,9 +1022,26 @@ function attachContextMenu(tile, id) {
 }
 
 function showCtxMenu(x, y, id) {
+  const menu = document.getElementById('context-menu');
+
+  // Bulk-delete: right-clicked tile is part of a multi-tile selection
+  if (_selectedIds.size > 1 && _selectedIds.has(id)) {
+    const count = _selectedIds.size;
+    menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="delete-sel">Delete ${count} tiles</button>`;
+    menu.querySelector('[data-action="delete-sel"]').addEventListener('click', () => {
+      _snapshotForUndo();
+      items = items.filter(i => !_selectedIds.has(i.id));
+      _clearSel();
+      save().then(render);
+      closeCtxMenu();
+      _showToast(`${count} deleted · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    });
+    positionAndShow(menu, x, y);
+    return;
+  }
+
   const item = items.find(i => i.id === id);
   if (!item) return;
-  const menu = document.getElementById('context-menu');
   const editBtn = item.type === 'site'
     ? `<button class="ctx-item" data-action="edit">Edit</button>` : '';
   menu.innerHTML = `
@@ -1995,6 +2032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (_selectedIds.size > 0)                                                     { _clearSel();    return; }
       if (!document.getElementById('search-overlay').classList.contains('hidden'))   { closeSearch();  return; }
       if (!document.getElementById('import-modal').classList.contains('hidden'))     { closeImportModal(); return; }
       if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
@@ -2017,6 +2055,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
       if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') { e.preventDefault(); openSearch(); }
     }
+  });
+
+  // Marquee (rubber-band) selection on grid background
+  document.getElementById('app').addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.tile')) return; // tile drag handled separately
+    _clearSel();
+    const anchor = { x: e.clientX, y: e.clientY };
+    const selBox = document.getElementById('sel-box');
+    Object.assign(selBox.style, { left: e.clientX+'px', top: e.clientY+'px', width: '0', height: '0', display: 'block' });
+
+    function onMove(ev) {
+      const x1 = Math.min(anchor.x, ev.clientX), x2 = Math.max(anchor.x, ev.clientX);
+      const y1 = Math.min(anchor.y, ev.clientY), y2 = Math.max(anchor.y, ev.clientY);
+      Object.assign(selBox.style, { left: x1+'px', top: y1+'px', width: (x2-x1)+'px', height: (y2-y1)+'px' });
+      if (x2-x1 > 4 || y2-y1 > 4) _updateTileSel(x1, y1, x2, y2);
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      selBox.style.display = 'none';
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 
   // Search input behaviour
