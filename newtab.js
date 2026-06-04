@@ -152,6 +152,44 @@ function sampleItems() {
   ];
 }
 
+// ─── Tile Size ────────────────────────────────────────────────────────────────
+
+const TILE_SIZES = {
+  xs: { tile: 72,  icon: 48, radius: 12 },
+  s:  { tile: 80,  icon: 54, radius: 14 },
+  m:  { tile: 88,  icon: 60, radius: 16 },
+  l:  { tile: 104, icon: 72, radius: 18 },
+  xl: { tile: 120, icon: 84, radius: 20 },
+};
+
+let _currentTileSize = 'm';
+
+function applyTileSize(key) {
+  const sz = TILE_SIZES[key] ?? TILE_SIZES.m;
+  const root = document.documentElement;
+  root.style.setProperty('--tile-size',      `${sz.tile}px`);
+  root.style.setProperty('--tile-icon-size', `${sz.icon}px`);
+  root.style.setProperty('--radius',         `${sz.radius}px`);
+  _currentTileSize = key;
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.size === key);
+  });
+}
+
+function saveTileSize(key) {
+  chrome.storage.local.set({ tileSize: key });
+}
+
+async function loadTileSize() {
+  return new Promise(resolve => {
+    chrome.storage.local.get('tileSize', r => {
+      const key = r.tileSize && TILE_SIZES[r.tileSize] ? r.tileSize : 'm';
+      applyTileSize(key);
+      resolve(key);
+    });
+  });
+}
+
 // ─── Marquee Selection ───────────────────────────────────────────────────────
 
 const _selectedIds = new Set();
@@ -2135,6 +2173,7 @@ function _srHighlight() {
 document.addEventListener('DOMContentLoaded', async () => {
   await load();
   await loadTheme();
+  await loadTileSize();
   render();
 
   // Clock — tick immediately then every second
@@ -2396,6 +2435,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBgImage(dataUrl);
     themeSwatches.classList.add('hidden');
     e.target.value = '';
+  });
+
+  // Tile size buttons
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      applyTileSize(btn.dataset.size);
+      saveTileSize(btn.dataset.size);
+    });
   });
 
   // Confirm modal dismiss
