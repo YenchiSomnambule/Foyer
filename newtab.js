@@ -2707,10 +2707,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // ── ⌘K / Ctrl+K or "/": open search ──
-    if (!anyOverlayOpen) {
+    // ── ⌘K / Ctrl+K or "/": open search · "n": add tile ──
+    if (!anyOverlayOpen && !groupOpen) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
-      if (e.key === '/' && !isInput) { e.preventDefault(); openSearch(); }
+      if (e.key === '/' && !isInput) { e.preventDefault(); openSearch(); return; }
+      if (e.key === 'n' && !isInput) { e.preventDefault(); openAddModal(); return; }
     }
   });
 
