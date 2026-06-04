@@ -1891,6 +1891,78 @@ function closeImportModal() {
   document.getElementById('import-modal').classList.add('hidden');
 }
 
+// ─── Export / Import JSON Backup ─────────────────────────────────────────────
+
+async function doExportJson() {
+  const stored = await chrome.storage.local.get(['items', 'theme', 'customColor']);
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    items: stored.items ?? items,
+    theme: stored.theme ?? null,
+    customColor: stored.customColor ?? null,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `foyer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  _showToast('Backup downloaded');
+}
+
+function _showConfirm(title, body, labelOk, onOk) {
+  const modal = document.getElementById('confirm-modal');
+  document.getElementById('confirm-modal-title').textContent = title;
+  document.getElementById('confirm-modal-body').textContent  = body;
+  document.getElementById('confirm-modal-ok').textContent    = labelOk;
+  modal.classList.remove('hidden');
+
+  const okBtn  = document.getElementById('confirm-modal-ok');
+  const canBtn = document.getElementById('confirm-modal-cancel');
+  const close  = () => {
+    modal.classList.add('hidden');
+    okBtn.removeEventListener('click', handleOk);
+    canBtn.removeEventListener('click', close);
+  };
+  const handleOk = () => { close(); onOk(); };
+  okBtn.addEventListener('click', handleOk);
+  canBtn.addEventListener('click', close);
+}
+
+function doImportJson(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+      if (!Array.isArray(data.items)) throw new Error();
+    } catch {
+      _showToast('Invalid backup file');
+      return;
+    }
+
+    const tileCount = data.items.length;
+    _showConfirm(
+      'Restore Backup',
+      `Replace your current ${items.length} tile${items.length !== 1 ? 's' : ''} with ${tileCount} tile${tileCount !== 1 ? 's' : ''} from the backup?`,
+      'Restore',
+      () => {
+        _snapshotForUndo();
+        items = data.items;
+        save().then(() => {
+          if (data.theme && data.theme !== 'custom') { applyTheme(data.theme); saveTheme(data.theme); }
+          else if (data.theme === 'custom' && data.customColor) { applyCustomColor(data.customColor); saveCustomColor(data.customColor); }
+          render();
+          _showToast(`Restored ${items.length} tile${items.length !== 1 ? 's' : ''} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+        });
+      }
+    );
+  };
+  reader.readAsText(file);
+}
+
 // ─── Search / Quick Launch ────────────────────────────────────────────────────
 
 let _srActiveIdx = -1;
@@ -2102,6 +2174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (_selectedIds.size > 0)                                                     { _clearSel();    return; }
       if (!document.getElementById('search-overlay').classList.contains('hidden'))   { closeSearch();  return; }
       if (!document.getElementById('import-modal').classList.contains('hidden'))     { closeImportModal(); return; }
+      if (!document.getElementById('confirm-modal').classList.contains('hidden'))    { document.getElementById('confirm-modal').classList.add('hidden'); return; }
       if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
@@ -2233,5 +2306,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('import-deselect-all').addEventListener('click', () => _bmSelectAll(false));
   document.getElementById('import-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeImportModal();
+  });
+
+  // Export / Import JSON backup
+  document.getElementById('swatch-export-json').addEventListener('click', e => {
+    e.stopPropagation();
+    doExportJson();
+    themeSwatches.classList.add('hidden');
+  });
+  const jsonImportInput = document.getElementById('json-import-input');
+  document.getElementById('swatch-import-json').addEventListener('click', e => {
+    e.stopPropagation();
+    jsonImportInput.click();
+    themeSwatches.classList.add('hidden');
+  });
+  jsonImportInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) doImportJson(file);
+    e.target.value = '';
+  });
+
+  // Confirm modal dismiss
+  document.getElementById('confirm-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) document.getElementById('confirm-modal').classList.add('hidden');
   });
 });

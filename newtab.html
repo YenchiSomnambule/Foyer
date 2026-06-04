@@ -157,11 +157,42 @@
         </svg>
         Import bookmarks
       </button>
+      <div class="swatch-separator"></div>
+      <button class="swatch-import-btn" id="swatch-export-json" title="Export backup">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export backup
+      </button>
+      <button class="swatch-import-btn" id="swatch-import-json" title="Import backup">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Import backup
+      </button>
     </div>
     <input type="color" id="custom-color-input" value="#4a90d9"
            style="position:fixed;opacity:0;pointer-events:none;width:0;height:0">
     <input type="file" id="bg-image-input" accept="image/*"
            style="position:fixed;opacity:0;pointer-events:none;width:0;height:0">
+    <input type="file" id="json-import-input" accept=".json,application/json"
+           style="position:fixed;opacity:0;pointer-events:none;width:0;height:0">
+  </div>
+
+  <!-- Confirm Modal (generic) -->
+  <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card confirm-card">
+      <h2 class="modal-title" id="confirm-modal-title"></h2>
+      <p id="confirm-modal-body"></p>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="confirm-modal-cancel">Cancel</button>
+        <button class="btn-danger" id="confirm-modal-ok">Restore</button>
+      </div>
+    </div>
   </div>
 
   <!-- Tutorial Overlay -->
