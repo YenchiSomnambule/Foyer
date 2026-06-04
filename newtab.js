@@ -1891,6 +1891,23 @@ function closeImportModal() {
   document.getElementById('import-modal').classList.add('hidden');
 }
 
+// ─── Clock / Date Widget ─────────────────────────────────────────────────────
+
+const _CLOCK_DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const _CLOCK_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function _tickClock() {
+  const now    = new Date();
+  const timeEl = document.getElementById('clock-time');
+  const dateEl = document.getElementById('clock-date');
+  if (!timeEl) return;
+  const h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2, '0');
+  timeEl.textContent = `${h}:${m}`;
+  dateEl.textContent =
+    `${_CLOCK_DAYS[now.getDay()]} · ${_CLOCK_MONTHS[now.getMonth()]} ${now.getDate()}`;
+}
+
 // ─── Export / Import JSON Backup ─────────────────────────────────────────────
 
 async function doExportJson() {
@@ -2119,6 +2136,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   await load();
   await loadTheme();
   render();
+
+  // Clock — tick immediately then every second
+  _tickClock();
+  setInterval(_tickClock, 1000);
 
   // Tutorial: wire buttons first, then check if first launch
   document.getElementById('tutorial-next').addEventListener('click', _tutNext);
