@@ -6,7 +6,8 @@
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "permissions": ["storage", "bookmarks"],
+  "permissions": ["storage"],
+  "optional_permissions": ["bookmarks"],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
