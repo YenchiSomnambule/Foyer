@@ -1865,3 +1865,168 @@ body.theme-custom .swatch-custom.active,
   text-align: center;
   margin-top: 10px;
 }
+
+/* ─── Window style toggle buttons (inside settings modal) ─────────────────── */
+
+.modal-style-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.modal-style-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.05);
+  color: rgba(22,17,10,0.60);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.modal-style-btn:hover { background: rgba(0,0,0,0.09); }
+.modal-style-btn.active {
+  background: rgba(60,120,240,0.11);
+  border-color: rgba(60,120,240,0.38);
+  color: rgba(22,17,10,0.90);
+}
+
+/* ─── Missing keyframe for settings modal entry ────────────────────────────── */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Modal Dark Mode overrides ────────────────────────────────────────────── */
+
+body.modal-dark .modal-style-btn {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.52);
+}
+body.modal-dark .modal-style-btn:hover { background: rgba(255,255,255,0.10); }
+body.modal-dark .modal-style-btn.active {
+  background: rgba(88,150,255,0.18);
+  border-color: rgba(88,150,255,0.42);
+  color: rgba(255,255,255,0.92);
+}
+
+body.modal-dark .modal-card {
+  background: rgba(30,35,55,0.92);
+  border-color: rgba(255,255,255,0.16);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.92);
+}
+body.modal-dark .modal-title { color: white; }
+
+body.modal-dark #favicon-preview-box,
+body.modal-dark #edit-favicon-preview-box {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.14);
+}
+body.modal-dark #favicon-preview-box.loaded,
+body.modal-dark #edit-favicon-preview-box.loaded {
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+}
+body.modal-dark #favicon-preview-letter,
+body.modal-dark #edit-favicon-preview-letter { color: rgba(255,255,255,0.22); }
+
+body.modal-dark .input-group label { color: rgba(255,255,255,0.55); }
+body.modal-dark .input-group input {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: white;
+}
+body.modal-dark .input-group input::placeholder { color: rgba(255,255,255,0.30); }
+body.modal-dark .input-group input:focus {
+  border-color: rgba(100,160,255,0.60);
+  background: rgba(255,255,255,0.12);
+}
+
+body.modal-dark .btn-cancel {
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.80);
+  border-color: rgba(255,255,255,0.15);
+}
+body.modal-dark .btn-cancel:hover { background: rgba(255,255,255,0.15); }
+
+body.modal-dark .confirm-card p { color: rgba(255,255,255,0.65); }
+
+body.modal-dark #location-results { background: rgba(255,255,255,0.06); }
+body.modal-dark .loc-result:hover  { background: rgba(255,255,255,0.09); }
+
+body.modal-dark #import-sel-count { color: rgba(255,255,255,0.45); }
+body.modal-dark #import-toolbar-btns button {
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.12);
+}
+body.modal-dark #import-toolbar-btns button:hover {
+  background: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.85);
+}
+body.modal-dark #import-list { scrollbar-color: rgba(255,255,255,0.12) transparent; }
+body.modal-dark .bm-section      { color: rgba(255,255,255,0.32); }
+body.modal-dark .bm-folder-header:hover { background: rgba(255,255,255,0.06); }
+body.modal-dark .bm-folder-icon  { color: rgba(255,255,255,0.50); }
+body.modal-dark .bm-folder-label { color: rgba(255,255,255,0.82); }
+body.modal-dark .bm-item:hover   { background: rgba(255,255,255,0.06); }
+body.modal-dark .bm-name         { color: rgba(255,255,255,0.88); }
+body.modal-dark .bm-url          { color: rgba(255,255,255,0.38); }
+body.modal-dark .bm-exists-badge { color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.07); }
+body.modal-dark .bm-empty,
+body.modal-dark .bm-loading      { color: rgba(255,255,255,0.35); }
+
+body.modal-dark #settings-card {
+  background: rgba(30,35,55,0.95);
+  color: rgba(255,255,255,0.92);
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+}
+body.modal-dark #settings-header h2 { color: rgba(255,255,255,0.92); }
+body.modal-dark #close-settings { color: rgba(255,255,255,0.45); }
+body.modal-dark #close-settings:hover { color: rgba(255,255,255,0.90); background: rgba(255,255,255,0.08); }
+body.modal-dark #settings-tabs  { border-bottom-color: rgba(255,255,255,0.08); }
+body.modal-dark .stab            { color: rgba(255,255,255,0.42); }
+body.modal-dark .stab:hover      { color: rgba(255,255,255,0.75); }
+body.modal-dark .stab.active     { color: rgba(255,255,255,0.92); border-bottom-color: rgba(88,150,255,0.9); }
+body.modal-dark #settings-body   { scrollbar-color: rgba(255,255,255,0.15) transparent; }
+body.modal-dark .ssec-title      { color: rgba(255,255,255,0.35); }
+body.modal-dark #settings-size-btns .size-btn       { color: rgba(255,255,255,0.72); }
+body.modal-dark #settings-size-btns .size-btn:hover { background: rgba(255,255,255,0.08); }
+body.modal-dark .ssec-action-btn {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.75);
+}
+body.modal-dark .ssec-action-btn:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.92);
+}
+body.modal-dark .sc-row          { border-bottom-color: rgba(255,255,255,0.06); }
+body.modal-dark .sc-action       { color: rgba(255,255,255,0.72); }
+body.modal-dark .sc-sep          { color: rgba(255,255,255,0.28); }
+body.modal-dark .sc-key {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.82);
+}
+body.modal-dark .sc-key.editable:hover {
+  background: rgba(88,150,255,0.15);
+  border-color: rgba(88,150,255,0.50);
+  color: rgba(255,255,255,0.95);
+}
+body.modal-dark .sc-key.listening {
+  background: rgba(88,150,255,0.18);
+  border-color: rgba(88,150,255,0.85);
+  color: rgba(88,150,255,1);
+}
+body.modal-dark .sc-hint         { color: rgba(255,255,255,0.28); }

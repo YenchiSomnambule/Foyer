@@ -468,6 +468,7 @@ function _navGroupGrid(key) {
 
 let _shortcuts    = { addTile: 'n', search: '/' };
 let _scListening  = null; // { el, action, oldKey }
+let _modalDark    = false;
 
 function openSettingsModal(tab) {
   document.getElementById('settings-modal').classList.remove('hidden');
@@ -504,6 +505,23 @@ function _cancelShortcutListen() {
 function _updateShortcutDisplay() {
   document.querySelectorAll('.sc-key[data-action]').forEach(el => {
     if (_shortcuts[el.dataset.action]) el.textContent = _shortcuts[el.dataset.action];
+  });
+}
+
+function applyModalDark(dark) {
+  _modalDark = dark;
+  document.body.classList.toggle('modal-dark', dark);
+  document.querySelectorAll('.modal-style-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === (dark ? 'modal-style-dark' : 'modal-style-light'));
+  });
+}
+
+async function loadModalDark() {
+  return new Promise(resolve => {
+    chrome.storage.local.get('modalDark', r => {
+      applyModalDark(!!r.modalDark);
+      resolve();
+    });
   });
 }
 
@@ -2550,6 +2568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await load();
   await loadTheme();
   await loadTileSize();
+  await loadModalDark();
   await loadShortcuts();
   render();
 
@@ -2895,6 +2914,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('import-deselect-all').addEventListener('click', () => _bmSelectAll(false));
   document.getElementById('import-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeImportModal();
+  });
+
+  // Window style (light / dark modals)
+  document.getElementById('modal-style-light').addEventListener('click', () => {
+    applyModalDark(false);
+    chrome.storage.local.set({ modalDark: false });
+  });
+  document.getElementById('modal-style-dark').addEventListener('click', () => {
+    applyModalDark(true);
+    chrome.storage.local.set({ modalDark: true });
   });
 
   // Shortcut key remapping
