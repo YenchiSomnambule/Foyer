@@ -72,66 +72,30 @@ body {
 
 .widget-sep.hidden { display: none; }
 
-/* ─── Top search bar ─── */
-#top-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
+/* ─── Search icon button (between config and palette) ─── */
 #top-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
+  width: 40px;
   height: 40px;
-  border-radius: 20px;
+  border-radius: 50%;
   background: var(--glass);
   border: 1px solid var(--glass-border);
+  color: var(--add-btn-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  cursor: pointer;
-  color: var(--add-btn-color);
-  font-family: var(--font);
-  font-size: 12.5px;
-  font-weight: 500;
-  min-width: 180px;
-  opacity: 0.85;
   transition: background 0.2s, transform 0.15s;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
   margin: 0;
-  user-select: none;
-  -webkit-user-select: none;
+  padding: 0;
 }
-
-#top-search-bar:hover  { background: var(--glass-border); transform: scale(1.02); }
-#top-search-bar:active { transform: scale(0.97); }
-
-#top-search-bar span {
-  flex: 1;
-  text-align: left;
-  opacity: 0.45;
-}
-
-#top-search-bar svg {
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
-#top-search-bar kbd {
-  font-family: var(--font);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 5px;
-  background: rgba(0,0,0,0.1);
-  color: var(--add-btn-color);
-  opacity: 0.55;
-  letter-spacing: 0.02em;
-}
+#top-search-bar:hover  { background: var(--glass-border); transform: scale(1.08); }
+#top-search-bar:active { transform: scale(0.93); }
 
 /* ─── Engine search bar (center-top) ─── */
 #engine-search-bar {
