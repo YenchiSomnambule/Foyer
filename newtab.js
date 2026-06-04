@@ -2353,7 +2353,8 @@ function _tickClock() {
   if (!timeEl) return;
   const h = now.getHours();
   const m = String(now.getMinutes()).padStart(2, '0');
-  timeEl.textContent = `${h}:${m}`;
+  const s = String(now.getSeconds()).padStart(2, '0');
+  timeEl.textContent = `${h}:${m}:${s}`;
   dateEl.textContent =
     `${_CLOCK_DAYS[now.getDay()]} · ${_CLOCK_MONTHS[now.getMonth()]} ${now.getDate()}`;
 }
