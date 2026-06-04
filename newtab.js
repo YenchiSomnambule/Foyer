@@ -1377,6 +1377,7 @@ function openGroup(groupId) {
   cleanupGroupDrag = initGroupPageDrag(container, track, dots);
 
   document.getElementById('group-overlay').classList.remove('hidden');
+  _updateGroupHints();
 }
 
 function closeGroup() {
@@ -1396,6 +1397,15 @@ function goToGroupPage(page) {
   document.querySelectorAll('.group-dot').forEach((d, i) =>
     d.classList.toggle('active', i === groupCurrentPage)
   );
+  _updateGroupHints();
+}
+
+function _updateGroupHints() {
+  const prev = document.getElementById('group-hint-prev');
+  const next = document.getElementById('group-hint-next');
+  if (!prev || !next) return;
+  prev.classList.toggle('disabled', groupCurrentPage <= 0);
+  next.classList.toggle('disabled', groupCurrentPage >= groupTotalPages - 1);
 }
 
 function initGroupPageDrag(container, track, dots) {
@@ -2838,6 +2848,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (nt.length) _focusGroupTile(nt[Math.min(tileIdx, nt.length - 1)].dataset.siteId);
         }
         _showToast('Deleted · ' + (_isMac ? '⌘' : 'Ctrl') + '+Z to undo');
+        return;
+      }
+    }
+
+    // ── A / D: group page navigation ──
+    if (groupOpen && !isInput) {
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        if (groupCurrentPage > 0) goToGroupPage(groupCurrentPage - 1);
+        _updateGroupHints();
+        return;
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        if (groupCurrentPage < groupTotalPages - 1) goToGroupPage(groupCurrentPage + 1);
+        _updateGroupHints();
         return;
       }
     }
