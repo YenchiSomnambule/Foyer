@@ -917,6 +917,8 @@ function doGroup(srcId, tgtId) {
   const tgt = items.find(i => i.id === tgtId);
   if (!src || !tgt) return;
 
+  _snapshotForUndo();
+
   if (tgt.type === 'group') {
     // Add src into existing group
     if (src.type === 'site') {
@@ -925,6 +927,7 @@ function doGroup(srcId, tgtId) {
       items = items.filter(i => i.id !== srcId);
     }
     save();
+    _showToast(`Added to group · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
   } else if (src.type === 'site' && tgt.type === 'site') {
     // Create a new group from two sites
     const newGroup = {
@@ -938,6 +941,7 @@ function doGroup(srcId, tgtId) {
     items.splice(tgtIdx, 1, newGroup);
     items = items.filter(i => i.id !== srcId);
     save();
+    _showToast(`Grouped · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
     // Prompt rename — dragend will render first, showing the "New Group" tile
     // We delay slightly so render() has a chance to complete
     setTimeout(() => promptRename(newGroup.id), 50);
@@ -946,6 +950,7 @@ function doGroup(srcId, tgtId) {
     src.items.push({ id: uid(), name: tgt.name, url: tgt.url });
     items = items.filter(i => i.id !== tgtId);
     save();
+    _showToast(`Added to group · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
   }
 }
 
