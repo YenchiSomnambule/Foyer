@@ -2889,6 +2889,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeSearch();
   });
 
+  // Top search bar → open search overlay
+  document.getElementById('top-search-bar').addEventListener('click', () => openSearch());
+
   // Config button → open settings modal
   document.getElementById('config-btn').addEventListener('click', e => {
     e.stopPropagation();
