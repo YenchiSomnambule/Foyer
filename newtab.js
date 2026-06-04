@@ -1609,6 +1609,121 @@ function _tutDone() {
   chrome.storage.local.set({ tutorialDone: true });
 }
 
+// ─── Search / Quick Launch ────────────────────────────────────────────────────
+
+let _srActiveIdx = -1;
+
+function _flattenSites() {
+  const out = [];
+  for (const item of items) {
+    if (item.type === 'site') {
+      out.push({ name: item.name, url: item.url, favicon: item.favicon ?? null, groupName: null });
+    } else if (item.type === 'group') {
+      for (const s of (item.items ?? [])) {
+        out.push({ name: s.name, url: s.url, favicon: s.favicon ?? null, groupName: item.name });
+      }
+    }
+  }
+  return out;
+}
+
+function _hlMatch(str, q) {
+  if (!q) return escHtml(str);
+  const idx = str.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return escHtml(str);
+  return escHtml(str.slice(0, idx))
+    + `<mark>${escHtml(str.slice(idx, idx + q.length))}</mark>`
+    + escHtml(str.slice(idx + q.length));
+}
+
+function openSearch() {
+  document.getElementById('search-overlay').classList.remove('hidden');
+  const inp = document.getElementById('search-input');
+  inp.value = '';
+  _srActiveIdx = -1;
+  _renderSearch('');
+  requestAnimationFrame(() => inp.focus());
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').classList.add('hidden');
+  _srActiveIdx = -1;
+}
+
+function _renderSearch(raw) {
+  const el = document.getElementById('search-results');
+  const all = _flattenSites();
+  const q = raw.trim().toLowerCase();
+
+  let list = q
+    ? all.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        s.url.toLowerCase().includes(q)  ||
+        (s.groupName && s.groupName.toLowerCase().includes(q)))
+    : all;
+
+  if (q) {
+    list = list.slice().sort((a, b) => {
+      const an = a.name.toLowerCase(), bn = b.name.toLowerCase();
+      if (an === q   && bn !== q)   return -1;
+      if (bn === q   && an !== q)   return  1;
+      if (an.startsWith(q) && !bn.startsWith(q)) return -1;
+      if (bn.startsWith(q) && !an.startsWith(q)) return  1;
+      return 0;
+    });
+  }
+
+  if (!list.length) {
+    el.innerHTML = `<div class="sr-empty">No results for "${escHtml(raw.trim())}"</div>`;
+    _srActiveIdx = -1;
+    return;
+  }
+
+  el.innerHTML = list.map((site, i) => `
+    <div class="sr-item${i === _srActiveIdx ? ' active' : ''}" role="option"
+         data-url="${escHtml(site.url)}" data-idx="${i}">
+      <div class="sr-icon" style="background:${tileGradient(site.url)}"
+           data-fav="${escHtml(site.favicon ?? '')}">
+        <span>${(site.name[0] ?? '?').toUpperCase()}</span>
+        <img alt="" draggable="false" style="display:none">
+      </div>
+      <div class="sr-text">
+        <div class="sr-name">${_hlMatch(site.name, raw.trim())}</div>
+        <div class="sr-url">${_hlMatch(site.url, raw.trim())}</div>
+      </div>
+      ${site.groupName
+        ? `<span class="sr-group" title="${escHtml(site.groupName)}">${escHtml(site.groupName)}</span>`
+        : ''}
+    </div>
+  `).join('');
+
+  // Show cached favicons
+  el.querySelectorAll('.sr-icon[data-fav]').forEach(icon => {
+    const fav = icon.dataset.fav;
+    if (!fav) return;
+    const img = icon.querySelector('img'), span = icon.querySelector('span');
+    img.onload  = () => { img.style.display = ''; span.style.display = 'none'; };
+    img.onerror = () => {};
+    img.src = fav;
+  });
+
+  // Pointer interactions
+  el.querySelectorAll('.sr-item').forEach(row => {
+    row.addEventListener('mouseenter', () => {
+      _srActiveIdx = +row.dataset.idx;
+      _srHighlight();
+    });
+    row.addEventListener('click', () => { window.location.href = row.dataset.url; });
+  });
+}
+
+function _srHighlight() {
+  document.querySelectorAll('.sr-item').forEach((r, i) => {
+    r.classList.toggle('active', i === _srActiveIdx);
+    if (i === _srActiveIdx) r.scrollIntoView({ block: 'nearest' });
+  });
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1702,10 +1817,48 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone(); return; }
+      if (!document.getElementById('search-overlay').classList.contains('hidden'))   { closeSearch();  return; }
+      if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
+      return;
     }
+    // ⌘K / Ctrl+K or "/" → open search (not when an input is focused or a modal is open)
+    const tag = document.activeElement?.tagName;
+    const modalOpen = ['add-modal','edit-modal','rename-modal'].some(
+      id => !document.getElementById(id).classList.contains('hidden')
+    );
+    if (!modalOpen) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
+      if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') { e.preventDefault(); openSearch(); }
+    }
+  });
+
+  // Search input behaviour
+  const searchInput = document.getElementById('search-input');
+  searchInput.addEventListener('input', e => {
+    _srActiveIdx = -1;
+    _renderSearch(e.target.value);
+  });
+  searchInput.addEventListener('keydown', e => {
+    const rows = document.querySelectorAll('.sr-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      _srActiveIdx = Math.min(_srActiveIdx + 1, rows.length - 1);
+      if (_srActiveIdx < 0 && rows.length) _srActiveIdx = 0;
+      _srHighlight();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      _srActiveIdx = Math.max(_srActiveIdx - 1, -1);
+      _srHighlight();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const active = document.querySelector('.sr-item.active') ?? document.querySelector('.sr-item');
+      if (active) window.location.href = active.dataset.url;
+    }
+  });
+  document.getElementById('search-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSearch();
   });
 
   // Theme picker
