@@ -753,6 +753,41 @@ body.theme-cream  #add-btn:hover {
   gap: 8px;
 }
 
+#config-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--add-btn-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  transition: background 0.2s, transform 0.15s;
+}
+#config-btn:hover  { background: var(--glass-border); transform: scale(1.08); }
+#config-btn:active { transform: scale(0.93); }
+
+#config-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 6px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  min-width: 160px;
+  animation: swatchesIn 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+#config-panel.hidden { display: none; }
+
 #theme-btn {
   width: 40px;
   height: 40px;

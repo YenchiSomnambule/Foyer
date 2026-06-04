@@ -2201,6 +2201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('context-menu').contains(e.target)) closeCtxMenu();
     if (!document.getElementById('theme-picker').contains(e.target)) {
       document.getElementById('theme-swatches').classList.add('hidden');
+      document.getElementById('config-panel').classList.add('hidden');
     }
   });
 
@@ -2283,12 +2284,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeSearch();
   });
 
+  // Config panel (settings / import / export actions)
+  const configBtn   = document.getElementById('config-btn');
+  const configPanel = document.getElementById('config-panel');
+  configBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    configPanel.classList.toggle('hidden');
+    themeSwatches.classList.add('hidden'); // mutual exclusion
+  });
+
+  // Import bookmarks
+  document.getElementById('swatch-import').addEventListener('click', e => {
+    e.stopPropagation();
+    openImportModal();
+    configPanel.classList.add('hidden');
+  });
+  document.getElementById('cancel-import').addEventListener('click', closeImportModal);
+  document.getElementById('confirm-import').addEventListener('click', doImportBookmarks);
+  document.getElementById('import-select-all').addEventListener('click', () => _bmSelectAll(true));
+  document.getElementById('import-deselect-all').addEventListener('click', () => _bmSelectAll(false));
+  document.getElementById('import-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeImportModal();
+  });
+
+  // Export / Import JSON backup
+  document.getElementById('swatch-export-json').addEventListener('click', e => {
+    e.stopPropagation();
+    doExportJson();
+    configPanel.classList.add('hidden');
+  });
+  document.getElementById('swatch-export-html').addEventListener('click', e => {
+    e.stopPropagation();
+    doExportBookmarksHtml();
+    configPanel.classList.add('hidden');
+  });
+  const jsonImportInput = document.getElementById('json-import-input');
+  document.getElementById('swatch-import-json').addEventListener('click', e => {
+    e.stopPropagation();
+    jsonImportInput.click();
+    configPanel.classList.add('hidden');
+  });
+  jsonImportInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) doImportJson(file);
+    e.target.value = '';
+  });
+
   // Theme picker
-  const themeBtn     = document.getElementById('theme-btn');
+  const themeBtn      = document.getElementById('theme-btn');
   const themeSwatches = document.getElementById('theme-swatches');
   themeBtn.addEventListener('click', e => {
     e.stopPropagation();
     themeSwatches.classList.toggle('hidden');
+    configPanel.classList.add('hidden'); // mutual exclusion
   });
   document.querySelectorAll('.swatch[data-theme]').forEach(swatch => {
     swatch.addEventListener('click', e => {
@@ -2326,43 +2374,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyBgImage(dataUrl);
     saveBgImage(dataUrl);
     themeSwatches.classList.add('hidden');
-    e.target.value = ''; // reset so same file can be re-picked
-  });
-
-  // Import bookmarks
-  document.getElementById('swatch-import').addEventListener('click', e => {
-    e.stopPropagation();
-    openImportModal();
-    themeSwatches.classList.add('hidden');
-  });
-  document.getElementById('cancel-import').addEventListener('click', closeImportModal);
-  document.getElementById('confirm-import').addEventListener('click', doImportBookmarks);
-  document.getElementById('import-select-all').addEventListener('click', () => _bmSelectAll(true));
-  document.getElementById('import-deselect-all').addEventListener('click', () => _bmSelectAll(false));
-  document.getElementById('import-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeImportModal();
-  });
-
-  // Export / Import JSON backup
-  document.getElementById('swatch-export-json').addEventListener('click', e => {
-    e.stopPropagation();
-    doExportJson();
-    themeSwatches.classList.add('hidden');
-  });
-  document.getElementById('swatch-export-html').addEventListener('click', e => {
-    e.stopPropagation();
-    doExportBookmarksHtml();
-    themeSwatches.classList.add('hidden');
-  });
-  const jsonImportInput = document.getElementById('json-import-input');
-  document.getElementById('swatch-import-json').addEventListener('click', e => {
-    e.stopPropagation();
-    jsonImportInput.click();
-    themeSwatches.classList.add('hidden');
-  });
-  jsonImportInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) doImportJson(file);
     e.target.value = '';
   });
 
