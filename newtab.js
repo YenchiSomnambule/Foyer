@@ -549,61 +549,13 @@ const TILE_SIZES = {
 };
 const SIZE_KEYS = ['xs', 's', 'm', 'l', 'xl'];
 
-const ENGINES = {
-  google:  { name: 'Google',  url: 'https://www.google.com/search?q=', favicon: 'https://www.google.com/favicon.ico' },
-  bing:    { name: 'Bing',    url: 'https://www.bing.com/search?q=',   favicon: 'https://www.bing.com/favicon.ico' },
-  claude:  { name: 'Claude',  url: 'https://claude.ai/new?q=',         favicon: 'https://claude.ai/favicon.ico' },
-  chatgpt: { name: 'ChatGPT', url: 'https://chatgpt.com/?q=',          favicon: 'https://chatgpt.com/favicon.ico' },
-};
-const ENGINE_ORDER = ['google', 'bing', 'claude', 'chatgpt'];
-let _engine = 'google';
+const GOOGLE_SEARCH_URL = 'https://www.google.com/search?q=';
 
 function _engineUrl(q) {
-  return (ENGINES[_engine] || ENGINES.google).url + encodeURIComponent(q);
+  return GOOGLE_SEARCH_URL + encodeURIComponent(q);
 }
 
-function _applyEngine(key) {
-  _engine = key;
-  const cfg = ENGINES[key] || ENGINES.google;
-  document.getElementById('engine-favicon').src = cfg.favicon;
-  document.getElementById('engine-input').placeholder = `Search ${cfg.name}…`;
-}
-
-function _renderEnginePicker() {
-  const picker = document.getElementById('engine-picker');
-  picker.innerHTML = '';
-  ENGINE_ORDER.forEach(key => {
-    const cfg = ENGINES[key];
-    const btn = document.createElement('button');
-    btn.className = 'engine-opt' + (key === _engine ? ' active' : '');
-    btn.innerHTML = `<img src="${cfg.favicon}" width="16" height="16" alt=""><span>${cfg.name}</span>`;
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      saveEngine(key);
-      _closeEnginePicker();
-    });
-    picker.appendChild(btn);
-  });
-}
-
-function _openEnginePicker() {
-  _renderEnginePicker();
-  document.getElementById('engine-picker').classList.remove('hidden');
-}
-
-function _closeEnginePicker() {
-  document.getElementById('engine-picker').classList.add('hidden');
-}
-
-async function loadEngine() {
-  const { searchEngine } = await chrome.storage.local.get('searchEngine');
-  _applyEngine(searchEngine || 'google');
-}
-
-async function saveEngine(key) {
-  await chrome.storage.local.set({ searchEngine: key });
-  _applyEngine(key);
-}
+async function loadEngine() {}
 
 let _currentTileSize = 'm';
 
@@ -2964,18 +2916,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  document.getElementById('engine-icon-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    const picker = document.getElementById('engine-picker');
-    if (picker.classList.contains('hidden')) _openEnginePicker();
-    else _closeEnginePicker();
-  });
-
-  document.addEventListener('click', e => {
-    if (!document.getElementById('engine-search-bar').contains(e.target)) {
-      _closeEnginePicker();
-    }
-  });
 
   // Config button → open settings modal
   document.getElementById('config-btn').addEventListener('click', e => {
