@@ -942,17 +942,49 @@ body.theme-custom .swatch-custom.active,
   padding: 10px 4px 4px;
 }
 
-.bm-folder-row {
+.bm-folder-group {
+  margin-bottom: 2px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.bm-folder-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-top: 4px;
-  padding-bottom: 2px;
-  color: rgba(255,255,255,0.45);
-  font-size: 12px;
-  font-weight: 600;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
   user-select: none;
+  transition: background 0.1s;
 }
+.bm-folder-header:hover { background: rgba(255,255,255,0.06); }
+.bm-folder-check {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  accent-color: #5db0ff;
+  cursor: pointer;
+}
+.bm-folder-icon { flex-shrink: 0; color: rgba(255,255,255,0.5); }
+.bm-folder-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bm-group-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: rgba(88,150,255,0.72);
+  background: rgba(88,150,255,0.13);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.bm-folder-items { padding-left: 14px; }
 
 .bm-item {
   display: flex;

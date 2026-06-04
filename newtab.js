@@ -1688,22 +1688,15 @@ function _existingUrls() {
   return s;
 }
 
-function _flattenBmNodes(nodes, out, depth, existingUrls) {
+function _collectBmNodes(nodes, out, existingUrls) {
   for (const node of nodes) {
     if (node.url) {
       if (!/^https?:\/\//i.test(node.url)) continue;
       let hostname = node.url;
       try { hostname = new URL(node.url).hostname.replace(/^www\./, ''); } catch {}
-      out.push({
-        type: 'bookmark', id: node.id, depth,
-        name: node.title || hostname,
-        url: node.url,
-        hostname,
-        exists: existingUrls.has(node.url),
-      });
+      out.push({ id: node.id, name: node.title || hostname, url: node.url, hostname, exists: existingUrls.has(node.url) });
     } else if (node.children) {
-      out.push({ type: 'folder', id: node.id, name: node.title || 'Folder', depth });
-      _flattenBmNodes(node.children, out, depth + 1, existingUrls);
+      _collectBmNodes(node.children, out, existingUrls); // flatten nested sub-folders
     }
   }
 }
@@ -1736,19 +1729,47 @@ async function openImportModal() {
     const existing = _existingUrls();
     const sections = [];
 
-    for (const folder of (root.children ?? [])) {
-      if (!folder.children) continue;
-      const flatItems = [];
-      _flattenBmNodes(folder.children, flatItems, 0, existing);
-      const bookmarks = flatItems.filter(i => i.type === 'bookmark');
-      if (bookmarks.length === 0) continue;
-      sections.push({ name: folder.title || 'Bookmarks', items: flatItems });
+    for (const chromeFolder of (root.children ?? [])) {
+      if (!chromeFolder.children) continue;
+      const folders = [];
+      const loose   = [];
+
+      for (const child of chromeFolder.children) {
+        if (child.url) {
+          if (/^https?:\/\//i.test(child.url)) {
+            let hostname = child.url;
+            try { hostname = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
+            loose.push({ id: child.id, name: child.title || hostname, url: child.url, hostname, exists: existing.has(child.url) });
+          }
+        } else if (child.children) {
+          const bookmarks = [];
+          _collectBmNodes(child.children, bookmarks, existing);
+          if (bookmarks.length > 0) folders.push({ id: child.id, name: child.title || 'Folder', bookmarks });
+        }
+      }
+
+      if (folders.length > 0 || loose.length > 0)
+        sections.push({ name: (chromeFolder.title || 'Bookmarks').toUpperCase(), folders, loose });
     }
 
     _renderImportList(sections);
   } catch {
     list.innerHTML = '<div class="bm-empty">Could not read bookmarks.</div>';
   }
+}
+
+function _bmItemHtml(bm) {
+  const grad   = tileGradient(bm.url);
+  const letter = (bm.name[0] ?? '?').toUpperCase();
+  return `<label class="bm-item${bm.exists ? ' bm-exists' : ''}">
+    <input type="checkbox" class="bm-check" data-url="${escHtml(bm.url)}" data-name="${escHtml(bm.name)}" ${bm.exists ? 'disabled' : 'checked'}>
+    <div class="bm-icon" style="background:${grad}">${letter}</div>
+    <div class="bm-text">
+      <span class="bm-name">${escHtml(bm.name)}</span>
+      <span class="bm-url">${escHtml(bm.hostname)}</span>
+    </div>
+    ${bm.exists ? '<span class="bm-exists-badge">Added</span>' : ''}
+  </label>`;
 }
 
 function _renderImportList(sections) {
@@ -1759,40 +1780,56 @@ function _renderImportList(sections) {
     return;
   }
 
-  list.innerHTML = sections.map(sec => {
-    const rows = sec.items.map(item => {
-      if (item.type === 'folder') {
-        const indent = 4 + item.depth * 16;
-        return `<div class="bm-folder-row" style="padding-left:${indent}px">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+  let html = '';
+  for (const sec of sections) {
+    html += `<div class="bm-section">${escHtml(sec.name)}</div>`;
+
+    for (const folder of sec.folders) {
+      const allExists = folder.bookmarks.every(b => b.exists);
+      html += `<div class="bm-folder-group" data-folder-id="${escHtml(folder.id)}" data-folder-name="${escHtml(folder.name)}">
+        <div class="bm-folder-header">
+          <input type="checkbox" class="bm-folder-check" ${allExists ? 'disabled' : 'checked'}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" class="bm-folder-icon">
             <path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/>
           </svg>
-          ${escHtml(item.name)}
-        </div>`;
-      }
-      const indent = 4 + item.depth * 16;
-      const grad   = tileGradient(item.url);
-      const letter = (item.name[0] ?? '?').toUpperCase();
-      return `<label class="bm-item${item.exists ? ' bm-exists' : ''}"
-                     style="padding-left:${indent}px">
-        <input type="checkbox" class="bm-check"
-               data-url="${escHtml(item.url)}" data-name="${escHtml(item.name)}"
-               ${item.exists ? 'disabled' : 'checked'}>
-        <div class="bm-icon" style="background:${grad}">${letter}</div>
-        <div class="bm-text">
-          <span class="bm-name">${escHtml(item.name)}</span>
-          <span class="bm-url">${escHtml(item.hostname)}</span>
+          <span class="bm-folder-label">${escHtml(folder.name)}</span>
+          <span class="bm-group-badge">→ Group</span>
         </div>
-        ${item.exists ? '<span class="bm-exists-badge">Added</span>' : ''}
-      </label>`;
-    }).join('');
+        <div class="bm-folder-items">${folder.bookmarks.map(_bmItemHtml).join('')}</div>
+      </div>`;
+    }
 
-    return `<div class="bm-section">${escHtml(sec.name)}</div>${rows}`;
-  }).join('');
+    for (const bm of sec.loose) {
+      html += _bmItemHtml(bm);
+    }
+  }
 
-  list.querySelectorAll('.bm-check').forEach(cb =>
+  list.innerHTML = html;
+
+  // Wire folder checkbox ↔ item checkboxes
+  list.querySelectorAll('.bm-folder-group').forEach(fg => {
+    const fc         = fg.querySelector('.bm-folder-check');
+    const itemChecks = [...fg.querySelectorAll('.bm-check:not(:disabled)')];
+    if (!fc || fc.disabled || !itemChecks.length) return;
+
+    fc.addEventListener('change', () => {
+      itemChecks.forEach(cb => { cb.checked = fc.checked; });
+      _updateImportCount();
+    });
+
+    const sync = () => {
+      const n = itemChecks.filter(c => c.checked).length;
+      fc.indeterminate = n > 0 && n < itemChecks.length;
+      fc.checked       = n === itemChecks.length;
+      _updateImportCount();
+    };
+    itemChecks.forEach(cb => cb.addEventListener('change', sync));
+  });
+
+  list.querySelectorAll('.bm-item:not(.bm-folder-group .bm-item) .bm-check').forEach(cb =>
     cb.addEventListener('change', _updateImportCount)
   );
+
   _updateImportCount();
 }
 
@@ -1806,18 +1843,48 @@ function _updateImportCount() {
 
 function _bmSelectAll(checked) {
   document.querySelectorAll('.bm-check:not(:disabled)').forEach(cb => { cb.checked = checked; });
+  document.querySelectorAll('.bm-folder-check:not(:disabled)').forEach(fc => {
+    fc.checked = checked; fc.indeterminate = false;
+  });
   _updateImportCount();
 }
 
 function doImportBookmarks() {
-  const checked = [...document.querySelectorAll('.bm-check:checked')];
-  if (!checked.length) return;
-  for (const cb of checked) {
-    items.push({ id: uid(), type: 'site', name: cb.dataset.name, url: cb.dataset.url });
-  }
+  const newItems = [];
+  let siteCount = 0, groupCount = 0;
+
+  // Folders → Groups (or single site if only 1 item checked)
+  document.querySelectorAll('.bm-folder-group').forEach(fg => {
+    const checked = [...fg.querySelectorAll('.bm-check:checked:not(:disabled)')];
+    if (!checked.length) return;
+    if (checked.length === 1) {
+      const cb = checked[0];
+      newItems.push({ id: uid(), type: 'site', name: cb.dataset.name, url: cb.dataset.url });
+      siteCount++;
+    } else {
+      newItems.push({
+        id: uid(), type: 'group', name: fg.dataset.folderName,
+        items: checked.map(cb => ({ id: uid(), type: 'site', name: cb.dataset.name, url: cb.dataset.url })),
+      });
+      groupCount++;
+    }
+  });
+
+  // Loose (top-level) bookmarks → individual sites
+  document.querySelectorAll('.bm-item:not(.bm-folder-group .bm-item) .bm-check:checked:not(:disabled)').forEach(cb => {
+    newItems.push({ id: uid(), type: 'site', name: cb.dataset.name, url: cb.dataset.url });
+    siteCount++;
+  });
+
+  if (!newItems.length) return;
+  items.push(...newItems);
   save().then(render);
   closeImportModal();
-  _showToast(`Imported ${checked.length} site${checked.length > 1 ? 's' : ''}`);
+
+  const parts = [];
+  if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
+  if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
+  _showToast(`Imported ${parts.join(' + ')}`);
 }
 
 function closeImportModal() {
