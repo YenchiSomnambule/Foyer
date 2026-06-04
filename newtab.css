@@ -36,6 +36,7 @@ html, body {
 body {
   background-attachment: fixed;
   transition: background 0.45s ease;
+  color: var(--text-color);
 }
 
 /* ─── App Shell: fills viewport, scrolls vertically, starts top-left ─── */
