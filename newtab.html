@@ -151,57 +151,13 @@
 
   <!-- Theme Picker -->
   <div id="theme-picker">
-    <!-- Config button (settings/backup actions) -->
+    <!-- Config button (opens settings modal) -->
     <button id="config-btn" title="Settings" aria-label="Settings">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
     </button>
-    <div id="config-panel" class="hidden">
-      <div class="size-row">
-        <span class="size-label">Tile size</span>
-        <div class="size-btns">
-          <button class="size-btn" data-size="xs">XS</button>
-          <button class="size-btn" data-size="s">S</button>
-          <button class="size-btn active" data-size="m">M</button>
-          <button class="size-btn" data-size="l">L</button>
-          <button class="size-btn" data-size="xl">XL</button>
-        </div>
-      </div>
-      <div class="swatch-separator"></div>
-      <button class="swatch-import-btn" id="swatch-import" title="Import from Chrome bookmarks">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-        </svg>
-        Import bookmarks
-      </button>
-      <button class="swatch-import-btn" id="swatch-export-html" title="Export as Bookmarks HTML">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/>
-        </svg>
-        Export as bookmarks
-      </button>
-      <div class="swatch-separator"></div>
-      <button class="swatch-import-btn" id="swatch-import-json" title="Import backup">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        Import backup
-      </button>
-      <button class="swatch-import-btn" id="swatch-export-json" title="Export backup">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        Export backup
-      </button>
-    </div>
 
     <!-- Theme / colour button -->
     <button id="theme-btn" title="Change theme" aria-label="Change theme">
@@ -298,6 +254,116 @@
           </svg>
           Auto-detect
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div id="settings-card">
+      <div id="settings-header">
+        <h2>Settings</h2>
+        <button id="close-settings" aria-label="Close settings">✕</button>
+      </div>
+      <nav id="settings-tabs">
+        <button class="stab active" data-pane="general">General</button>
+        <button class="stab" data-pane="shortcuts">Shortcuts</button>
+      </nav>
+      <div id="settings-body">
+
+        <!-- General pane -->
+        <div class="settings-pane" id="spane-general">
+
+          <div class="ssec">
+            <div class="ssec-title">Tile size</div>
+            <div class="size-btns" id="settings-size-btns">
+              <button class="size-btn" data-size="xs">XS</button>
+              <button class="size-btn" data-size="s">S</button>
+              <button class="size-btn active" data-size="m">M</button>
+              <button class="size-btn" data-size="l">L</button>
+              <button class="size-btn" data-size="xl">XL</button>
+            </div>
+          </div>
+
+          <div class="ssec">
+            <div class="ssec-title">Theme</div>
+            <div id="settings-swatches">
+              <button class="swatch" data-theme="cream"  title="Cream"></button>
+              <button class="swatch" data-theme="blue"   title="Blue"></button>
+              <button class="swatch" data-theme="pink"   title="Pink"></button>
+              <button class="swatch" data-theme="yellow" title="Yellow"></button>
+              <button class="swatch" data-theme="dark"   title="Dark"></button>
+              <button class="swatch swatch-custom" id="settings-swatch-custom" title="Custom color"></button>
+              <button class="swatch swatch-image" id="settings-swatch-image" title="Background image">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="ssec">
+            <div class="ssec-title">Data</div>
+            <div class="ssec-btns">
+              <button class="ssec-action-btn" id="settings-import-bm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                Import bookmarks
+              </button>
+              <button class="ssec-action-btn" id="settings-export-bm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+                Export bookmarks
+              </button>
+              <button class="ssec-action-btn" id="settings-import-json">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import backup
+              </button>
+              <button class="ssec-action-btn" id="settings-export-json">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export backup
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Shortcuts pane -->
+        <div class="settings-pane hidden" id="spane-shortcuts">
+          <div class="shortcuts-list">
+            <div class="sc-row">
+              <span class="sc-action">Add tile</span>
+              <span class="sc-keys"><kbd class="sc-key editable" data-action="addTile">n</kbd></span>
+            </div>
+            <div class="sc-row">
+              <span class="sc-action">Search</span>
+              <span class="sc-keys"><kbd class="sc-key editable" data-action="search">/</kbd></span>
+            </div>
+            <div class="sc-row sc-fixed">
+              <span class="sc-action">Navigate tiles</span>
+              <span class="sc-keys"><kbd class="sc-key">↑</kbd><kbd class="sc-key">↓</kbd><kbd class="sc-key">←</kbd><kbd class="sc-key">→</kbd></span>
+            </div>
+            <div class="sc-row sc-fixed">
+              <span class="sc-action">Open / Enter group</span>
+              <span class="sc-keys"><kbd class="sc-key">Enter</kbd></span>
+            </div>
+            <div class="sc-row sc-fixed">
+              <span class="sc-action">Delete tile</span>
+              <span class="sc-keys"><kbd class="sc-key">Del</kbd></span>
+            </div>
+            <div class="sc-row sc-fixed">
+              <span class="sc-action">Close / Go back</span>
+              <span class="sc-keys"><kbd class="sc-key">Esc</kbd></span>
+            </div>
+            <div class="sc-row sc-fixed">
+              <span class="sc-action">Undo</span>
+              <span class="sc-keys"><kbd class="sc-key">⌘Z</kbd><span class="sc-sep">/</span><kbd class="sc-key">Ctrl+Z</kbd></span>
+            </div>
+          </div>
+          <p id="sc-conflict-msg" class="sc-conflict"></p>
+          <p class="sc-hint">Click a highlighted shortcut to remap it. Press Esc to cancel.</p>
+        </div>
+
       </div>
     </div>
   </div>

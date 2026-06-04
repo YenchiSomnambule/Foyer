@@ -464,6 +464,60 @@ function _navGroupGrid(key) {
   }
 }
 
+// ─── Settings Modal & Shortcuts ───────────────────────────────────────────────
+
+let _shortcuts    = { addTile: 'n', search: '/' };
+let _scListening  = null; // { el, action, oldKey }
+
+function openSettingsModal(tab) {
+  document.getElementById('settings-modal').classList.remove('hidden');
+  document.getElementById('theme-swatches').classList.add('hidden');
+  _switchSettingsTab(tab || 'general');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settings-modal').classList.add('hidden');
+  if (_scListening) _cancelShortcutListen();
+}
+
+function _switchSettingsTab(pane) {
+  document.querySelectorAll('.stab').forEach(t => t.classList.toggle('active', t.dataset.pane === pane));
+  document.querySelectorAll('.settings-pane').forEach(p => p.classList.toggle('hidden', p.id !== `spane-${pane}`));
+}
+
+function _startShortcutListen(el, action) {
+  if (_scListening) _cancelShortcutListen();
+  _scListening = { el, action, oldKey: _shortcuts[action] };
+  el.textContent = '…';
+  el.classList.add('listening');
+  document.getElementById('sc-conflict-msg').textContent = '';
+}
+
+function _cancelShortcutListen() {
+  if (!_scListening) return;
+  _scListening.el.textContent = _scListening.oldKey;
+  _scListening.el.classList.remove('listening');
+  _scListening = null;
+  document.getElementById('sc-conflict-msg').textContent = '';
+}
+
+function _updateShortcutDisplay() {
+  document.querySelectorAll('.sc-key[data-action]').forEach(el => {
+    if (_shortcuts[el.dataset.action]) el.textContent = _shortcuts[el.dataset.action];
+  });
+}
+
+async function loadShortcuts() {
+  return new Promise(resolve => {
+    chrome.storage.local.get('shortcuts', r => {
+      if (r.shortcuts?.addTile) _shortcuts.addTile = r.shortcuts.addTile;
+      if (r.shortcuts?.search)  _shortcuts.search  = r.shortcuts.search;
+      _updateShortcutDisplay();
+      resolve();
+    });
+  });
+}
+
 // ─── Tile Size ────────────────────────────────────────────────────────────────
 
 const TILE_SIZES = {
@@ -1794,7 +1848,7 @@ function applyTheme(theme) {
   document.querySelectorAll('.swatch').forEach(s => {
     s.classList.toggle('active', s.dataset.theme === theme);
   });
-  document.getElementById('swatch-custom')?.style.removeProperty('background');
+  document.querySelectorAll('.swatch-custom').forEach(s => s.style.removeProperty('background'));
   _resetImageSwatch();
 }
 
@@ -1859,11 +1913,10 @@ function applyCustomColor(hex) {
   }
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-  const customSwatch = document.getElementById('swatch-custom');
-  if (customSwatch) {
-    customSwatch.classList.add('active');
-    customSwatch.style.background = hex;  // Show chosen color instead of rainbow
-  }
+  document.querySelectorAll('.swatch-custom').forEach(s => {
+    s.classList.add('active');
+    s.style.background = hex;
+  });
 }
 
 function saveCustomColor(hex) {
@@ -1920,12 +1973,11 @@ function compressImage(file) {
 }
 
 function _resetImageSwatch() {
-  const btn = document.getElementById('swatch-image');
-  if (btn) {
+  document.querySelectorAll('.swatch-image').forEach(btn => {
     btn.style.removeProperty('background-image');
     btn.style.removeProperty('background-size');
     btn.style.removeProperty('background-position');
-  }
+  });
 }
 
 function applyBgImage(dataUrl) {
@@ -1945,13 +1997,12 @@ function applyBgImage(dataUrl) {
   document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-  const btn = document.getElementById('swatch-image');
-  if (btn) {
+  document.querySelectorAll('.swatch-image').forEach(btn => {
     btn.classList.add('active');
-    btn.style.backgroundImage  = `url("${dataUrl}")`;
-    btn.style.backgroundSize   = 'cover';
+    btn.style.backgroundImage    = `url("${dataUrl}")`;
+    btn.style.backgroundSize     = 'cover';
     btn.style.backgroundPosition = 'center';
-  }
+  });
 }
 
 function saveBgImage(dataUrl) {
@@ -2499,6 +2550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await load();
   await loadTheme();
   await loadTileSize();
+  await loadShortcuts();
   render();
 
   // Clock — tick immediately then every second
@@ -2587,9 +2639,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Context menu dismiss
   document.addEventListener('click', e => {
     if (!document.getElementById('context-menu').contains(e.target)) closeCtxMenu();
-    if (!document.getElementById('theme-picker').contains(e.target)) {
+    if (!document.getElementById('theme-picker').contains(e.target) &&
+        !document.getElementById('settings-modal').contains(e.target)) {
       document.getElementById('theme-swatches').classList.add('hidden');
-      document.getElementById('config-panel').classList.add('hidden');
     }
   });
 
@@ -2597,10 +2649,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tag      = document.activeElement?.tagName;
     const isInput  = tag === 'INPUT' || tag === 'TEXTAREA';
 
+    // ── Shortcut listening mode (remapping) ──
+    if (_scListening) {
+      if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); _cancelShortcutListen(); return; }
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1) {
+        e.preventDefault();
+        const key = e.key;
+        const conflict = Object.entries(_shortcuts).find(([a, k]) => k === key && a !== _scListening.action);
+        if (conflict) {
+          const names = { addTile: 'Add tile', search: 'Search' };
+          document.getElementById('sc-conflict-msg').textContent =
+            `"${key}" is already used by "${names[conflict[0]] || conflict[0]}"`;
+          return;
+        }
+        _shortcuts[_scListening.action] = key;
+        _scListening.el.textContent = key;
+        _scListening.el.classList.remove('listening');
+        _scListening = null;
+        document.getElementById('sc-conflict-msg').textContent = '';
+        chrome.storage.local.set({ shortcuts: { ..._shortcuts } });
+        return;
+      }
+      return;
+    }
+
     const anyOverlayOpen = [
       'add-modal','edit-modal','rename-modal',
       'import-modal','location-modal','confirm-modal',
-      'search-overlay','tutorial-overlay',
+      'search-overlay','tutorial-overlay','settings-modal',
     ].some(id => !document.getElementById(id).classList.contains('hidden'));
 
     const groupOpen = !document.getElementById('group-overlay').classList.contains('hidden');
@@ -2609,6 +2685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Escape ──
     if (e.key === 'Escape') {
+      if (!document.getElementById('settings-modal').classList.contains('hidden'))      { closeSettingsModal(); return; }
       if (groupOpen)                                                                      { closeGroup();     return; }
       if (_selectedIds.size > 0)                                                         { _clearSel();      return; }
       if (_focusedId)                                                                     { _focusTile(null); return; }
@@ -2707,18 +2784,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // ── "n": add tile (to group if open, else to main grid) ──
-    if (e.key === 'n' && !isInput && !anyOverlayOpen) {
+    // ── add tile shortcut (to group if open, else main grid) ──
+    if (e.key === _shortcuts.addTile && !isInput && !anyOverlayOpen) {
       e.preventDefault();
       if (groupOpen) openAddModalForGroup(openGroupId);
       else           openAddModal();
       return;
     }
 
-    // ── ⌘K / Ctrl+K or "/": open search ──
+    // ── ⌘K / Ctrl+K or search shortcut ──
     if (!anyOverlayOpen && !groupOpen) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); return; }
-      if (e.key === '/' && !isInput) { e.preventDefault(); openSearch(); return; }
+      if (e.key === _shortcuts.search && !isInput) { e.preventDefault(); openSearch(); return; }
     }
   });
 
@@ -2774,21 +2851,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeSearch();
   });
 
-  // Config panel (settings / import / export actions)
-  const configBtn   = document.getElementById('config-btn');
-  const configPanel = document.getElementById('config-panel');
-  configBtn.addEventListener('click', e => {
+  // Config button → open settings modal
+  document.getElementById('config-btn').addEventListener('click', e => {
     e.stopPropagation();
-    configPanel.classList.toggle('hidden');
-    themeSwatches.classList.add('hidden'); // mutual exclusion
+    openSettingsModal();
   });
 
-  // Import bookmarks
-  document.getElementById('swatch-import').addEventListener('click', e => {
-    e.stopPropagation();
-    openImportModal();
-    configPanel.classList.add('hidden');
+  // Settings modal close button + backdrop
+  document.getElementById('close-settings').addEventListener('click', closeSettingsModal);
+  document.getElementById('settings-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSettingsModal();
   });
+
+  // Settings tabs
+  document.querySelectorAll('.stab').forEach(tab => {
+    tab.addEventListener('click', () => _switchSettingsTab(tab.dataset.pane));
+  });
+
+  // Settings → data buttons
+  document.getElementById('settings-import-bm').addEventListener('click', () => {
+    closeSettingsModal(); openImportModal();
+  });
+  document.getElementById('settings-export-bm').addEventListener('click', () => {
+    doExportBookmarksHtml(); closeSettingsModal();
+  });
+  document.getElementById('settings-export-json').addEventListener('click', () => {
+    doExportJson(); closeSettingsModal();
+  });
+  const jsonImportInput = document.getElementById('json-import-input');
+  document.getElementById('settings-import-json').addEventListener('click', () => {
+    jsonImportInput.click(); closeSettingsModal();
+  });
+  jsonImportInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) doImportJson(file);
+    e.target.value = '';
+  });
+
+  // Import bookmarks modal
   document.getElementById('cancel-import').addEventListener('click', closeImportModal);
   document.getElementById('confirm-import').addEventListener('click', doImportBookmarks);
   document.getElementById('import-select-all').addEventListener('click', () => _bmSelectAll(true));
@@ -2797,52 +2897,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeImportModal();
   });
 
-  // Export / Import JSON backup
-  document.getElementById('swatch-export-json').addEventListener('click', e => {
-    e.stopPropagation();
-    doExportJson();
-    configPanel.classList.add('hidden');
-  });
-  document.getElementById('swatch-export-html').addEventListener('click', e => {
-    e.stopPropagation();
-    doExportBookmarksHtml();
-    configPanel.classList.add('hidden');
-  });
-  const jsonImportInput = document.getElementById('json-import-input');
-  document.getElementById('swatch-import-json').addEventListener('click', e => {
-    e.stopPropagation();
-    jsonImportInput.click();
-    configPanel.classList.add('hidden');
-  });
-  jsonImportInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) doImportJson(file);
-    e.target.value = '';
+  // Shortcut key remapping
+  document.querySelectorAll('.sc-key.editable').forEach(el => {
+    el.addEventListener('click', () => _startShortcutListen(el, el.dataset.action));
   });
 
-  // Theme picker
+  // Theme picker (quick-access button stays)
   const themeBtn      = document.getElementById('theme-btn');
   const themeSwatches = document.getElementById('theme-swatches');
   themeBtn.addEventListener('click', e => {
     e.stopPropagation();
     themeSwatches.classList.toggle('hidden');
-    configPanel.classList.add('hidden'); // mutual exclusion
   });
   document.querySelectorAll('.swatch[data-theme]').forEach(swatch => {
     swatch.addEventListener('click', e => {
       e.stopPropagation();
-      const theme = swatch.dataset.theme;
-      applyTheme(theme);
-      saveTheme(theme);
+      applyTheme(swatch.dataset.theme);
+      saveTheme(swatch.dataset.theme);
       themeSwatches.classList.add('hidden');
     });
   });
 
-  const swatchCustom = document.getElementById('swatch-custom');
-  const colorInput   = document.getElementById('custom-color-input');
-  swatchCustom.addEventListener('click', e => {
-    e.stopPropagation();
-    colorInput.click();
+  const colorInput = document.getElementById('custom-color-input');
+  document.querySelectorAll('.swatch-custom').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); colorInput.click(); });
   });
   colorInput.addEventListener('input', e => {
     applyCustomColor(e.target.value);
@@ -2850,11 +2928,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Image background picker
-  const swatchImage  = document.getElementById('swatch-image');
   const bgImageInput = document.getElementById('bg-image-input');
-  swatchImage.addEventListener('click', e => {
-    e.stopPropagation();
-    bgImageInput.click();
+  document.querySelectorAll('.swatch-image').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); bgImageInput.click(); });
   });
   bgImageInput.addEventListener('change', async e => {
     const file = e.target.files[0];
