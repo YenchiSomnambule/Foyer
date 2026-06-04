@@ -12,10 +12,27 @@
     <div id="grid"></div>
   </div>
 
-  <!-- Clock / Date -->
-  <div id="clock-widget">
-    <time id="clock-time"></time>
-    <div id="clock-date"></div>
+  <!-- Top widgets: Clock + Weather -->
+  <div id="top-widgets">
+    <div id="clock-widget">
+      <time id="clock-time"></time>
+      <div id="clock-date"></div>
+    </div>
+    <div class="widget-sep hidden" id="weather-sep"></div>
+    <div id="weather-widget" class="hidden">
+      <div id="weather-main">
+        <span id="weather-icon"></span>
+        <span id="weather-temp" title="Toggle °C / °F"></span>
+      </div>
+      <button id="weather-city-btn" title="Change location">
+        <span id="weather-condition"></span>
+        <span class="weather-dot">·</span>
+        <span id="weather-city">Detecting…</span>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <!-- Marquee selection box -->
@@ -261,6 +278,29 @@
 
   <!-- Toast / Undo notification -->
   <div id="toast" aria-live="polite"></div>
+
+  <!-- Location Picker Modal -->
+  <div id="location-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 class="modal-title">Weather Location</h2>
+      <div class="input-group">
+        <label>City</label>
+        <input type="text" id="location-input" placeholder="Search city or country…" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="location-results"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancel-location">Cancel</button>
+        <button class="btn-cancel" id="location-use-gps">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+            <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+          </svg>
+          Auto-detect
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="newtab.js"></script>
 </body>

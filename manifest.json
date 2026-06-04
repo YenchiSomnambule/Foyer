@@ -7,6 +7,11 @@
     "newtab": "newtab.html"
   },
   "permissions": ["storage", "bookmarks"],
+  "host_permissions": [
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
+    "https://api.bigdatacloud.net/*"
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

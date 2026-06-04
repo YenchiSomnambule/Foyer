@@ -152,6 +152,201 @@ function sampleItems() {
   ];
 }
 
+// ─── Weather ──────────────────────────────────────────────────────────────────
+
+const WMO = {
+  0:  ['☀️',  'Clear'],
+  1:  ['🌤️', 'Mostly clear'],
+  2:  ['⛅',  'Partly cloudy'],
+  3:  ['☁️',  'Overcast'],
+  45: ['🌫️', 'Fog'],
+  48: ['🌫️', 'Icy fog'],
+  51: ['🌦️', 'Drizzle'],
+  53: ['🌦️', 'Drizzle'],
+  55: ['🌧️', 'Heavy drizzle'],
+  61: ['🌧️', 'Light rain'],
+  63: ['🌧️', 'Rain'],
+  65: ['🌧️', 'Heavy rain'],
+  71: ['❄️',  'Light snow'],
+  73: ['❄️',  'Snow'],
+  75: ['❄️',  'Heavy snow'],
+  77: ['🌨️', 'Snow grains'],
+  80: ['🌦️', 'Showers'],
+  81: ['🌧️', 'Rain showers'],
+  82: ['🌧️', 'Heavy showers'],
+  85: ['🌨️', 'Snow showers'],
+  86: ['🌨️', 'Heavy snow showers'],
+  95: ['⛈️',  'Thunderstorm'],
+  96: ['⛈️',  'Thunderstorm'],
+  99: ['⛈️',  'Thunderstorm'],
+};
+
+let _weatherData = null;   // { tempC, code, city, country, lat, lon, fetchedAt }
+let _weatherUnit = 'C';    // 'C' | 'F'
+const _WEATHER_TTL = 30 * 60 * 1000; // 30 min
+
+function _showWeatherWidget(show) {
+  document.getElementById('weather-widget').classList.toggle('hidden', !show);
+  document.getElementById('weather-sep').classList.toggle('hidden', !show);
+}
+
+function _renderWeather() {
+  if (!_weatherData) return;
+  const { tempC, code, city, country } = _weatherData;
+  const [emoji, desc] = WMO[code] ?? ['🌡️', 'Unknown'];
+  const temp = _weatherUnit === 'F'
+    ? Math.round(tempC * 9 / 5 + 32) + '°F'
+    : Math.round(tempC) + '°C';
+
+  document.getElementById('weather-icon').textContent = emoji;
+  document.getElementById('weather-temp').textContent = temp;
+  const condEl = document.getElementById('weather-condition');
+  const dotEl  = document.querySelector('.weather-dot');
+  condEl.textContent = desc;
+  dotEl.style.display = desc ? '' : 'none';
+  document.getElementById('weather-city').textContent = city + (country ? ', ' + country : '');
+  _showWeatherWidget(true);
+}
+
+function _weatherSetStatus(cityText) {
+  document.getElementById('weather-icon').textContent = '⏳';
+  document.getElementById('weather-temp').textContent = '--';
+  document.getElementById('weather-condition').textContent = '';
+  document.querySelector('.weather-dot').style.display = 'none';
+  document.getElementById('weather-city').textContent = cityText;
+  _showWeatherWidget(true);
+}
+
+async function _fetchWeatherRaw(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  return { tempC: j.current.temperature_2m, code: j.current.weather_code };
+}
+
+async function _reverseGeocode(lat, lon) {
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+    const res = await fetch(url);
+    if (!res.ok) return { city: 'Unknown', country: '' };
+    const j = await res.json();
+    return {
+      city:    j.city || j.locality || j.principalSubdivision || 'Unknown',
+      country: j.countryCode || '',
+    };
+  } catch {
+    return { city: 'Unknown', country: '' };
+  }
+}
+
+async function _applyLocation(lat, lon, city, country) {
+  _weatherSetStatus(city);
+  try {
+    const w = await _fetchWeatherRaw(lat, lon);
+    _weatherData = { tempC: w.tempC, code: w.code, city, country, lat, lon, fetchedAt: Date.now() };
+    chrome.storage.local.set({
+      weatherLocation: { lat, lon, city, country },
+      weatherCache: _weatherData,
+    });
+    _renderWeather();
+  } catch {
+    document.getElementById('weather-city').textContent = 'Unavailable';
+  }
+}
+
+async function _loadWeather() {
+  const stored = await new Promise(r => chrome.storage.local.get(
+    ['weatherLocation', 'weatherCache', 'weatherUnit'], r));
+
+  if (stored.weatherUnit) _weatherUnit = stored.weatherUnit;
+
+  // Use cache if still fresh
+  if (stored.weatherCache) {
+    const c = stored.weatherCache;
+    if (Date.now() - c.fetchedAt < _WEATHER_TTL) {
+      _weatherData = c;
+      _renderWeather();
+      return;
+    }
+  }
+
+  // Refresh from stored location
+  if (stored.weatherLocation) {
+    const { lat, lon, city, country } = stored.weatherLocation;
+    await _applyLocation(lat, lon, city, country);
+    return;
+  }
+
+  // No location — try geolocation silently
+  if (!navigator.geolocation) return;
+  _weatherSetStatus('Detecting…');
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const geo = await _reverseGeocode(lat, lon);
+      await _applyLocation(lat, lon, geo.city, geo.country);
+    },
+    () => {
+      // Permission denied — show "Set location" prompt
+      document.getElementById('weather-icon').textContent = '📍';
+      document.getElementById('weather-temp').textContent = '--';
+      document.getElementById('weather-condition').textContent = '';
+      document.querySelector('.weather-dot').style.display = 'none';
+      document.getElementById('weather-city').textContent = 'Set location';
+      _showWeatherWidget(true);
+    },
+    { timeout: 8000 }
+  );
+}
+
+// ─── Location search ──────────────────────────────────────────────────────────
+
+function openLocationModal() {
+  document.getElementById('location-modal').classList.remove('hidden');
+  document.getElementById('location-results').innerHTML = '';
+  const inp = document.getElementById('location-input');
+  inp.value = '';
+  setTimeout(() => inp.focus(), 60);
+}
+
+function closeLocationModal() {
+  document.getElementById('location-modal').classList.add('hidden');
+  clearTimeout(_locationSearchTimer);
+}
+
+let _locationSearchTimer = null;
+
+async function _doLocationSearch(query) {
+  const resultsEl = document.getElementById('location-results');
+  if (!query.trim()) { resultsEl.innerHTML = ''; return; }
+  resultsEl.innerHTML = '<div class="loc-status">Searching…</div>';
+  try {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=7&language=en&format=json`;
+    const res = await fetch(url);
+    const j = await res.json();
+    const list = j.results ?? [];
+    if (!list.length) {
+      resultsEl.innerHTML = '<div class="loc-status">No results</div>';
+      return;
+    }
+    resultsEl.innerHTML = list.map((r, i) =>
+      `<button class="loc-result" data-idx="${i}">
+        <span class="loc-name">${escHtml(r.name)}${r.admin1 ? ', ' + escHtml(r.admin1) : ''}</span>
+        <span class="loc-country">${escHtml(r.country_code ?? '')}</span>
+       </button>`
+    ).join('');
+    list.forEach((r, i) => {
+      resultsEl.querySelector(`[data-idx="${i}"]`).addEventListener('click', () => {
+        closeLocationModal();
+        _applyLocation(r.latitude, r.longitude, r.name, r.country_code ?? '');
+      });
+    });
+  } catch {
+    resultsEl.innerHTML = '<div class="loc-status">Search failed</div>';
+  }
+}
+
 // ─── Tile Size ────────────────────────────────────────────────────────────────
 
 const TILE_SIZES = {
@@ -2180,6 +2375,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   _tickClock();
   setInterval(_tickClock, 1000);
 
+  // Weather — fire and forget (updates UI async)
+  _loadWeather();
+
   // Tutorial: wire buttons first, then check if first launch
   document.getElementById('tutorial-next').addEventListener('click', _tutNext);
   document.getElementById('tutorial-skip').addEventListener('click', _tutDone);
@@ -2270,6 +2468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (_selectedIds.size > 0)                                                     { _clearSel();    return; }
       if (!document.getElementById('search-overlay').classList.contains('hidden'))   { closeSearch();  return; }
       if (!document.getElementById('import-modal').classList.contains('hidden'))     { closeImportModal(); return; }
+      if (!document.getElementById('location-modal').classList.contains('hidden'))    { closeLocationModal(); return; }
       if (!document.getElementById('confirm-modal').classList.contains('hidden'))    { document.getElementById('confirm-modal').classList.add('hidden'); return; }
       if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
@@ -2435,6 +2634,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBgImage(dataUrl);
     themeSwatches.classList.add('hidden');
     e.target.value = '';
+  });
+
+  // Weather: temp click → toggle °C/°F
+  document.getElementById('weather-temp').addEventListener('click', () => {
+    _weatherUnit = _weatherUnit === 'C' ? 'F' : 'C';
+    chrome.storage.local.set({ weatherUnit: _weatherUnit });
+    _renderWeather();
+  });
+
+  // Weather: city button → location modal
+  document.getElementById('weather-city-btn').addEventListener('click', openLocationModal);
+
+  // Location modal
+  document.getElementById('cancel-location').addEventListener('click', closeLocationModal);
+  document.getElementById('location-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeLocationModal();
+  });
+  const locationInput = document.getElementById('location-input');
+  locationInput.addEventListener('input', e => {
+    clearTimeout(_locationSearchTimer);
+    _locationSearchTimer = setTimeout(() => _doLocationSearch(e.target.value), 340);
+  });
+  locationInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLocationModal();
+  });
+  document.getElementById('location-use-gps').addEventListener('click', () => {
+    closeLocationModal();
+    if (!navigator.geolocation) return;
+    _weatherSetStatus('Detecting…');
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        const geo = await _reverseGeocode(lat, lon);
+        await _applyLocation(lat, lon, geo.city, geo.country);
+      },
+      () => { document.getElementById('weather-city').textContent = 'Set location'; },
+      { timeout: 8000 }
+    );
   });
 
   // Tile size buttons
