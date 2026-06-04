@@ -73,51 +73,52 @@ body {
 .widget-sep.hidden { display: none; }
 
 /* ─── Top search bar ─── */
-#top-search-bar {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
+#top-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
+}
+
+#top-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 40px;
   border-radius: 20px;
   background: var(--glass);
-  border: 1px solid rgba(255,255,255,0.14);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
   cursor: pointer;
-  color: var(--text-color);
+  color: var(--add-btn-color);
   font-family: var(--font);
   font-size: 12.5px;
   font-weight: 500;
-  min-width: 220px;
-  opacity: 0.62;
-  transition: opacity 0.15s, background 0.15s;
+  min-width: 180px;
+  opacity: 0.85;
+  transition: background 0.2s, transform 0.15s;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
   margin: 0;
   user-select: none;
   -webkit-user-select: none;
-  pointer-events: auto;
 }
 
-#top-search-bar:hover {
-  opacity: 1;
-}
+#top-search-bar:hover  { background: var(--glass-border); transform: scale(1.02); }
+#top-search-bar:active { transform: scale(0.97); }
 
 #top-search-bar span {
   flex: 1;
   text-align: left;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 #top-search-bar svg {
   flex-shrink: 0;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 #top-search-bar kbd {
@@ -127,8 +128,8 @@ body {
   padding: 1px 5px;
   border-radius: 5px;
   background: rgba(0,0,0,0.1);
-  color: var(--text-color);
-  opacity: 0.5;
+  color: var(--add-btn-color);
+  opacity: 0.55;
   letter-spacing: 0.02em;
 }
 
