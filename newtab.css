@@ -835,6 +835,179 @@ body.theme-custom .swatch-custom.active,
   box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px rgba(0,0,0,0.35);
 }
 
+/* ─── Import-bookmarks button (inside swatches panel) ──────────────────────── */
+
+.swatch-import-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  border-radius: 10px;
+  opacity: 0.62;
+  transition: opacity 0.15s, background 0.15s;
+  white-space: nowrap;
+  text-align: left;
+}
+.swatch-import-btn:hover { opacity: 1; background: var(--glass); }
+.swatch-import-btn svg { flex-shrink: 0; }
+
+/* ─── Import Bookmarks Modal ────────────────────────────────────────────────── */
+
+#import-card {
+  width: min(500px, 94vw);
+  padding: 24px 24px 20px;
+}
+
+#import-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#import-sel-count {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+  flex-shrink: 0;
+}
+
+#import-toolbar-btns {
+  display: flex;
+  gap: 6px;
+}
+
+#import-toolbar-btns button {
+  font-size: 11px;
+  font-family: var(--font);
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+#import-toolbar-btns button:hover {
+  background: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.85);
+}
+
+#import-list {
+  max-height: 380px;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+
+.bm-section {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.32);
+  padding: 10px 4px 4px;
+}
+
+.bm-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  padding-bottom: 2px;
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.bm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-right: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.bm-item:hover { background: rgba(255,255,255,0.06); }
+.bm-item.bm-exists { opacity: 0.38; cursor: default; }
+.bm-item.bm-exists:hover { background: none; }
+
+.bm-item input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  accent-color: #5db0ff;
+  cursor: pointer;
+}
+.bm-item.bm-exists input[type="checkbox"] { cursor: default; }
+
+.bm-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.bm-text {
+  flex: 1;
+  min-width: 0;
+}
+.bm-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bm-url {
+  display: block;
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.bm-exists-badge {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bm-empty, .bm-loading {
+  padding: 36px 0;
+  text-align: center;
+  color: rgba(255,255,255,0.35);
+  font-size: 14px;
+}
+
 /* ─── Tutorial ─── */
 #tutorial-overlay {
   position: fixed;

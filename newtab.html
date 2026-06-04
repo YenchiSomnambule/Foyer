@@ -98,6 +98,25 @@
     </div>
   </div>
 
+  <!-- Import Bookmarks Modal -->
+  <div id="import-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" id="import-card">
+      <h2 class="modal-title">Import Bookmarks</h2>
+      <div id="import-toolbar">
+        <span id="import-sel-count">0 selected</span>
+        <div id="import-toolbar-btns">
+          <button id="import-select-all">Select all</button>
+          <button id="import-deselect-all">Deselect all</button>
+        </div>
+      </div>
+      <div id="import-list"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancel-import">Cancel</button>
+        <button class="btn-confirm" id="confirm-import" disabled>Import</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Context Menu -->
   <div id="context-menu" class="hidden" role="menu">
     <button class="ctx-item" data-action="rename">Rename</button>
@@ -127,6 +146,13 @@
           <circle cx="8.5" cy="8.5" r="1.5"/>
           <polyline points="21 15 16 10 5 21"/>
         </svg>
+      </button>
+      <div class="swatch-separator"></div>
+      <button class="swatch-import-btn" id="swatch-import" title="Import from Chrome bookmarks">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        Import bookmarks
       </button>
     </div>
     <input type="color" id="custom-color-input" value="#4a90d9"

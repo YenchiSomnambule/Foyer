@@ -1640,6 +1640,147 @@ function _tutDone() {
   chrome.storage.local.set({ tutorialDone: true });
 }
 
+// ─── Import Bookmarks ─────────────────────────────────────────────────────────
+
+function _existingUrls() {
+  const s = new Set();
+  for (const item of items) {
+    if (item.type === 'site') s.add(item.url);
+    else if (item.type === 'group') (item.items ?? []).forEach(c => s.add(c.url));
+  }
+  return s;
+}
+
+function _flattenBmNodes(nodes, out, depth, existingUrls) {
+  for (const node of nodes) {
+    if (node.url) {
+      if (!/^https?:\/\//i.test(node.url)) continue;
+      let hostname = node.url;
+      try { hostname = new URL(node.url).hostname.replace(/^www\./, ''); } catch {}
+      out.push({
+        type: 'bookmark', id: node.id, depth,
+        name: node.title || hostname,
+        url: node.url,
+        hostname,
+        exists: existingUrls.has(node.url),
+      });
+    } else if (node.children) {
+      out.push({ type: 'folder', id: node.id, name: node.title || 'Folder', depth });
+      _flattenBmNodes(node.children, out, depth + 1, existingUrls);
+    }
+  }
+}
+
+async function openImportModal() {
+  const modal = document.getElementById('import-modal');
+  const list  = document.getElementById('import-list');
+  const btn   = document.getElementById('confirm-import');
+
+  modal.classList.remove('hidden');
+  list.innerHTML = '<div class="bm-loading">Loading…</div>';
+  btn.disabled = true;
+  btn.textContent = 'Import';
+  document.getElementById('import-sel-count').textContent = '0 selected';
+
+  if (!chrome.bookmarks) {
+    list.innerHTML = '<div class="bm-empty">Bookmarks API not available.</div>';
+    return;
+  }
+
+  try {
+    const tree = await chrome.bookmarks.getTree();
+    const root = tree[0];
+    const existing = _existingUrls();
+    const sections = [];
+
+    for (const folder of (root.children ?? [])) {
+      if (!folder.children) continue;
+      const flatItems = [];
+      _flattenBmNodes(folder.children, flatItems, 0, existing);
+      const bookmarks = flatItems.filter(i => i.type === 'bookmark');
+      if (bookmarks.length === 0) continue;
+      sections.push({ name: folder.title || 'Bookmarks', items: flatItems });
+    }
+
+    _renderImportList(sections);
+  } catch {
+    list.innerHTML = '<div class="bm-empty">Could not read bookmarks.</div>';
+  }
+}
+
+function _renderImportList(sections) {
+  const list = document.getElementById('import-list');
+
+  if (!sections.length) {
+    list.innerHTML = '<div class="bm-empty">No bookmarks found.</div>';
+    return;
+  }
+
+  list.innerHTML = sections.map(sec => {
+    const rows = sec.items.map(item => {
+      if (item.type === 'folder') {
+        const indent = 4 + item.depth * 16;
+        return `<div class="bm-folder-row" style="padding-left:${indent}px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/>
+          </svg>
+          ${escHtml(item.name)}
+        </div>`;
+      }
+      const indent = 4 + item.depth * 16;
+      const grad   = tileGradient(item.url);
+      const letter = (item.name[0] ?? '?').toUpperCase();
+      return `<label class="bm-item${item.exists ? ' bm-exists' : ''}"
+                     style="padding-left:${indent}px">
+        <input type="checkbox" class="bm-check"
+               data-url="${escHtml(item.url)}" data-name="${escHtml(item.name)}"
+               ${item.exists ? 'disabled' : 'checked'}>
+        <div class="bm-icon" style="background:${grad}">${letter}</div>
+        <div class="bm-text">
+          <span class="bm-name">${escHtml(item.name)}</span>
+          <span class="bm-url">${escHtml(item.hostname)}</span>
+        </div>
+        ${item.exists ? '<span class="bm-exists-badge">Added</span>' : ''}
+      </label>`;
+    }).join('');
+
+    return `<div class="bm-section">${escHtml(sec.name)}</div>${rows}`;
+  }).join('');
+
+  list.querySelectorAll('.bm-check').forEach(cb =>
+    cb.addEventListener('change', _updateImportCount)
+  );
+  _updateImportCount();
+}
+
+function _updateImportCount() {
+  const n   = document.querySelectorAll('.bm-check:checked').length;
+  const btn = document.getElementById('confirm-import');
+  document.getElementById('import-sel-count').textContent = `${n} selected`;
+  btn.disabled   = n === 0;
+  btn.textContent = n > 0 ? `Import ${n} site${n > 1 ? 's' : ''}` : 'Import';
+}
+
+function _bmSelectAll(checked) {
+  document.querySelectorAll('.bm-check:not(:disabled)').forEach(cb => { cb.checked = checked; });
+  _updateImportCount();
+}
+
+function doImportBookmarks() {
+  const checked = [...document.querySelectorAll('.bm-check:checked')];
+  if (!checked.length) return;
+  for (const cb of checked) {
+    items.push({ id: uid(), type: 'site', name: cb.dataset.name, url: cb.dataset.url });
+  }
+  save().then(render);
+  closeImportModal();
+  _showToast(`Imported ${checked.length} site${checked.length > 1 ? 's' : ''}`);
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').classList.add('hidden');
+}
+
 // ─── Search / Quick Launch ────────────────────────────────────────────────────
 
 let _srActiveIdx = -1;
@@ -1849,6 +1990,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (!document.getElementById('search-overlay').classList.contains('hidden'))   { closeSearch();  return; }
+      if (!document.getElementById('import-modal').classList.contains('hidden'))     { closeImportModal(); return; }
       if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) { _tutDone();     return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
@@ -1942,5 +2084,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBgImage(dataUrl);
     themeSwatches.classList.add('hidden');
     e.target.value = ''; // reset so same file can be re-picked
+  });
+
+  // Import bookmarks
+  document.getElementById('swatch-import').addEventListener('click', e => {
+    e.stopPropagation();
+    openImportModal();
+    themeSwatches.classList.add('hidden');
+  });
+  document.getElementById('cancel-import').addEventListener('click', closeImportModal);
+  document.getElementById('confirm-import').addEventListener('click', doImportBookmarks);
+  document.getElementById('import-select-all').addEventListener('click', () => _bmSelectAll(true));
+  document.getElementById('import-deselect-all').addEventListener('click', () => _bmSelectAll(false));
+  document.getElementById('import-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeImportModal();
   });
 });
