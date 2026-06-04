@@ -549,6 +549,34 @@ const TILE_SIZES = {
 };
 const SIZE_KEYS = ['xs', 's', 'm', 'l', 'xl'];
 
+const ENGINES = {
+  google:     { name: 'Google',     url: 'https://www.google.com/search?q=',    favicon: 'https://www.google.com/favicon.ico' },
+  bing:       { name: 'Bing',       url: 'https://www.bing.com/search?q=',      favicon: 'https://www.bing.com/favicon.ico' },
+  duckduckgo: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=',          favicon: 'https://duckduckgo.com/favicon.ico' },
+};
+let _engine = 'google';
+
+function _engineUrl(q) {
+  return (ENGINES[_engine] || ENGINES.google).url + encodeURIComponent(q);
+}
+
+function _applyEngine(key) {
+  _engine = key;
+  const cfg = ENGINES[key] || ENGINES.google;
+  document.getElementById('engine-favicon').src = cfg.favicon;
+  document.getElementById('engine-input').placeholder = `Search ${cfg.name}…`;
+}
+
+async function loadEngine() {
+  const { searchEngine } = await chrome.storage.local.get('searchEngine');
+  _applyEngine(searchEngine || 'google');
+}
+
+async function saveEngine(key) {
+  await chrome.storage.local.set({ searchEngine: key });
+  _applyEngine(key);
+}
+
 let _currentTileSize = 'm';
 
 function _syncSizeSlider(key) {
@@ -2588,6 +2616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadTheme();
   await loadTileSize();
   await loadModalDark();
+  await loadEngine();
   await loadShortcuts();
   render();
 
@@ -2891,6 +2920,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Top search bar → open search overlay
   document.getElementById('top-search-bar').addEventListener('click', () => openSearch());
+
+  // Engine search bar
+  const engineInput = document.getElementById('engine-input');
+  engineInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const q = engineInput.value.trim();
+      if (!q) return;
+      const url = _engineUrl(q);
+      window.open(url, '_self');
+      engineInput.value = '';
+    }
+    if (e.key === 'Escape') {
+      engineInput.blur();
+      engineInput.value = '';
+    }
+  });
 
   // Config button → open settings modal
   document.getElementById('config-btn').addEventListener('click', e => {

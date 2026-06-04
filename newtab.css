@@ -133,6 +133,56 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* ─── Engine search bar (center-top) ─── */
+#engine-search-bar {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  height: 40px;
+  width: clamp(260px, 30vw, 480px);
+  border-radius: 20px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  transition: box-shadow 0.2s;
+}
+
+#engine-search-bar:focus-within {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.28);
+}
+
+#engine-favicon {
+  flex-shrink: 0;
+  border-radius: 3px;
+  opacity: 0.85;
+}
+
+#engine-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--text-color);
+  caret-color: var(--text-color);
+  min-width: 0;
+}
+
+#engine-input::placeholder {
+  color: var(--text-color);
+  opacity: 0.38;
+}
+
 /* ─── Clock Widget ─── */
 #clock-widget {}
 
