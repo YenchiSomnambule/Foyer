@@ -2356,7 +2356,7 @@ function _tickClock() {
   const s = String(now.getSeconds()).padStart(2, '0');
   timeEl.textContent = `${h}:${m}:${s}`;
   dateEl.textContent =
-    `${_CLOCK_DAYS[now.getDay()]} · ${_CLOCK_MONTHS[now.getMonth()]} ${now.getDate()}`;
+    `${_CLOCK_DAYS[now.getDay()]} · ${_CLOCK_MONTHS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 
 // ─── Export / Import JSON Backup ─────────────────────────────────────────────
