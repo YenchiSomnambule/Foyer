@@ -276,12 +276,10 @@
 
           <div class="ssec">
             <div class="ssec-title">Tile size</div>
-            <div class="size-btns" id="settings-size-btns">
-              <button class="size-btn" data-size="xs">XS</button>
-              <button class="size-btn" data-size="s">S</button>
-              <button class="size-btn active" data-size="m">M</button>
-              <button class="size-btn" data-size="l">L</button>
-              <button class="size-btn" data-size="xl">XL</button>
+            <div class="size-slider-wrap">
+              <span class="size-slider-label">Small</span>
+              <input type="range" id="tile-size-slider" min="1" max="5" step="1" value="3">
+              <span class="size-slider-label">Large</span>
             </div>
           </div>
 

@@ -514,6 +514,8 @@ function applyModalDark(dark) {
   document.querySelectorAll('.modal-style-btn').forEach(btn => {
     btn.classList.toggle('active', btn.id === (dark ? 'modal-style-dark' : 'modal-style-light'));
   });
+  const slider = document.getElementById('tile-size-slider');
+  if (slider) _updateSliderFill(slider);
 }
 
 async function loadModalDark() {
@@ -545,8 +547,26 @@ const TILE_SIZES = {
   l:  { tile: 104, icon: 72, radius: 18 },
   xl: { tile: 120, icon: 84, radius: 20 },
 };
+const SIZE_KEYS = ['xs', 's', 'm', 'l', 'xl'];
 
 let _currentTileSize = 'm';
+
+function _syncSizeSlider(key) {
+  const slider = document.getElementById('tile-size-slider');
+  if (!slider) return;
+  const idx = SIZE_KEYS.indexOf(key);
+  slider.value = idx < 0 ? 3 : idx + 1;
+  _updateSliderFill(slider);
+}
+
+function _updateSliderFill(slider) {
+  const pct = (slider.value - 1) / (slider.max - 1) * 100;
+  const filled   = 'rgba(60,120,240,0.75)';
+  const unfilled = document.body.classList.contains('modal-dark')
+    ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.13)';
+  slider.style.background =
+    `linear-gradient(to right, ${filled} ${pct}%, ${unfilled} ${pct}%)`;
+}
 
 function applyTileSize(key) {
   const sz = TILE_SIZES[key] ?? TILE_SIZES.m;
@@ -555,9 +575,7 @@ function applyTileSize(key) {
   root.style.setProperty('--tile-icon-size', `${sz.icon}px`);
   root.style.setProperty('--radius',         `${sz.radius}px`);
   _currentTileSize = key;
-  document.querySelectorAll('.size-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.size === key);
-  });
+  _syncSizeSlider(key);
 }
 
 function saveTileSize(key) {
@@ -3010,13 +3028,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
   });
 
-  // Tile size buttons
-  document.querySelectorAll('.size-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      applyTileSize(btn.dataset.size);
-      saveTileSize(btn.dataset.size);
-    });
+  // Tile size slider
+  const tileSizeSlider = document.getElementById('tile-size-slider');
+  tileSizeSlider.addEventListener('input', () => {
+    const key = SIZE_KEYS[tileSizeSlider.value - 1];
+    applyTileSize(key);
+    saveTileSize(key);
   });
 
   // Confirm modal dismiss
