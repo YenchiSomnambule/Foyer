@@ -680,39 +680,61 @@ function buildGroupTile(item) {
   tile.className = 'tile group-tile';
   tile.dataset.id = item.id;
 
-  const sites = (item.items ?? []).slice(0, 9);
+  const allSites  = item.items ?? [];
+  const coverSite = item.cover ? allSites.find(s => s.id === item.cover) : null;
 
-  // 9-slot mini-grid: filled slots show letter+favicon, empty slots stay faint
-  let miniHTML = '';
-  for (let i = 0; i < 9; i++) {
-    const s = sites[i];
-    if (s) {
-      const letter = (s.name[0] ?? '?').toUpperCase();
-      const bg = tileGradient(s.url);
-      miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
-    } else {
-      miniHTML += `<div class="mini-cell empty"></div>`;
+  if (coverSite) {
+    // Cover mode: full-size favicon with a count badge
+    const letter = (coverSite.name[0] ?? '?').toUpperCase();
+    const bg     = tileGradient(coverSite.url);
+    tile.innerHTML = `
+      <div class="tile-icon group-cover-icon">
+        <img alt="" draggable="false" style="display:none">
+        <div class="tile-icon-fallback" style="display:flex;background:${bg}">${letter}</div>
+        <span class="group-cover-badge">${allSites.length}</span>
+      </div>
+      <span class="tile-name">${escHtml(item.name)}</span>
+    `;
+    const img      = tile.querySelector('img');
+    const fallback = tile.querySelector('.tile-icon-fallback');
+    const sources  = [
+      ...(coverSite.favicon ? [coverSite.favicon] : []),
+      ...getFaviconSources(coverSite.url),
+    ].filter((v, i, a) => a.indexOf(v) === i);
+    tryFaviconChain(img, fallback, sources);
+
+  } else {
+    // Default 9-grid mode
+    const sites = allSites.slice(0, 9);
+    let miniHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const s = sites[i];
+      if (s) {
+        const letter = (s.name[0] ?? '?').toUpperCase();
+        const bg = tileGradient(s.url);
+        miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
+      } else {
+        miniHTML += `<div class="mini-cell empty"></div>`;
+      }
     }
+    tile.innerHTML = `
+      <div class="tile-icon group-icon">
+        <div class="mini-grid">${miniHTML}</div>
+      </div>
+      <span class="tile-name">${escHtml(item.name)}</span>
+    `;
+    tile.querySelectorAll('.mini-cell:not(.empty)').forEach((cell, i) => {
+      const site = sites[i];
+      if (!site) return;
+      const img    = cell.querySelector('img');
+      const letter = cell.querySelector('.mini-letter');
+      const sources = [
+        ...(site.favicon ? [site.favicon] : []),
+        ...getFaviconSources(site.url),
+      ].filter((v, j, a) => a.indexOf(v) === j);
+      tryFaviconChain(img, letter, sources);
+    });
   }
-
-  tile.innerHTML = `
-    <div class="tile-icon group-icon">
-      <div class="mini-grid">${miniHTML}</div>
-    </div>
-    <span class="tile-name">${escHtml(item.name)}</span>
-  `;
-
-  tile.querySelectorAll('.mini-cell:not(.empty)').forEach((cell, i) => {
-    const site = sites[i];
-    if (!site) return;
-    const img    = cell.querySelector('img');
-    const letter = cell.querySelector('.mini-letter');
-    const sources = [
-      ...(site.favicon ? [site.favicon] : []),
-      ...getFaviconSources(site.url),
-    ].filter((v, j, a) => a.indexOf(v) === j);
-    tryFaviconChain(img, letter, sources);
-  });
 
   tile.addEventListener('click', e => {
     if (e.defaultPrevented || _suppressClick) return;
@@ -1465,16 +1487,23 @@ function initGroupPageDrag(container, track, dots) {
 }
 
 function showGroupSiteCtx(e, groupId, siteId) {
+  const group = items.find(i => i.id === groupId);
+  if (!group) return;
+  const isCover = group.cover === siteId;
   const menu = document.getElementById('context-menu');
-  menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="delete">Delete</button>`;
+  menu.innerHTML = `
+    <button class="ctx-item" data-action="cover">${isCover ? 'Remove cover' : 'Set as cover'}</button>
+    <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+  `;
+  menu.querySelector('[data-action="cover"]').addEventListener('click', () => {
+    if (isCover) delete group.cover; else group.cover = siteId;
+    save().then(render);
+    closeCtxMenu();
+  });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
-    const group = items.find(i => i.id === groupId);
-    if (!group) return;
     _snapshotForUndo();
-
-    // Permanently delete the site from the group
+    if (group.cover === siteId) delete group.cover;
     group.items = group.items.filter(s => s.id !== siteId);
-
     _dissolveGroupIfNeeded(groupId);
     save();
     render();
@@ -1558,9 +1587,12 @@ function showCtxMenu(x, y, id) {
   if (!item) return;
   const editBtn = item.type === 'site'
     ? `<button class="ctx-item" data-action="edit">Edit</button>` : '';
+  const removeCoverBtn = (item.type === 'group' && item.cover)
+    ? `<button class="ctx-item" data-action="remove-cover">Remove cover</button>` : '';
   menu.innerHTML = `
     <button class="ctx-item" data-action="rename">Rename</button>
     ${editBtn}
+    ${removeCoverBtn}
     <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
   `;
   menu.querySelector('[data-action="rename"]').addEventListener('click', () => {
@@ -1570,6 +1602,11 @@ function showCtxMenu(x, y, id) {
   menu.querySelector('[data-action="edit"]')?.addEventListener('click', () => {
     closeCtxMenu();
     openEditModal(id);
+  });
+  menu.querySelector('[data-action="remove-cover"]')?.addEventListener('click', () => {
+    delete item.cover;
+    save().then(render);
+    closeCtxMenu();
   });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
     _snapshotForUndo();
