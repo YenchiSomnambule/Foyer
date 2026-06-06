@@ -2528,6 +2528,73 @@ function closeImportModal() {
   document.getElementById('import-modal').classList.add('hidden');
 }
 
+async function importBookmarksBar() {
+  if (!chrome?.bookmarks) {
+    _showToast('Bookmarks API not available');
+    return;
+  }
+  try {
+    const tree    = await chrome.bookmarks.getTree();
+    const root    = tree[0];
+    // Bookmarks bar is always id "1" in Chrome
+    const barNode = (root.children ?? []).find(n => n.id === '1') ?? root.children?.[0];
+    if (!barNode?.children?.length) {
+      _showToast('Bookmarks bar is empty');
+      return;
+    }
+
+    const existing = _existingUrls(); // Set of already-added URLs
+    const newItems = [];
+    let siteCount = 0, groupCount = 0;
+
+    for (const node of barNode.children) {
+      if (node.url) {
+        // Direct bookmark on the bar
+        if (!/^https?:\/\//i.test(node.url) || existing.has(node.url)) continue;
+        let name = node.title || node.url;
+        try { if (!node.title) name = new URL(node.url).hostname.replace(/^www\./, ''); } catch {}
+        newItems.push({ id: uid(), type: 'site', name, url: node.url });
+        existing.add(node.url);
+        siteCount++;
+      } else if (node.children) {
+        // Subfolder → collect new sites only
+        const folderSites = [];
+        for (const child of node.children) {
+          if (!child.url || !/^https?:\/\//i.test(child.url) || existing.has(child.url)) continue;
+          let name = child.title || child.url;
+          try { if (!child.title) name = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
+          folderSites.push({ id: uid(), name, url: child.url });
+          existing.add(child.url);
+        }
+        if (!folderSites.length) continue;
+        if (folderSites.length === 1) {
+          newItems.push({ id: uid(), type: 'site', name: folderSites[0].name, url: folderSites[0].url });
+          siteCount++;
+        } else {
+          newItems.push({ id: uid(), type: 'group', name: node.title || 'Folder', items: folderSites });
+          groupCount++;
+        }
+      }
+    }
+
+    if (!newItems.length) {
+      _showToast('All bookmarks bar items already added');
+      return;
+    }
+
+    _snapshotForUndo();
+    items.push(...newItems);
+    save().then(render);
+
+    const parts = [];
+    if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
+    if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
+    _showToast(`Synced ${parts.join(' + ')} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+  } catch {
+    _showToast('Could not read bookmarks');
+  }
+}
+
 // ─── Clock / Date Widget ─────────────────────────────────────────────────────
 
 const _CLOCK_DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -3146,6 +3213,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Settings → data buttons
   document.getElementById('settings-import-bm').addEventListener('click', () => {
     closeSettingsModal(); openImportModal();
+  });
+  document.getElementById('settings-sync-bar').addEventListener('click', () => {
+    closeSettingsModal(); importBookmarksBar();
   });
   document.getElementById('settings-export-bm').addEventListener('click', () => {
     doExportBookmarksHtml(); closeSettingsModal();
