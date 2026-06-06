@@ -73,7 +73,8 @@ body {
 .widget-sep.hidden { display: none; }
 
 /* ─── Search icon button (between config and palette) ─── */
-#top-search-bar {
+/* shared style for all top-right icon buttons */
+.top-btn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -93,9 +94,10 @@ body {
   appearance: none;
   margin: 0;
   padding: 0;
+  flex-shrink: 0;
 }
-#top-search-bar:hover  { background: var(--glass-border); transform: scale(1.08); }
-#top-search-bar:active { transform: scale(0.93); }
+.top-btn:hover  { background: var(--glass-border); transform: scale(1.08); }
+.top-btn:active { transform: scale(0.93); }
 
 /* ─── Engine search bar (center-top) ─── */
 #engine-search-bar {
@@ -1173,24 +1175,6 @@ body.theme-cream  #add-btn:hover {
   gap: 8px;
 }
 
-#config-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  color: var(--add-btn-color);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  transition: background 0.2s, transform 0.15s;
-}
-#config-btn:hover  { background: var(--glass-border); transform: scale(1.08); }
-#config-btn:active { transform: scale(0.93); }
 
 
 .size-row {

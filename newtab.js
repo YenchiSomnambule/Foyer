@@ -3236,6 +3236,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Top search bar → open search overlay
   document.getElementById('top-search-bar').addEventListener('click', () => openSearch());
 
+  document.getElementById('history-btn').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://history' });
+  });
+  document.getElementById('downloads-btn').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://downloads' });
+  });
+
   // Engine search bar
   const engineInput = document.getElementById('engine-input');
   engineInput.addEventListener('keydown', e => {
