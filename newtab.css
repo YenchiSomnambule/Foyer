@@ -631,15 +631,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: rgba(0,0,0,0.08);
-  border: 1px solid rgba(0,0,0,0.12);
-  color: rgba(22,17,10,0.45);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.28);
+  color: rgba(22,17,10,0.65);
   font-family: var(--font);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
@@ -2171,7 +2172,6 @@ body.modal-dark #group-panel {
 body.modal-dark #group-title       { color: rgba(255,255,255,0.95); }
 body.modal-dark #close-group       { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
 body.modal-dark #close-group:hover { background: rgba(255,255,255,0.22); }
-body.modal-dark .group-hint-key    { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); color: rgba(255,255,255,0.55); }
 body.modal-dark .group-dot         { background: rgba(255,255,255,0.28); }
 body.modal-dark .group-dot.active  { background: rgba(255,255,255,0.9); }
 body.modal-dark .group-site-tile span { color: rgba(255,255,255,0.88); }
