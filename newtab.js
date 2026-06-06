@@ -1401,7 +1401,9 @@ function openGroup(groupId) {
   groupCurrentPage = 0;
   _gpFocusedSiteId = null;
 
-  document.getElementById('group-title').textContent = group.name;
+  const titleEl = document.getElementById('group-title');
+  titleEl.textContent = group.name;
+  titleEl.ondblclick = () => promptRename(groupId);
 
   const track = document.getElementById('group-pages-track');
   const dots  = document.getElementById('group-dots');
@@ -1678,7 +1680,12 @@ function promptRename(id) {
 
   const doSave = () => {
     const val = input.value.trim();
-    if (val) { item.name = val; save().then(render); }
+    if (val) {
+      item.name = val;
+      save().then(render);
+      // Also refresh the overlay title if this group is currently open
+      if (openGroupId === id) document.getElementById('group-title').textContent = val;
+    }
     modal.classList.add('hidden');
     unbind();
   };

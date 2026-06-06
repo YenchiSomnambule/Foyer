@@ -605,6 +605,14 @@ body {
   color: rgba(22,17,10,0.88);
   letter-spacing: -0.02em;
   text-align: center;
+  cursor: default;
+  border-radius: 6px;
+  padding: 2px 8px;
+  transition: background 0.15s;
+}
+
+#group-title:hover {
+  background: rgba(0,0,0,0.06);
 }
 
 #close-group {
@@ -2275,6 +2283,7 @@ body.modal-dark #group-panel {
   box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
 }
 body.modal-dark #group-title       { color: rgba(255,255,255,0.95); }
+body.modal-dark #group-title:hover { background: rgba(255,255,255,0.1); }
 body.modal-dark #close-group       { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
 body.modal-dark #close-group:hover { background: rgba(255,255,255,0.22); }
 body.modal-dark .group-dot         { background: rgba(255,255,255,0.28); }
