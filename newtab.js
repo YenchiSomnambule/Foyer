@@ -823,13 +823,14 @@ function attachDrag(tile, id) {
 function _initDrag(el, rect) {
   pdClone = el.cloneNode(true);
   Object.assign(pdClone.style, {
-    position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+    position: 'fixed', left: '0', top: '0',
     width: rect.width + 'px', height: rect.height + 'px',
     pointerEvents: 'none', zIndex: '1000',
-    opacity: '0.92', transform: 'scale(1.1)',
+    opacity: '0.92',
+    transform: `translate(${rect.left}px,${rect.top}px) scale(1.08)`,
     transformOrigin: 'center center',
-    transition: 'transform 0.15s ease',
-    filter: 'drop-shadow(0 18px 38px rgba(0,0,0,0.55))',
+    filter: 'drop-shadow(0 18px 38px rgba(0,0,0,0.5))',
+    willChange: 'transform',
   });
   document.body.appendChild(pdClone);
   el.style.opacity = '0';
@@ -837,14 +838,15 @@ function _initDrag(el, rect) {
 
 function _moveDrag(cx, cy) {
   if (!pdClone) return;
-  pdClone.style.left = (cx - pdOffX) + 'px';
-  pdClone.style.top  = (cy - pdOffY) + 'px';
+  // GPU-composited movement — no layout triggered
+  pdClone.style.transition = 'none';
+  pdClone.style.transform  = `translate(${cx - pdOffX}px,${cy - pdOffY}px) scale(1.08)`;
 
-  // Auto-scroll #app
+  // Proportional auto-scroll — speed ramps up as cursor approaches edge
   const app = document.getElementById('app');
-  const ZONE = 80, SPEED = 10;
-  if (cy < ZONE) app.scrollTop -= SPEED;
-  else if (cy > window.innerHeight - ZONE) app.scrollTop += SPEED;
+  const ZONE = 80, MAX_SPEED = 16;
+  if      (cy < ZONE)                         app.scrollTop -= Math.ceil(MAX_SPEED * (1 - cy / ZONE));
+  else if (cy > window.innerHeight - ZONE)    app.scrollTop += Math.ceil(MAX_SPEED * ((cy - (window.innerHeight - ZONE)) / ZONE));
 
   // Use the floating clone's CENTER as the collision point (icon body, not cursor tip)
   const cr    = pdClone.getBoundingClientRect();
@@ -925,43 +927,51 @@ function _applyReorderPreview(tgtEl, insertBefore) {
     t.animate(
       [
         { transform: `translate(${dx}px,${dy}px)` },
-        { transform: 'translate(0,0)' }
+        { transform: 'translate(0,0)' },
       ],
-      { duration: 400, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)', fill: 'forwards' }
+      { duration: 180, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)', fill: 'none' }
     );
   });
 }
 
 function _commitDrag() {
-  pdClone?.remove(); pdClone = null;
-  if (pdSrcEl) pdSrcEl.style.opacity = '';
+  const srcEl   = pdSrcEl;
+  const clone   = pdClone;
+  const dropTgt = pdDropTgt;
+  const dropMode= pdDropMode;
+  const srcId   = pdSrcId;
 
-  // Cancel any in-flight FLIP animations and clear decorations
-  document.querySelectorAll('.tile').forEach(t => {
-    t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
-    t.classList.remove('drag-group-target');
-    t.style.transition = '';
-    t.style.transform  = '';
-  });
+  pdClone = null; pdSrcEl = null;
+  pdDropTgt = null; pdDropMode = null; pdActive = false; pdSrcId = null;
 
-  if (pdDropMode === 'group' && pdDropTgt) {
-    doGroup(pdSrcId, pdDropTgt);
+  // Drop animation: fade clone out while revealing the source tile
+  if (clone) {
+    clone.style.transition = 'opacity 0.16s, transform 0.16s cubic-bezier(0.25,0.46,0.45,0.94)';
+    clone.style.opacity    = '0';
+    clone.style.transform  = clone.style.transform.replace('scale(1.08)', 'scale(1)');
+    setTimeout(() => clone.remove(), 160);
+  }
+  // Reveal source tile simultaneously (clone fades out on top of it)
+  if (srcEl) srcEl.style.opacity = '';
+
+  // Only remove group-highlight decoration; let in-flight FLIP animations complete naturally
+  document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
+
+  _suppressClick = true;
+  requestAnimationFrame(() => { _suppressClick = false; });
+
+  if (dropMode === 'group' && dropTgt) {
+    // Group merge: need a full re-render since tile types change
+    doGroup(srcId, dropTgt);
+    render();
   } else {
-    // DOM order already reflects the live preview → sync items[]
+    // Reorder: DOM already reflects the final order from live preview
+    // Sync items[] from DOM without rebuilding — eliminates the rebuild flash
     const grid = document.getElementById('grid');
     const domOrder = [...grid.querySelectorAll('.tile')].map(t => t.dataset.id);
     items = domOrder.map(did => items.find(i => i.id === did)).filter(Boolean);
     save();
   }
-
-  // Suppress the click that fires after mouseup on the same element
-  _suppressClick = true;
-  requestAnimationFrame(() => { _suppressClick = false; });
-
-  pdSrcId = null; pdSrcEl = null;
-  pdDropTgt = null; pdDropMode = null; pdActive = false;
-
-  render();
 }
 
 // Returns true if the group was dissolved (removed or replaced), false if it survives.
