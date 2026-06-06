@@ -6,6 +6,16 @@
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content_gmail.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "permissions": ["storage", "bookmarks"],
   "host_permissions": [
     "https://api.open-meteo.com/*",
