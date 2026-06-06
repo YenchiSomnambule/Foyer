@@ -2595,6 +2595,67 @@ async function importBookmarksBar() {
   }
 }
 
+async function syncAllBookmarks() {
+  if (!chrome?.bookmarks) {
+    _showToast('Bookmarks API not available');
+    return;
+  }
+  try {
+    const tree = await chrome.bookmarks.getTree();
+    const root = tree[0];
+    const existing = _existingUrls();
+    const newItems = [];
+    let siteCount = 0, groupCount = 0;
+
+    for (const chromeFolder of (root.children ?? [])) {
+      if (!chromeFolder.children) continue;
+
+      for (const child of chromeFolder.children) {
+        if (child.url) {
+          // Direct bookmark inside a top-level Chrome folder
+          if (!/^https?:\/\//i.test(child.url) || existing.has(child.url)) continue;
+          let name = child.title || child.url;
+          try { if (!child.title) name = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
+          newItems.push({ id: uid(), type: 'site', name, url: child.url });
+          existing.add(child.url);
+          siteCount++;
+        } else if (child.children) {
+          // Subfolder → group; _collectBmNodes flattens any nested sub-sub-folders
+          const collected = [];
+          _collectBmNodes(child.children, collected, existing);
+          const fresh = collected.filter(bm => !bm.exists);
+          if (!fresh.length) continue;
+          fresh.forEach(bm => existing.add(bm.url));
+          const folderSites = fresh.map(bm => ({ id: uid(), name: bm.name, url: bm.url }));
+          if (folderSites.length === 1) {
+            newItems.push({ id: uid(), type: 'site', name: folderSites[0].name, url: folderSites[0].url });
+            siteCount++;
+          } else {
+            newItems.push({ id: uid(), type: 'group', name: child.title || 'Folder', items: folderSites });
+            groupCount++;
+          }
+        }
+      }
+    }
+
+    if (!newItems.length) {
+      _showToast('All bookmarks already added');
+      return;
+    }
+
+    _snapshotForUndo();
+    items.push(...newItems);
+    save().then(render);
+
+    const parts = [];
+    if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
+    if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
+    _showToast(`Synced ${parts.join(' + ')} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+  } catch {
+    _showToast('Could not read bookmarks');
+  }
+}
+
 // ─── Clock / Date Widget ─────────────────────────────────────────────────────
 
 const _CLOCK_DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -3216,6 +3277,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('settings-sync-bar').addEventListener('click', () => {
     closeSettingsModal(); importBookmarksBar();
+  });
+  document.getElementById('settings-sync-all').addEventListener('click', () => {
+    closeSettingsModal(); syncAllBookmarks();
   });
   document.getElementById('settings-export-bm').addEventListener('click', () => {
     doExportBookmarksHtml(); closeSettingsModal();
