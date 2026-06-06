@@ -15,8 +15,16 @@ function report() {
 
 report();
 
-// Gmail updates the title dynamically; observe the <title> element for changes
-new MutationObserver(report).observe(
-  document.querySelector('title')?.parentNode ?? document.head,
-  { subtree: true, childList: true, characterData: true }
-);
+// Observe only the <title> text node — not the entire <head> subtree
+const titleEl = document.querySelector('title');
+if (titleEl) {
+  new MutationObserver(report).observe(titleEl, { childList: true, characterData: true, subtree: true });
+} else {
+  // Fallback: watch <head> for a title element to appear, then re-attach
+  new MutationObserver((_, obs) => {
+    const t = document.querySelector('title');
+    if (!t) return;
+    obs.disconnect();
+    new MutationObserver(report).observe(t, { childList: true, characterData: true, subtree: true });
+  }).observe(document.head, { childList: true });
+}

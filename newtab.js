@@ -1655,9 +1655,9 @@ function showCtxMenu(x, y, id) {
 
 function positionAndShow(menu, x, y) {
   menu.classList.remove('hidden');
-  const mw = 180, mh = 90;
-  menu.style.left = `${Math.min(x, window.innerWidth  - mw - 8)}px`;
-  menu.style.top  = `${Math.min(y, window.innerHeight - mh - 8)}px`;
+  const mw = 180, mh = menu.offsetHeight || 96;
+  menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth  - mw - 8))}px`;
+  menu.style.top  = `${Math.max(8, Math.min(y, window.innerHeight - mh - 8))}px`;
 }
 
 function closeCtxMenu() {
@@ -1991,6 +1991,7 @@ function addSite() {
       group.items.push({ id: uid(), name: siteName, url, favicon: pendingFavicon ?? undefined });
       const gid = _addTargetGroupId;
       save();
+      render();
       closeAddModal();
       openGroup(gid);
       return;
@@ -2557,16 +2558,13 @@ async function importBookmarksBar() {
         existing.add(node.url);
         siteCount++;
       } else if (node.children) {
-        // Subfolder → collect new sites only
-        const folderSites = [];
-        for (const child of node.children) {
-          if (!child.url || !/^https?:\/\//i.test(child.url) || existing.has(child.url)) continue;
-          let name = child.title || child.url;
-          try { if (!child.title) name = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
-          folderSites.push({ id: uid(), name, url: child.url });
-          existing.add(child.url);
-        }
-        if (!folderSites.length) continue;
+        // Subfolder → collect new sites recursively (handles nested sub-subfolders)
+        const collected = [];
+        _collectBmNodes(node.children, collected, existing);
+        const fresh = collected.filter(bm => !bm.exists);
+        if (!fresh.length) continue;
+        fresh.forEach(bm => existing.add(bm.url));
+        const folderSites = fresh.map(bm => ({ id: uid(), name: bm.name, url: bm.url }));
         if (folderSites.length === 1) {
           newItems.push({ id: uid(), type: 'site', name: folderSites[0].name, url: folderSites[0].url });
           siteCount++;
