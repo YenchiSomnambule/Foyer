@@ -66,7 +66,6 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 // ─── State ───────────────────────────────────────────────────────────────────
 
 let items = [];
-let _badges = {};  // { hostname: count } — kept in sync with storage
 let ctxTargetId = null;
 let openGroupId = null;
 let _focusedId     = null;   // keyboard-navigated tile id (main grid)
@@ -106,28 +105,6 @@ let _saveTimer = null;
 function debouncedSave() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => save(), 400);
-}
-
-// ─── Badge helpers ────────────────────────────────────────────────────────────
-
-function _getHostname(url) {
-  try { return new URL(url).hostname; } catch { return null; }
-}
-
-function _updateBadges() {
-  document.querySelectorAll('.site-tile').forEach(tile => {
-    const item = items.find(i => i.id === tile.dataset.id);
-    if (!item) return;
-    const hostname = _getHostname(item.url);
-    const count = hostname ? (_badges[hostname] ?? 0) : 0;
-    let badge = tile.querySelector('.tile-badge');
-    if (count > 0) {
-      if (!badge) { badge = document.createElement('span'); badge.className = 'tile-badge'; tile.appendChild(badge); }
-      badge.textContent = count > 99 ? '99+' : String(count);
-    } else {
-      badge?.remove();
-    }
-  });
 }
 
 // ─── Undo ─────────────────────────────────────────────────────────────────────
@@ -692,16 +669,6 @@ function buildSiteTile(item) {
     _focusTile(item.id);
     window.location.href = item.url;
   });
-
-  // Notification badge
-  const _bHost = _getHostname(item.url);
-  const _bCount = _bHost ? (_badges[_bHost] ?? 0) : 0;
-  if (_bCount > 0) {
-    const badge = document.createElement('span');
-    badge.className = 'tile-badge';
-    badge.textContent = _bCount > 99 ? '99+' : String(_bCount);
-    tile.appendChild(badge);
-  }
 
   attachDrag(tile, item.id);
   attachContextMenu(tile, item.id);
@@ -2924,18 +2891,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       _tickClock();
       _clockInterval = setInterval(_tickClock, 1000);
-    }
-  });
-
-  // Badges — load stored counts then keep them live
-  chrome.storage.local.get('badges', r => {
-    _badges = r.badges ?? {};
-    _updateBadges();
-  });
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.badges) {
-      _badges = changes.badges.newValue ?? {};
-      _updateBadges();
     }
   });
 
