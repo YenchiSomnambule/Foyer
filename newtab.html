@@ -224,6 +224,24 @@
     </div>
   </div>
 
+  <!-- Background Adjust Modal -->
+  <div id="bg-adjust-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" id="bg-adjust-card">
+      <h2 class="modal-title">Adjust Background</h2>
+      <div id="bg-adjust-preview"></div>
+      <div class="bg-adjust-row">
+        <span class="bg-adjust-label">Zoom</span>
+        <input type="range" id="bg-zoom-slider" min="100" max="300" step="1" value="100">
+        <span class="bg-adjust-label" id="bg-zoom-val">1.0×</span>
+      </div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="btn-cancel" id="bg-adjust-change">Change photo</button>
+        <button class="btn-cancel" id="bg-adjust-cancel">Cancel</button>
+        <button class="btn-confirm" id="bg-adjust-apply">Apply</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Tutorial Overlay -->
   <div id="tutorial-overlay" class="hidden">
     <div id="tutorial-spotlight"></div>

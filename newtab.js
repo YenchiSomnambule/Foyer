@@ -2026,14 +2026,14 @@ function saveTheme(theme) {
 
 async function loadTheme() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['theme', 'customColor', 'bgImage'], r => {
+    chrome.storage.local.get(['theme', 'customColor', 'bgImage', 'bgPosX', 'bgPosY', 'bgZoom'], r => {
       if (r.theme === 'custom' && r.customColor) {
         applyCustomColor(r.customColor);
         const inp = document.getElementById('custom-color-input');
         if (inp) inp.value = r.customColor;
         resolve('custom');
       } else if (r.theme === 'image' && r.bgImage) {
-        applyBgImage(r.bgImage);
+        applyBgImage(r.bgImage, r.bgPosX ?? 50, r.bgPosY ?? 50, r.bgZoom ?? 100);
         resolve('image');
       } else {
         const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
@@ -2077,8 +2077,16 @@ function _resetImageSwatch() {
   });
 }
 
-function applyBgImage(dataUrl) {
-  document.body.style.background = `url("${dataUrl}") center/cover no-repeat`;
+let _bgDataUrl = null;
+let _bgPosX    = 50;  // 0–100 %
+let _bgPosY    = 50;  // 0–100 %
+let _bgZoom    = 100; // 100–300 %
+
+function applyBgImage(dataUrl, posX = _bgPosX, posY = _bgPosY, zoom = _bgZoom) {
+  _bgDataUrl = dataUrl;
+  _bgPosX = posX; _bgPosY = posY; _bgZoom = zoom;
+  const size = zoom <= 100 ? 'cover' : `${zoom}%`;
+  document.body.style.background = `url("${dataUrl}") ${posX.toFixed(1)}% ${posY.toFixed(1)}% / ${size} no-repeat`;
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
   document.body.classList.remove('theme-custom');
   document.body.classList.add('theme-image');
@@ -2102,8 +2110,49 @@ function applyBgImage(dataUrl) {
   });
 }
 
-function saveBgImage(dataUrl) {
-  chrome.storage.local.set({ theme: 'image', bgImage: dataUrl });
+function saveBgImage(dataUrl, posX, posY, zoom) {
+  chrome.storage.local.set({ theme: 'image', bgImage: dataUrl, bgPosX: posX, bgPosY: posY, bgZoom: zoom });
+}
+
+// ─── Background Adjust Modal ─────────────────────────────────────────────────
+
+let _bgAdjPrevDataUrl = null, _bgAdjPrevPosX = 50, _bgAdjPrevPosY = 50, _bgAdjPrevZoom = 100;
+let _bgAdjDragging = false, _bgAdjDragStartX = 0, _bgAdjDragStartY = 0;
+let _bgAdjTmpPosX = 50, _bgAdjTmpPosY = 50, _bgAdjTmpZoom = 100;
+
+function _bgPreviewUpdate() {
+  const p = document.getElementById('bg-adjust-preview');
+  if (!p) return;
+  const size = _bgAdjTmpZoom <= 100 ? 'cover' : `${_bgAdjTmpZoom}%`;
+  p.style.backgroundSize     = size;
+  p.style.backgroundPosition = `${_bgAdjTmpPosX.toFixed(1)}% ${_bgAdjTmpPosY.toFixed(1)}%`;
+  const slider = document.getElementById('bg-zoom-slider');
+  if (slider) slider.value = _bgAdjTmpZoom;
+  const val = document.getElementById('bg-zoom-val');
+  if (val) val.textContent = (_bgAdjTmpZoom / 100).toFixed(1) + '×';
+}
+
+function openBgAdjust(dataUrl) {
+  // Save state for cancel
+  _bgAdjPrevDataUrl = _bgDataUrl;
+  _bgAdjPrevPosX   = _bgPosX;
+  _bgAdjPrevPosY   = _bgPosY;
+  _bgAdjPrevZoom   = _bgZoom;
+  // Working copy
+  _bgAdjTmpPosX = _bgPosX;
+  _bgAdjTmpPosY = _bgPosY;
+  _bgAdjTmpZoom = _bgZoom;
+  // Set preview image
+  const p = document.getElementById('bg-adjust-preview');
+  p.style.backgroundImage = `url("${dataUrl}")`;
+  _bgDataUrl = dataUrl;
+  _bgPreviewUpdate();
+  document.getElementById('bg-adjust-modal').classList.remove('hidden');
+}
+
+function closeBgAdjust() {
+  document.getElementById('bg-adjust-modal').classList.add('hidden');
+  _bgAdjDragging = false;
 }
 
 // ─── Tutorial ────────────────────────────────────────────────────────────────
@@ -2784,7 +2833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const anyOverlayOpen = [
       'add-modal','edit-modal','rename-modal',
       'import-modal','location-modal','confirm-modal',
-      'search-overlay','tutorial-overlay','settings-modal',
+      'search-overlay','tutorial-overlay','settings-modal','bg-adjust-modal',
     ].some(id => !document.getElementById(id).classList.contains('hidden'));
 
     const groupOpen = !document.getElementById('group-overlay').classList.contains('hidden');
@@ -2794,6 +2843,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── Escape ──
     if (e.key === 'Escape') {
       if (!document.getElementById('settings-modal').classList.contains('hidden'))      { closeSettingsModal(); return; }
+      if (!document.getElementById('bg-adjust-modal').classList.contains('hidden'))    { document.getElementById('bg-adjust-cancel').click(); return; }
       if (groupOpen)                                                                      { closeGroup();     return; }
       if (_selectedIds.size > 0)                                                         { _clearSel();      return; }
       if (_focusedId)                                                                     { _focusTile(null); return; }
@@ -3076,17 +3126,88 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Image background picker
   const bgImageInput = document.getElementById('bg-image-input');
   document.querySelectorAll('.swatch-image').forEach(el => {
-    el.addEventListener('click', e => { e.stopPropagation(); bgImageInput.click(); });
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (document.body.classList.contains('theme-image') && _bgDataUrl) {
+        // Re-adjust existing image without picking a new file
+        themeSwatches.classList.add('hidden');
+        openBgAdjust(_bgDataUrl);
+      } else {
+        bgImageInput.click();
+      }
+    });
   });
   bgImageInput.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
     const dataUrl = await compressImage(file);
     if (!dataUrl) return;
-    applyBgImage(dataUrl);
-    saveBgImage(dataUrl);
-    themeSwatches.classList.add('hidden');
     e.target.value = '';
+    themeSwatches.classList.add('hidden');
+    // Reset position for new image
+    _bgPosX = 50; _bgPosY = 50; _bgZoom = 100;
+    openBgAdjust(dataUrl);
+  });
+
+  // Background adjust modal wiring
+  const bgPreview = document.getElementById('bg-adjust-preview');
+
+  bgPreview.addEventListener('mousedown', e => {
+    _bgAdjDragging  = true;
+    _bgAdjDragStartX = e.clientX;
+    _bgAdjDragStartY = e.clientY;
+    bgPreview.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!_bgAdjDragging) return;
+    const pr = bgPreview.getBoundingClientRect();
+    const dx = e.clientX - _bgAdjDragStartX;
+    const dy = e.clientY - _bgAdjDragStartY;
+    _bgAdjDragStartX = e.clientX;
+    _bgAdjDragStartY = e.clientY;
+    // Dragging left = show more right side (posX increases); inverted for natural pan feel
+    _bgAdjTmpPosX = Math.max(0, Math.min(100, _bgAdjTmpPosX - (dx / pr.width)  * 100));
+    _bgAdjTmpPosY = Math.max(0, Math.min(100, _bgAdjTmpPosY - (dy / pr.height) * 100));
+    _bgPreviewUpdate();
+  });
+  document.addEventListener('mouseup', () => {
+    if (!_bgAdjDragging) return;
+    _bgAdjDragging = false;
+    bgPreview.classList.remove('dragging');
+  });
+
+  document.getElementById('bg-zoom-slider').addEventListener('input', e => {
+    _bgAdjTmpZoom = Number(e.target.value);
+    _bgPreviewUpdate();
+  });
+
+  document.getElementById('bg-adjust-apply').addEventListener('click', () => {
+    applyBgImage(_bgDataUrl, _bgAdjTmpPosX, _bgAdjTmpPosY, _bgAdjTmpZoom);
+    saveBgImage(_bgDataUrl, _bgAdjTmpPosX, _bgAdjTmpPosY, _bgAdjTmpZoom);
+    closeBgAdjust();
+  });
+
+  document.getElementById('bg-adjust-cancel').addEventListener('click', () => {
+    // Restore previous state
+    if (_bgAdjPrevDataUrl) {
+      applyBgImage(_bgAdjPrevDataUrl, _bgAdjPrevPosX, _bgAdjPrevPosY, _bgAdjPrevZoom);
+    } else {
+      applyTheme('cream');
+      chrome.storage.local.set({ theme: 'cream' });
+    }
+    closeBgAdjust();
+  });
+
+  document.getElementById('bg-adjust-change').addEventListener('click', () => {
+    bgImageInput.click();
+  });
+
+  document.getElementById('bg-adjust-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      // treat backdrop click as cancel
+      document.getElementById('bg-adjust-cancel').click();
+    }
   });
 
   // Weather: temp click → toggle °C/°F

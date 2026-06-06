@@ -913,6 +913,64 @@ body {
   margin-bottom: 4px;
 }
 
+/* ─── Background Adjust Modal ─── */
+#bg-adjust-card {
+  width: min(420px, 94vw);
+}
+
+#bg-adjust-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  cursor: grab;
+  margin-top: 4px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#bg-adjust-preview.dragging { cursor: grabbing; }
+
+.bg-adjust-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.bg-adjust-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(22,17,10,0.45);
+  white-space: nowrap;
+}
+
+#bg-zoom-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+#bg-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(60,120,240,0.85);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+  cursor: pointer;
+}
+
+body.modal-dark .bg-adjust-label { color: rgba(255,255,255,0.40); }
+
 /* ─── Context Menu ─── */
 #context-menu {
   position: fixed;
