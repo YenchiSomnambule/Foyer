@@ -520,23 +520,15 @@ function applyModalDark(dark) {
 }
 
 async function loadModalDark() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('modalDark', r => {
-      applyModalDark(!!r.modalDark);
-      resolve();
-    });
-  });
+  const r = await chrome.storage.local.get('modalDark');
+  applyModalDark(!!r.modalDark);
 }
 
 async function loadShortcuts() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('shortcuts', r => {
-      if (r.shortcuts?.addTile) _shortcuts.addTile = r.shortcuts.addTile;
-      if (r.shortcuts?.search)  _shortcuts.search  = r.shortcuts.search;
-      _updateShortcutDisplay();
-      resolve();
-    });
-  });
+  const r = await chrome.storage.local.get('shortcuts');
+  if (r.shortcuts?.addTile) _shortcuts.addTile = r.shortcuts.addTile;
+  if (r.shortcuts?.search)  _shortcuts.search  = r.shortcuts.search;
+  _updateShortcutDisplay();
 }
 
 // ─── Tile Size ────────────────────────────────────────────────────────────────
@@ -588,13 +580,9 @@ function saveTileSize(key) {
 }
 
 async function loadTileSize() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('tileSize', r => {
-      const key = r.tileSize && TILE_SIZES[r.tileSize] ? r.tileSize : 'm';
-      applyTileSize(key);
-      resolve(key);
-    });
-  });
+  const r = await chrome.storage.local.get('tileSize');
+  const key = r.tileSize && TILE_SIZES[r.tileSize] ? r.tileSize : 'm';
+  applyTileSize(key);
 }
 
 // ─── Marquee Selection ───────────────────────────────────────────────────────
@@ -2080,23 +2068,17 @@ function saveTheme(theme) {
 }
 
 async function loadTheme() {
-  return new Promise(resolve => {
-    chrome.storage.local.get(['theme', 'customColor', 'bgImage', 'bgPosX', 'bgPosY', 'bgZoom'], r => {
-      if (r.theme === 'custom' && r.customColor) {
-        applyCustomColor(r.customColor);
-        const inp = document.getElementById('custom-color-input');
-        if (inp) inp.value = r.customColor;
-        resolve('custom');
-      } else if (r.theme === 'image' && r.bgImage) {
-        applyBgImage(r.bgImage, r.bgPosX ?? 50, r.bgPosY ?? 50, r.bgZoom ?? 100);
-        resolve('image');
-      } else {
-        const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
-        applyTheme(theme);
-        resolve(theme);
-      }
-    });
-  });
+  const r = await chrome.storage.local.get(['theme', 'customColor', 'bgImage', 'bgPosX', 'bgPosY', 'bgZoom']);
+  if (r.theme === 'custom' && r.customColor) {
+    applyCustomColor(r.customColor);
+    const inp = document.getElementById('custom-color-input');
+    if (inp) inp.value = r.customColor;
+  } else if (r.theme === 'image' && r.bgImage) {
+    applyBgImage(r.bgImage, r.bgPosX ?? 50, r.bgPosY ?? 50, r.bgZoom ?? 100);
+  } else {
+    const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
+    applyTheme(theme);
+  }
 }
 
 // ─── Image background ────────────────────────────────────────────────────────
@@ -2874,12 +2856,11 @@ function _srHighlight() {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await load();
-  await loadTheme();
-  await loadTileSize();
-  await loadModalDark();
-
-  await loadShortcuts();
+  try { await load();        } catch { items = sampleItems(); }
+  try { await loadTheme();   } catch { applyTheme('cream'); }
+  try { await loadTileSize(); } catch { applyTileSize('m'); }
+  try { await loadModalDark(); } catch { applyModalDark(false); }
+  try { await loadShortcuts(); } catch { /* use defaults */ }
   render();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
