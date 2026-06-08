@@ -29,12 +29,11 @@ function tileGradient(str) {
   return ICON_GRADIENTS[h % ICON_GRADIENTS.length];
 }
 
-// Priority chain: Chrome favicon cache (same as bookmark bar) → apple-touch-icon → gstatic → s2/favicons → favicon.ico
+// Priority chain: apple-touch-icon (high-res logo) → gstatic (Google cache, 128px) → s2/favicons → raw favicon.ico
 function getFaviconSources(url) {
   try {
     const { hostname: host, origin } = new URL(url);
     return [
-      chrome.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(origin)}&size=32`),
       `${origin}/apple-touch-icon.png`,
       `${origin}/apple-touch-icon-precomposed.png`,
       `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(origin)}&size=128`,
@@ -67,6 +66,7 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 // ─── State ───────────────────────────────────────────────────────────────────
 
 let items = [];
+let _bookmarkFavicons = {}; // { url: favIconUrl } — populated at boot from chrome.bookmarks
 let ctxTargetId = null;
 let openGroupId = null;
 let _focusedId     = null;   // keyboard-navigated tile id (main grid)
@@ -145,6 +145,22 @@ async function load() {
 
 function save() {
   return chrome.storage.local.set({ items });
+}
+
+function _loadBookmarkFavicons() {
+  chrome.bookmarks.getTree(tree => {
+    if (chrome.runtime.lastError) return;
+    function walk(nodes) {
+      for (const n of nodes) {
+        if (n.url && n.favIconUrl &&
+            (n.favIconUrl.startsWith('https://') || n.favIconUrl.startsWith('data:'))) {
+          _bookmarkFavicons[n.url] = n.favIconUrl;
+        }
+        if (n.children) walk(n.children);
+      }
+    }
+    walk(tree);
+  });
 }
 
 function sampleItems() {
@@ -639,9 +655,10 @@ function buildSiteTile(item) {
   const img      = tile.querySelector('img');
   const fallback = tile.querySelector('.tile-icon-fallback');
 
-  // Stored favicon first (from when the site was added), then full chain
+  // Stored favicon → bookmark bar favicon (exact match) → external chain
   const sources = [
     ...(item.favicon ? [item.favicon] : []),
+    ...(_bookmarkFavicons[item.url] ? [_bookmarkFavicons[item.url]] : []),
     ...getFaviconSources(item.url),
   ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
 
@@ -1608,7 +1625,13 @@ function showCtxMenu(x, y, id) {
     openEditModal(id);
   });
   menu.querySelector('[data-action="refresh-icon"]')?.addEventListener('click', () => {
-    delete item.favicon;
+    // Use bookmark bar favicon if Chrome has one for this exact URL; otherwise re-run chain
+    const bkmk = _bookmarkFavicons[item.url];
+    if (bkmk) {
+      item.favicon = bkmk;
+    } else {
+      delete item.favicon;
+    }
     save().then(render);
     closeCtxMenu();
   });
@@ -2870,6 +2893,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try { await loadTileSize(); } catch { applyTileSize('m'); }
   try { await loadModalDark(); } catch { applyModalDark(false); }
   try { await loadShortcuts(); } catch { /* use defaults */ }
+  _loadBookmarkFavicons(); // fire-and-forget; populates _bookmarkFavicons for "Refresh icon"
   render();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
