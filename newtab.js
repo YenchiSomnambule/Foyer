@@ -29,11 +29,12 @@ function tileGradient(str) {
   return ICON_GRADIENTS[h % ICON_GRADIENTS.length];
 }
 
-// Priority chain: apple-touch-icon (high-res logo) → gstatic (Google cache, 128px) → s2/favicons → raw favicon.ico
+// Priority chain: Chrome favicon cache (same as bookmark bar) → apple-touch-icon → gstatic → s2/favicons → favicon.ico
 function getFaviconSources(url) {
   try {
     const { hostname: host, origin } = new URL(url);
     return [
+      chrome.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(origin)}&size=32`),
       `${origin}/apple-touch-icon.png`,
       `${origin}/apple-touch-icon-precomposed.png`,
       `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(origin)}&size=128`,
@@ -1587,11 +1588,14 @@ function showCtxMenu(x, y, id) {
   if (!item) return;
   const editBtn = item.type === 'site'
     ? `<button class="ctx-item" data-action="edit">Edit</button>` : '';
+  const refreshIconBtn = item.type === 'site'
+    ? `<button class="ctx-item" data-action="refresh-icon">Refresh icon</button>` : '';
   const removeCoverBtn = (item.type === 'group' && item.cover)
     ? `<button class="ctx-item" data-action="remove-cover">Remove cover</button>` : '';
   menu.innerHTML = `
     <button class="ctx-item" data-action="rename">Rename</button>
     ${editBtn}
+    ${refreshIconBtn}
     ${removeCoverBtn}
     <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
   `;
@@ -1602,6 +1606,11 @@ function showCtxMenu(x, y, id) {
   menu.querySelector('[data-action="edit"]')?.addEventListener('click', () => {
     closeCtxMenu();
     openEditModal(id);
+  });
+  menu.querySelector('[data-action="refresh-icon"]')?.addEventListener('click', () => {
+    delete item.favicon;
+    save().then(render);
+    closeCtxMenu();
   });
   menu.querySelector('[data-action="remove-cover"]')?.addEventListener('click', () => {
     delete item.cover;
