@@ -139,12 +139,19 @@ function _showToast(msg) {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 async function load() {
-  const data = await chrome.storage.local.get('items');
+  const data = await _storageGet('items');
   items = data.items ?? sampleItems();
 }
 
 function save() {
   return chrome.storage.local.set({ items });
+}
+
+function _storageGet(keys) {
+  return Promise.race([
+    chrome.storage.local.get(keys),
+    new Promise(resolve => setTimeout(() => resolve({}), 3000))
+  ]);
 }
 
 function _loadBookmarkFavicons() {
@@ -537,12 +544,12 @@ function applyModalDark(dark) {
 }
 
 async function loadModalDark() {
-  const r = await chrome.storage.local.get('modalDark');
+  const r = await _storageGet('modalDark');
   applyModalDark(!!r.modalDark);
 }
 
 async function loadShortcuts() {
-  const r = await chrome.storage.local.get('shortcuts');
+  const r = await _storageGet('shortcuts');
   if (r.shortcuts?.addTile) _shortcuts.addTile = r.shortcuts.addTile;
   if (r.shortcuts?.search)  _shortcuts.search  = r.shortcuts.search;
   _updateShortcutDisplay();
@@ -597,7 +604,7 @@ function saveTileSize(key) {
 }
 
 async function loadTileSize() {
-  const r = await chrome.storage.local.get('tileSize');
+  const r = await _storageGet('tileSize');
   const key = r.tileSize && TILE_SIZES[r.tileSize] ? r.tileSize : 'm';
   applyTileSize(key);
 }
@@ -2100,7 +2107,7 @@ function saveTheme(theme) {
 }
 
 async function loadTheme() {
-  const r = await chrome.storage.local.get(['theme', 'customColor', 'bgImage', 'bgPosX', 'bgPosY', 'bgZoom']);
+  const r = await _storageGet(['theme', 'customColor', 'bgImage', 'bgPosX', 'bgPosY', 'bgZoom']);
   if (r.theme === 'custom' && r.customColor) {
     applyCustomColor(r.customColor);
     const inp = document.getElementById('custom-color-input');
@@ -2887,13 +2894,13 @@ function _srHighlight() {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', async () => {
+(async () => {
   try { await load();        } catch { items = sampleItems(); }
   try { await loadTheme();   } catch { applyTheme('cream'); }
   try { await loadTileSize(); } catch { applyTileSize('m'); }
   try { await loadModalDark(); } catch { applyModalDark(false); }
   try { await loadShortcuts(); } catch { /* use defaults */ }
-  _loadBookmarkFavicons(); // fire-and-forget; populates _bookmarkFavicons for "Refresh icon"
+  try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
   render();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -3467,4 +3474,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('confirm-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('confirm-modal').classList.add('hidden');
   });
-});
+})();
