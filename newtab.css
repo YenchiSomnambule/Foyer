@@ -1219,7 +1219,7 @@ body.theme-cream  .group-site-tile span {
 .quick-pill:hover svg { opacity: 1; }
 .quick-pill--blue {
   background: transparent;
-  color: rgba(30,70,200,0.65);
+  color: rgba(0,0,0,0.38);
 }
 .quick-pill--blue:hover {
   background: rgba(60,120,240,0.65);
@@ -1227,7 +1227,7 @@ body.theme-cream  .group-site-tile span {
 }
 .quick-pill--red {
   background: transparent;
-  color: rgba(170,25,25,0.65);
+  color: rgba(0,0,0,0.38);
 }
 .quick-pill--red:hover {
   background: rgba(210,45,45,0.62);
@@ -1235,7 +1235,7 @@ body.theme-cream  .group-site-tile span {
 }
 body.modal-dark .quick-pill--blue {
   background: transparent;
-  color: rgba(150,200,255,0.70);
+  color: rgba(255,255,255,0.35);
 }
 body.modal-dark .quick-pill--blue:hover {
   background: rgba(100,160,255,0.50);
@@ -1243,7 +1243,7 @@ body.modal-dark .quick-pill--blue:hover {
 }
 body.modal-dark .quick-pill--red {
   background: transparent;
-  color: rgba(255,130,130,0.70);
+  color: rgba(255,255,255,0.35);
 }
 body.modal-dark .quick-pill--red:hover {
   background: rgba(255,90,90,0.50);
