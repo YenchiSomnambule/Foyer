@@ -1778,17 +1778,26 @@ body.theme-custom .swatch-custom.active,
 #search-overlay.hidden { display: none; }
 
 #search-box {
-  /* always-dark card so it reads cleanly on every theme */
+  --sb-text:   rgba(22,17,10,0.85);
+  --sb-muted:  rgba(22,17,10,0.40);
+  --sb-glass:  rgba(0,0,0,0.04);
+  --sb-border: rgba(0,0,0,0.09);
+  --sb-active: rgba(0,0,0,0.06);
+  width: min(580px, calc(100vw - 32px));
+  background: rgba(248,244,238,0.97);
+  border: 1px solid rgba(0,0,0,0.09);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 0 0 0.5px rgba(0,0,0,0.04) inset;
+}
+body.modal-dark #search-box {
   --sb-text:   rgba(255,255,255,0.90);
   --sb-muted:  rgba(255,255,255,0.38);
   --sb-glass:  rgba(255,255,255,0.07);
   --sb-border: rgba(255,255,255,0.11);
   --sb-active: rgba(255,255,255,0.09);
-  width: min(580px, calc(100vw - 32px));
-  background: rgba(20,20,26,0.97);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 18px;
-  overflow: hidden;
+  background: rgba(30,35,55,0.92);
+  border-color: rgba(255,255,255,0.16);
   box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.05) inset;
 }
 
