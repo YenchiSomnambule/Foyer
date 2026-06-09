@@ -1,6 +1,6 @@
 # Privacy Policy — Foyer New Tab
 
-**Last updated: 2025**
+**Last updated: 2026**
 
 Foyer is a Chrome extension that replaces your new tab page with a personal site-grid dashboard. This policy explains what data the extension accesses and how it is handled.
 
@@ -15,6 +15,7 @@ All user data is stored exclusively on your device using `chrome.storage.local`.
 | Your site list and groups | Persists your grid layout across browser sessions |
 | Theme and tile-size preference | Restores your visual settings on each new tab |
 | Weather location and cache | Avoids redundant API calls; refreshes every 30 minutes |
+| Keyboard shortcut configuration | Restores your custom key bindings on each new tab |
 
 You can clear all stored data at any time by removing the extension or clearing its storage from Chrome's extension management page.
 
