@@ -73,7 +73,8 @@ body {
 .widget-sep.hidden { display: none; }
 
 /* ─── Search icon button (between config and palette) ─── */
-#top-search-bar {
+/* shared style for all top-right icon buttons */
+.top-btn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -93,9 +94,10 @@ body {
   appearance: none;
   margin: 0;
   padding: 0;
+  flex-shrink: 0;
 }
-#top-search-bar:hover  { background: var(--glass-border); transform: scale(1.08); }
-#top-search-bar:active { transform: scale(0.93); }
+.top-btn:hover  { background: var(--glass-border); transform: scale(1.08); }
+.top-btn:active { transform: scale(0.93); }
 
 /* ─── Engine search bar (center-top) ─── */
 #engine-search-bar {
@@ -462,6 +464,32 @@ body {
   border-radius: 3px;
 }
 
+/* ─── Group Cover Image ─── */
+.group-cover-icon {
+  position: relative;
+  overflow: visible !important;
+}
+
+.group-cover-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  background: rgba(20, 20, 20, 0.78);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 5px;
+  border-radius: 8px;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  border: 1.5px solid rgba(255,255,255,0.28);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+}
+
 /* ─── Drag states ─── */
 
 /* Group target: tile glows when dragging another tile onto its center */
@@ -529,14 +557,14 @@ body {
 #group-panel {
   position: relative;
   z-index: 1;
-  background: rgb(30,35,55);
-  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(248,244,238,0.97);
+  border: 1px solid rgba(0,0,0,0.09);
   border-radius: 28px;
   padding: 28px 28px 24px;
   width: min(500px, 92vw);
   max-height: 80vh;
   overflow: visible;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
   animation: panelIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -555,9 +583,17 @@ body {
 #group-title {
   font-size: 17px;
   font-weight: 600;
-  color: rgba(255,255,255,0.95);
+  color: rgba(22,17,10,0.88);
   letter-spacing: -0.02em;
   text-align: center;
+  cursor: default;
+  border-radius: 6px;
+  padding: 2px 8px;
+  transition: background 0.15s;
+}
+
+#group-title:hover {
+  background: rgba(0,0,0,0.06);
 }
 
 #close-group {
@@ -567,9 +603,9 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.07);
+  border: 1px solid rgba(0,0,0,0.1);
+  color: rgba(22,17,10,0.55);
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -579,7 +615,7 @@ body {
   line-height: 1;
 }
 
-#close-group:hover { background: rgba(255,255,255,0.22); }
+#close-group:hover { background: rgba(0,0,0,0.13); }
 
 /* ─── Group Overlay Pages ─── */
 #group-pages-container {
@@ -631,15 +667,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.18);
-  color: rgba(255,255,255,0.55);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.28);
+  color: rgba(22,17,10,0.65);
   font-family: var(--font);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
@@ -658,13 +695,13 @@ body {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.28);
+  background: rgba(0,0,0,0.18);
   transition: background 0.2s, transform 0.2s;
   cursor: pointer;
 }
 
 .group-dot.active {
-  background: rgba(255,255,255,0.9);
+  background: rgba(0,0,0,0.72);
   transform: scale(1.2);
 }
 
@@ -721,7 +758,7 @@ body {
 .group-site-tile span {
   font-size: 11px;
   font-weight: 500;
-  color: rgba(255,255,255,0.88);
+  color: rgba(22,17,10,0.75);
   text-align: center;
   width: 100%;
   overflow: hidden;
@@ -912,6 +949,64 @@ body {
   margin-bottom: 4px;
 }
 
+/* ─── Background Adjust Modal ─── */
+#bg-adjust-card {
+  width: min(420px, 94vw);
+}
+
+#bg-adjust-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  cursor: grab;
+  margin-top: 4px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#bg-adjust-preview.dragging { cursor: grabbing; }
+
+.bg-adjust-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.bg-adjust-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(22,17,10,0.45);
+  white-space: nowrap;
+}
+
+#bg-zoom-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+#bg-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(60,120,240,0.85);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+  cursor: pointer;
+}
+
+body.modal-dark .bg-adjust-label { color: rgba(255,255,255,0.40); }
+
 /* ─── Context Menu ─── */
 #context-menu {
   position: fixed;
@@ -1095,6 +1190,66 @@ body.theme-cream  .group-site-tile span {
   text-shadow: 0 1px 3px rgba(255,255,255,0.5);
 }
 
+/* ─── Quick action pills (top bar) ─── */
+#quick-btns {
+  position: fixed;
+  top: 20px;
+  right: 68px;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.quick-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  height: 30px;
+  border-radius: 999px;
+  border: none;
+  font-size: 11.5px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, color 0.18s;
+}
+.quick-pill svg { flex-shrink: 0; opacity: 0.70; transition: opacity 0.18s; }
+.quick-pill:hover svg { opacity: 1; }
+.quick-pill--blue {
+  background: transparent;
+  color: rgba(0,0,0,0.38);
+}
+.quick-pill--blue:hover {
+  background: rgba(60,120,240,0.65);
+  color: rgba(255,255,255,0.95);
+}
+.quick-pill--red {
+  background: transparent;
+  color: rgba(0,0,0,0.38);
+}
+.quick-pill--red:hover {
+  background: rgba(210,45,45,0.62);
+  color: rgba(255,255,255,0.95);
+}
+body.modal-dark .quick-pill--blue {
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+}
+body.modal-dark .quick-pill--blue:hover {
+  background: rgba(100,160,255,0.50);
+  color: rgba(255,255,255,0.95);
+}
+body.modal-dark .quick-pill--red {
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+}
+body.modal-dark .quick-pill--red:hover {
+  background: rgba(255,90,90,0.50);
+  color: rgba(255,255,255,0.95);
+}
+
 /* ─── Theme Picker ─── */
 #theme-picker {
   position: fixed;
@@ -1107,24 +1262,6 @@ body.theme-cream  .group-site-tile span {
   gap: 8px;
 }
 
-#config-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  color: var(--add-btn-color);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  transition: background 0.2s, transform 0.15s;
-}
-#config-btn:hover  { background: var(--glass-border); transform: scale(1.08); }
-#config-btn:active { transform: scale(0.93); }
 
 
 .size-row {
@@ -1641,17 +1778,26 @@ body.theme-custom .swatch-custom.active,
 #search-overlay.hidden { display: none; }
 
 #search-box {
-  /* always-dark card so it reads cleanly on every theme */
+  --sb-text:   rgba(22,17,10,0.85);
+  --sb-muted:  rgba(22,17,10,0.40);
+  --sb-glass:  rgba(0,0,0,0.04);
+  --sb-border: rgba(0,0,0,0.09);
+  --sb-active: rgba(0,0,0,0.06);
+  width: min(580px, calc(100vw - 32px));
+  background: rgba(248,244,238,0.97);
+  border: 1px solid rgba(0,0,0,0.09);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 0 0 0.5px rgba(0,0,0,0.04) inset;
+}
+body.modal-dark #search-box {
   --sb-text:   rgba(255,255,255,0.90);
   --sb-muted:  rgba(255,255,255,0.38);
   --sb-glass:  rgba(255,255,255,0.07);
   --sb-border: rgba(255,255,255,0.11);
   --sb-active: rgba(255,255,255,0.09);
-  width: min(580px, calc(100vw - 32px));
-  background: rgba(20,20,26,0.97);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 18px;
-  overflow: hidden;
+  background: rgba(30,35,55,0.92);
+  border-color: rgba(255,255,255,0.16);
   box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.05) inset;
 }
 
@@ -1949,6 +2095,28 @@ body.theme-custom .swatch-custom.active,
   color: rgba(22,17,10,0.90);
 }
 .ssec-action-btn svg { flex-shrink: 0; opacity: 0.55; }
+.ssec-action-btn--full { grid-column: 1 / -1; }
+.ssec-action-btn--danger {
+  background: rgba(200,40,40,0.07);
+  border-color: rgba(200,40,40,0.20);
+  color: rgba(180,30,30,0.85);
+}
+.ssec-action-btn--danger:hover {
+  background: rgba(200,40,40,0.13);
+  border-color: rgba(200,40,40,0.35);
+  color: rgba(160,20,20,1.0);
+}
+.ssec-action-btn--danger svg { opacity: 0.65; }
+body.modal-dark .ssec-action-btn--danger {
+  background: rgba(255,80,80,0.10);
+  border-color: rgba(255,80,80,0.20);
+  color: rgba(255,120,120,0.88);
+}
+body.modal-dark .ssec-action-btn--danger:hover {
+  background: rgba(255,80,80,0.18);
+  border-color: rgba(255,80,80,0.35);
+  color: rgba(255,150,150,1.0);
+}
 
 /* Shortcuts */
 .shortcuts-list { display: flex; flex-direction: column; }
@@ -2209,6 +2377,20 @@ body.modal-dark .sc-hint         { color: rgba(255,255,255,0.28); }
 }
 
 body.modal-dark .size-slider-label { color: rgba(255,255,255,0.40); }
+
+/* ─── Dark mode: group overlay ─── */
+body.modal-dark #group-panel {
+  background: rgb(30,35,55);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+}
+body.modal-dark #group-title       { color: rgba(255,255,255,0.95); }
+body.modal-dark #group-title:hover { background: rgba(255,255,255,0.1); }
+body.modal-dark #close-group       { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
+body.modal-dark #close-group:hover { background: rgba(255,255,255,0.22); }
+body.modal-dark .group-dot         { background: rgba(255,255,255,0.28); }
+body.modal-dark .group-dot.active  { background: rgba(255,255,255,0.9); }
+body.modal-dark .group-site-tile span { color: rgba(255,255,255,0.88); }
 
 #tile-size-slider {
   flex: 1;

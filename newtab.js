@@ -66,6 +66,7 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 // ─── State ───────────────────────────────────────────────────────────────────
 
 let items = [];
+let _bookmarkFavicons = {}; // { url: favIconUrl } — populated at boot from chrome.bookmarks
 let ctxTargetId = null;
 let openGroupId = null;
 let _focusedId     = null;   // keyboard-navigated tile id (main grid)
@@ -109,21 +110,22 @@ function debouncedSave() {
 
 // ─── Undo ─────────────────────────────────────────────────────────────────────
 
-let _undoSnapshot = null;
+const _undoStack  = [];   // newest at end
+const UNDO_LIMIT  = 10;
 let _toastTimer   = null;
 const _isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 function _snapshotForUndo() {
-  _undoSnapshot = JSON.parse(JSON.stringify(items));
+  _undoStack.push(JSON.parse(JSON.stringify(items)));
+  if (_undoStack.length > UNDO_LIMIT) _undoStack.shift();
 }
 
 function doUndo() {
-  if (!_undoSnapshot) return;
-  items = _undoSnapshot;
-  _undoSnapshot = null;
+  if (!_undoStack.length) return;
+  items = _undoStack.pop();
   save();
   render();
-  _showToast('Restored');
+  _showToast(_undoStack.length ? `Restored · ${_undoStack.length} more` : 'Restored');
 }
 
 function _showToast(msg) {
@@ -137,12 +139,35 @@ function _showToast(msg) {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 async function load() {
-  const data = await chrome.storage.local.get('items');
+  const data = await _storageGet('items');
   items = data.items ?? sampleItems();
 }
 
 function save() {
   return chrome.storage.local.set({ items });
+}
+
+function _storageGet(keys) {
+  return Promise.race([
+    chrome.storage.local.get(keys),
+    new Promise(resolve => setTimeout(() => resolve({}), 3000))
+  ]);
+}
+
+function _loadBookmarkFavicons() {
+  chrome.bookmarks.getTree(tree => {
+    if (chrome.runtime.lastError) return;
+    function walk(nodes) {
+      for (const n of nodes) {
+        if (n.url && n.favIconUrl &&
+            (n.favIconUrl.startsWith('https://') || n.favIconUrl.startsWith('data:'))) {
+          _bookmarkFavicons[n.url] = n.favIconUrl;
+        }
+        if (n.children) walk(n.children);
+      }
+    }
+    walk(tree);
+  });
 }
 
 function sampleItems() {
@@ -519,23 +544,15 @@ function applyModalDark(dark) {
 }
 
 async function loadModalDark() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('modalDark', r => {
-      applyModalDark(!!r.modalDark);
-      resolve();
-    });
-  });
+  const r = await _storageGet('modalDark');
+  applyModalDark(!!r.modalDark);
 }
 
 async function loadShortcuts() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('shortcuts', r => {
-      if (r.shortcuts?.addTile) _shortcuts.addTile = r.shortcuts.addTile;
-      if (r.shortcuts?.search)  _shortcuts.search  = r.shortcuts.search;
-      _updateShortcutDisplay();
-      resolve();
-    });
-  });
+  const r = await _storageGet('shortcuts');
+  if (r.shortcuts?.addTile) _shortcuts.addTile = r.shortcuts.addTile;
+  if (r.shortcuts?.search)  _shortcuts.search  = r.shortcuts.search;
+  _updateShortcutDisplay();
 }
 
 // ─── Tile Size ────────────────────────────────────────────────────────────────
@@ -549,13 +566,9 @@ const TILE_SIZES = {
 };
 const SIZE_KEYS = ['xs', 's', 'm', 'l', 'xl'];
 
-const GOOGLE_SEARCH_URL = 'https://www.google.com/search?q=';
-
 function _engineUrl(q) {
-  return GOOGLE_SEARCH_URL + encodeURIComponent(q);
+  return 'https://www.google.com/search?q=' + encodeURIComponent(q);
 }
-
-async function loadEngine() {}
 
 let _currentTileSize = 'm';
 
@@ -591,13 +604,9 @@ function saveTileSize(key) {
 }
 
 async function loadTileSize() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('tileSize', r => {
-      const key = r.tileSize && TILE_SIZES[r.tileSize] ? r.tileSize : 'm';
-      applyTileSize(key);
-      resolve(key);
-    });
-  });
+  const r = await _storageGet('tileSize');
+  const key = r.tileSize && TILE_SIZES[r.tileSize] ? r.tileSize : 'm';
+  applyTileSize(key);
 }
 
 // ─── Marquee Selection ───────────────────────────────────────────────────────
@@ -653,9 +662,10 @@ function buildSiteTile(item) {
   const img      = tile.querySelector('img');
   const fallback = tile.querySelector('.tile-icon-fallback');
 
-  // Stored favicon first (from when the site was added), then full chain
+  // Stored favicon → bookmark bar favicon (exact match) → external chain
   const sources = [
     ...(item.favicon ? [item.favicon] : []),
+    ...(_bookmarkFavicons[item.url] ? [_bookmarkFavicons[item.url]] : []),
     ...getFaviconSources(item.url),
   ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
 
@@ -683,39 +693,61 @@ function buildGroupTile(item) {
   tile.className = 'tile group-tile';
   tile.dataset.id = item.id;
 
-  const sites = (item.items ?? []).slice(0, 9);
+  const allSites  = item.items ?? [];
+  const coverSite = item.cover ? allSites.find(s => s.id === item.cover) : null;
 
-  // 9-slot mini-grid: filled slots show letter+favicon, empty slots stay faint
-  let miniHTML = '';
-  for (let i = 0; i < 9; i++) {
-    const s = sites[i];
-    if (s) {
-      const letter = (s.name[0] ?? '?').toUpperCase();
-      const bg = tileGradient(s.url);
-      miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
-    } else {
-      miniHTML += `<div class="mini-cell empty"></div>`;
+  if (coverSite) {
+    // Cover mode: full-size favicon with a count badge
+    const letter = (coverSite.name[0] ?? '?').toUpperCase();
+    const bg     = tileGradient(coverSite.url);
+    tile.innerHTML = `
+      <div class="tile-icon group-cover-icon">
+        <img alt="" draggable="false" style="display:none">
+        <div class="tile-icon-fallback" style="display:flex;background:${bg}">${letter}</div>
+        <span class="group-cover-badge">${allSites.length}</span>
+      </div>
+      <span class="tile-name">${escHtml(item.name)}</span>
+    `;
+    const img      = tile.querySelector('img');
+    const fallback = tile.querySelector('.tile-icon-fallback');
+    const sources  = [
+      ...(coverSite.favicon ? [coverSite.favicon] : []),
+      ...getFaviconSources(coverSite.url),
+    ].filter((v, i, a) => a.indexOf(v) === i);
+    tryFaviconChain(img, fallback, sources);
+
+  } else {
+    // Default 9-grid mode
+    const sites = allSites.slice(0, 9);
+    let miniHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const s = sites[i];
+      if (s) {
+        const letter = (s.name[0] ?? '?').toUpperCase();
+        const bg = tileGradient(s.url);
+        miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
+      } else {
+        miniHTML += `<div class="mini-cell empty"></div>`;
+      }
     }
+    tile.innerHTML = `
+      <div class="tile-icon group-icon">
+        <div class="mini-grid">${miniHTML}</div>
+      </div>
+      <span class="tile-name">${escHtml(item.name)}</span>
+    `;
+    tile.querySelectorAll('.mini-cell:not(.empty)').forEach((cell, i) => {
+      const site = sites[i];
+      if (!site) return;
+      const img    = cell.querySelector('img');
+      const letter = cell.querySelector('.mini-letter');
+      const sources = [
+        ...(site.favicon ? [site.favicon] : []),
+        ...getFaviconSources(site.url),
+      ].filter((v, j, a) => a.indexOf(v) === j);
+      tryFaviconChain(img, letter, sources);
+    });
   }
-
-  tile.innerHTML = `
-    <div class="tile-icon group-icon">
-      <div class="mini-grid">${miniHTML}</div>
-    </div>
-    <span class="tile-name">${escHtml(item.name)}</span>
-  `;
-
-  tile.querySelectorAll('.mini-cell:not(.empty)').forEach((cell, i) => {
-    const site = sites[i];
-    if (!site) return;
-    const img    = cell.querySelector('img');
-    const letter = cell.querySelector('.mini-letter');
-    const sources = [
-      ...(site.favicon ? [site.favicon] : []),
-      ...getFaviconSources(site.url),
-    ].filter((v, j, a) => a.indexOf(v) === j);
-    tryFaviconChain(img, letter, sources);
-  });
 
   tile.addEventListener('click', e => {
     if (e.defaultPrevented || _suppressClick) return;
@@ -771,13 +803,14 @@ function attachDrag(tile, id) {
 function _initDrag(el, rect) {
   pdClone = el.cloneNode(true);
   Object.assign(pdClone.style, {
-    position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+    position: 'fixed', left: '0', top: '0',
     width: rect.width + 'px', height: rect.height + 'px',
     pointerEvents: 'none', zIndex: '1000',
-    opacity: '0.92', transform: 'scale(1.1)',
+    opacity: '0.92',
+    transform: `translate(${rect.left}px,${rect.top}px) scale(1.08)`,
     transformOrigin: 'center center',
-    transition: 'transform 0.15s ease',
-    filter: 'drop-shadow(0 18px 38px rgba(0,0,0,0.55))',
+    filter: 'drop-shadow(0 18px 38px rgba(0,0,0,0.5))',
+    willChange: 'transform',
   });
   document.body.appendChild(pdClone);
   el.style.opacity = '0';
@@ -785,14 +818,15 @@ function _initDrag(el, rect) {
 
 function _moveDrag(cx, cy) {
   if (!pdClone) return;
-  pdClone.style.left = (cx - pdOffX) + 'px';
-  pdClone.style.top  = (cy - pdOffY) + 'px';
+  // GPU-composited movement — no layout triggered
+  pdClone.style.transition = 'none';
+  pdClone.style.transform  = `translate(${cx - pdOffX}px,${cy - pdOffY}px) scale(1.08)`;
 
-  // Auto-scroll #app
+  // Proportional auto-scroll — speed ramps up as cursor approaches edge
   const app = document.getElementById('app');
-  const ZONE = 80, SPEED = 10;
-  if (cy < ZONE) app.scrollTop -= SPEED;
-  else if (cy > window.innerHeight - ZONE) app.scrollTop += SPEED;
+  const ZONE = 80, MAX_SPEED = 16;
+  if      (cy < ZONE)                         app.scrollTop -= Math.ceil(MAX_SPEED * (1 - cy / ZONE));
+  else if (cy > window.innerHeight - ZONE)    app.scrollTop += Math.ceil(MAX_SPEED * ((cy - (window.innerHeight - ZONE)) / ZONE));
 
   // Use the floating clone's CENTER as the collision point (icon body, not cursor tip)
   const cr    = pdClone.getBoundingClientRect();
@@ -873,43 +907,65 @@ function _applyReorderPreview(tgtEl, insertBefore) {
     t.animate(
       [
         { transform: `translate(${dx}px,${dy}px)` },
-        { transform: 'translate(0,0)' }
+        { transform: 'translate(0,0)' },
       ],
-      { duration: 400, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)', fill: 'forwards' }
+      { duration: 180, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)', fill: 'none' }
     );
   });
 }
 
 function _commitDrag() {
-  pdClone?.remove(); pdClone = null;
-  if (pdSrcEl) pdSrcEl.style.opacity = '';
+  const srcEl   = pdSrcEl;
+  const clone   = pdClone;
+  const dropTgt = pdDropTgt;
+  const dropMode= pdDropMode;
+  const srcId   = pdSrcId;
 
-  // Cancel any in-flight FLIP animations and clear decorations
-  document.querySelectorAll('.tile').forEach(t => {
-    t.getAnimations().forEach(a => { try { a.cancel(); } catch {} });
-    t.classList.remove('drag-group-target');
-    t.style.transition = '';
-    t.style.transform  = '';
-  });
+  pdClone = null; pdSrcEl = null;
+  pdDropTgt = null; pdDropMode = null; pdActive = false; pdSrcId = null;
 
-  if (pdDropMode === 'group' && pdDropTgt) {
-    doGroup(pdSrcId, pdDropTgt);
+  // Drop animation: fade clone out while revealing the source tile
+  if (clone) {
+    clone.style.transition = 'opacity 0.16s, transform 0.16s cubic-bezier(0.25,0.46,0.45,0.94)';
+    clone.style.opacity    = '0';
+    clone.style.transform  = clone.style.transform.replace('scale(1.08)', 'scale(1)');
+    setTimeout(() => clone.remove(), 160);
+  }
+  // Reveal source tile simultaneously (clone fades out on top of it)
+  if (srcEl) srcEl.style.opacity = '';
+
+  // Only remove group-highlight decoration; let in-flight FLIP animations complete naturally
+  document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
+
+  _suppressClick = true;
+  requestAnimationFrame(() => { _suppressClick = false; });
+
+  if (dropMode === 'group' && dropTgt) {
+    // Group merge: need a full re-render since tile types change
+    doGroup(srcId, dropTgt);
+    render();
   } else {
-    // DOM order already reflects the live preview → sync items[]
+    // Reorder: DOM already reflects the final order from live preview
+    // Sync items[] from DOM without rebuilding — eliminates the rebuild flash
     const grid = document.getElementById('grid');
     const domOrder = [...grid.querySelectorAll('.tile')].map(t => t.dataset.id);
     items = domOrder.map(did => items.find(i => i.id === did)).filter(Boolean);
     save();
   }
+}
 
-  // Suppress the click that fires after mouseup on the same element
-  _suppressClick = true;
-  requestAnimationFrame(() => { _suppressClick = false; });
-
-  pdSrcId = null; pdSrcEl = null;
-  pdDropTgt = null; pdDropMode = null; pdActive = false;
-
-  render();
+// Returns true if the group was dissolved (removed or replaced), false if it survives.
+function _dissolveGroupIfNeeded(groupId) {
+  const group = items.find(i => i.id === groupId);
+  if (!group || group.items.length > 1) return false;
+  if (group.items.length === 1) {
+    const rem = group.items[0];
+    items = items.filter(i => i.id !== groupId);
+    items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
+  } else {
+    items = items.filter(i => i.id !== groupId);
+  }
+  return true;
 }
 
 function _newGroupName() {
@@ -1259,15 +1315,7 @@ function _gpCommitDrag(groupId) {
         group.items = group.items.filter(s => s.id !== gpDragSrcId);
         items.push({ id: uid(), type: 'site', name: site.name, url: site.url, favicon: site.favicon });
 
-        if (group.items.length <= 1) {
-          if (group.items.length === 1) {
-            const rem = group.items[0];
-            items = items.filter(i => i.id !== groupId);
-            items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
-          } else {
-            items = items.filter(i => i.id !== groupId);
-          }
-        }
+        _dissolveGroupIfNeeded(groupId);
       }
     }
     _gpSuppressClick = true;
@@ -1343,7 +1391,9 @@ function openGroup(groupId) {
   groupCurrentPage = 0;
   _gpFocusedSiteId = null;
 
-  document.getElementById('group-title').textContent = group.name;
+  const titleEl = document.getElementById('group-title');
+  titleEl.textContent = group.name;
+  titleEl.ondblclick = () => promptRename(groupId);
 
   const track = document.getElementById('group-pages-track');
   const dots  = document.getElementById('group-dots');
@@ -1447,6 +1497,7 @@ function initGroupPageDrag(container, track, dots) {
     dots.querySelectorAll('.group-dot').forEach((d, i) =>
       d.classList.toggle('active', i === groupCurrentPage)
     );
+    _updateGroupHints();
   }
 
   container.addEventListener('mousedown', onStart);
@@ -1461,27 +1512,24 @@ function initGroupPageDrag(container, track, dots) {
 }
 
 function showGroupSiteCtx(e, groupId, siteId) {
+  const group = items.find(i => i.id === groupId);
+  if (!group) return;
+  const isCover = group.cover === siteId;
   const menu = document.getElementById('context-menu');
-  menu.innerHTML = `<button class="ctx-item ctx-danger" data-action="delete">Delete</button>`;
+  menu.innerHTML = `
+    <button class="ctx-item" data-action="cover">${isCover ? 'Remove cover' : 'Set as cover'}</button>
+    <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+  `;
+  menu.querySelector('[data-action="cover"]').addEventListener('click', () => {
+    if (isCover) delete group.cover; else group.cover = siteId;
+    save().then(render);
+    closeCtxMenu();
+  });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
-    const group = items.find(i => i.id === groupId);
-    if (!group) return;
     _snapshotForUndo();
-
-    // Permanently delete the site from the group
+    if (group.cover === siteId) delete group.cover;
     group.items = group.items.filter(s => s.id !== siteId);
-
-    // Dissolve group if fewer than 2 items remain
-    if (group.items.length <= 1) {
-      if (group.items.length === 1) {
-        const rem = group.items[0];
-        items = items.filter(i => i.id !== groupId);
-        items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
-      } else {
-        items = items.filter(i => i.id !== groupId);
-      }
-    }
-
+    _dissolveGroupIfNeeded(groupId);
     save();
     render();
     closeCtxMenu();
@@ -1564,9 +1612,15 @@ function showCtxMenu(x, y, id) {
   if (!item) return;
   const editBtn = item.type === 'site'
     ? `<button class="ctx-item" data-action="edit">Edit</button>` : '';
+  const refreshIconBtn = item.type === 'site'
+    ? `<button class="ctx-item" data-action="refresh-icon">Refresh icon</button>` : '';
+  const removeCoverBtn = (item.type === 'group' && item.cover)
+    ? `<button class="ctx-item" data-action="remove-cover">Remove cover</button>` : '';
   menu.innerHTML = `
     <button class="ctx-item" data-action="rename">Rename</button>
     ${editBtn}
+    ${refreshIconBtn}
+    ${removeCoverBtn}
     <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
   `;
   menu.querySelector('[data-action="rename"]').addEventListener('click', () => {
@@ -1576,6 +1630,22 @@ function showCtxMenu(x, y, id) {
   menu.querySelector('[data-action="edit"]')?.addEventListener('click', () => {
     closeCtxMenu();
     openEditModal(id);
+  });
+  menu.querySelector('[data-action="refresh-icon"]')?.addEventListener('click', () => {
+    // Use bookmark bar favicon if Chrome has one for this exact URL; otherwise re-run chain
+    const bkmk = _bookmarkFavicons[item.url];
+    if (bkmk) {
+      item.favicon = bkmk;
+    } else {
+      delete item.favicon;
+    }
+    save().then(render);
+    closeCtxMenu();
+  });
+  menu.querySelector('[data-action="remove-cover"]')?.addEventListener('click', () => {
+    delete item.cover;
+    save().then(render);
+    closeCtxMenu();
   });
   menu.querySelector('[data-action="delete"]').addEventListener('click', () => {
     _snapshotForUndo();
@@ -1589,9 +1659,9 @@ function showCtxMenu(x, y, id) {
 
 function positionAndShow(menu, x, y) {
   menu.classList.remove('hidden');
-  const mw = 180, mh = 90;
-  menu.style.left = `${Math.min(x, window.innerWidth  - mw - 8)}px`;
-  menu.style.top  = `${Math.min(y, window.innerHeight - mh - 8)}px`;
+  const mw = 180, mh = menu.offsetHeight || 96;
+  menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth  - mw - 8))}px`;
+  menu.style.top  = `${Math.max(8, Math.min(y, window.innerHeight - mh - 8))}px`;
 }
 
 function closeCtxMenu() {
@@ -1614,7 +1684,12 @@ function promptRename(id) {
 
   const doSave = () => {
     const val = input.value.trim();
-    if (val) { item.name = val; save().then(render); }
+    if (val) {
+      item.name = val;
+      save().then(render);
+      // Also refresh the overlay title if this group is currently open
+      if (openGroupId === id) document.getElementById('group-title').textContent = val;
+    }
     modal.classList.add('hidden');
     unbind();
   };
@@ -1920,6 +1995,7 @@ function addSite() {
       group.items.push({ id: uid(), name: siteName, url, favicon: pendingFavicon ?? undefined });
       const gid = _addTargetGroupId;
       save();
+      render();
       closeAddModal();
       openGroup(gid);
       return;
@@ -2031,23 +2107,17 @@ function saveTheme(theme) {
 }
 
 async function loadTheme() {
-  return new Promise(resolve => {
-    chrome.storage.local.get(['theme', 'customColor', 'bgImage'], r => {
-      if (r.theme === 'custom' && r.customColor) {
-        applyCustomColor(r.customColor);
-        const inp = document.getElementById('custom-color-input');
-        if (inp) inp.value = r.customColor;
-        resolve('custom');
-      } else if (r.theme === 'image' && r.bgImage) {
-        applyBgImage(r.bgImage);
-        resolve('image');
-      } else {
-        const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
-        applyTheme(theme);
-        resolve(theme);
-      }
-    });
-  });
+  const r = await _storageGet(['theme', 'customColor', 'bgImage', 'bgPosX', 'bgPosY', 'bgZoom']);
+  if (r.theme === 'custom' && r.customColor) {
+    applyCustomColor(r.customColor);
+    const inp = document.getElementById('custom-color-input');
+    if (inp) inp.value = r.customColor;
+  } else if (r.theme === 'image' && r.bgImage) {
+    applyBgImage(r.bgImage, r.bgPosX ?? 50, r.bgPosY ?? 50, r.bgZoom ?? 100);
+  } else {
+    const theme = (r.theme && THEMES.includes(r.theme)) ? r.theme : 'cream';
+    applyTheme(theme);
+  }
 }
 
 // ─── Image background ────────────────────────────────────────────────────────
@@ -2083,8 +2153,16 @@ function _resetImageSwatch() {
   });
 }
 
-function applyBgImage(dataUrl) {
-  document.body.style.background = `url("${dataUrl}") center/cover no-repeat`;
+let _bgDataUrl = null;
+let _bgPosX    = 50;  // 0–100 %
+let _bgPosY    = 50;  // 0–100 %
+let _bgZoom    = 100; // 100–300 %
+
+function applyBgImage(dataUrl, posX = _bgPosX, posY = _bgPosY, zoom = _bgZoom) {
+  _bgDataUrl = dataUrl;
+  _bgPosX = posX; _bgPosY = posY; _bgZoom = zoom;
+  const size = zoom <= 100 ? 'cover' : `${zoom}%`;
+  document.body.style.background = `url("${dataUrl}") ${posX.toFixed(1)}% ${posY.toFixed(1)}% / ${size} no-repeat`;
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
   document.body.classList.remove('theme-custom');
   document.body.classList.add('theme-image');
@@ -2108,18 +2186,61 @@ function applyBgImage(dataUrl) {
   });
 }
 
-function saveBgImage(dataUrl) {
-  chrome.storage.local.set({ theme: 'image', bgImage: dataUrl });
+function saveBgImage(dataUrl, posX, posY, zoom) {
+  chrome.storage.local.set({ theme: 'image', bgImage: dataUrl, bgPosX: posX, bgPosY: posY, bgZoom: zoom });
+}
+
+// ─── Background Adjust Modal ─────────────────────────────────────────────────
+
+let _bgAdjPrevDataUrl = null, _bgAdjPrevPosX = 50, _bgAdjPrevPosY = 50, _bgAdjPrevZoom = 100;
+let _bgAdjDragging = false, _bgAdjDragStartX = 0, _bgAdjDragStartY = 0;
+let _bgAdjTmpPosX = 50, _bgAdjTmpPosY = 50, _bgAdjTmpZoom = 100;
+
+function _bgPreviewUpdate() {
+  const p = document.getElementById('bg-adjust-preview');
+  if (!p) return;
+  const size = _bgAdjTmpZoom <= 100 ? 'cover' : `${_bgAdjTmpZoom}%`;
+  p.style.backgroundSize     = size;
+  p.style.backgroundPosition = `${_bgAdjTmpPosX.toFixed(1)}% ${_bgAdjTmpPosY.toFixed(1)}%`;
+  const slider = document.getElementById('bg-zoom-slider');
+  if (slider) slider.value = _bgAdjTmpZoom;
+  const val = document.getElementById('bg-zoom-val');
+  if (val) val.textContent = (_bgAdjTmpZoom / 100).toFixed(1) + '×';
+}
+
+function openBgAdjust(dataUrl) {
+  // Save state for cancel
+  _bgAdjPrevDataUrl = _bgDataUrl;
+  _bgAdjPrevPosX   = _bgPosX;
+  _bgAdjPrevPosY   = _bgPosY;
+  _bgAdjPrevZoom   = _bgZoom;
+  // Working copy
+  _bgAdjTmpPosX = _bgPosX;
+  _bgAdjTmpPosY = _bgPosY;
+  _bgAdjTmpZoom = _bgZoom;
+  // Set preview image
+  const p = document.getElementById('bg-adjust-preview');
+  p.style.backgroundImage = `url("${dataUrl}")`;
+  _bgDataUrl = dataUrl;
+  _bgPreviewUpdate();
+  document.getElementById('bg-adjust-modal').classList.remove('hidden');
+}
+
+function closeBgAdjust() {
+  document.getElementById('bg-adjust-modal').classList.add('hidden');
+  _bgAdjDragging = false;
 }
 
 // ─── Tutorial ────────────────────────────────────────────────────────────────
 
 const TUT_STEPS = [
-  { sel: null,         title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in." },
-  { sel: '#add-btn',   title: 'Add a website',      body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
-  { sel: '.tile',      title: 'Open or manage',     body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
-  { sel: '#grid',      title: 'Drag to organise',   body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },
-  { sel: '#theme-btn', title: 'Change the look',    body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
+  { sel: null,           title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in." },
+  { sel: '#add-btn',     title: 'Add a website',     body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
+  { sel: '.tile',        title: 'Open or manage',    body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
+  { sel: '#grid',        title: 'Drag to organise',  body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },
+  { sel: '#quick-btns',  title: 'Quick actions',     body: 'Sync your Chrome bookmark bar or all bookmarks straight into the grid. The red button clears every tile — a confirmation keeps you safe.' },
+  { sel: '#theme-btn',   title: 'Change the look',   body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
+  { sel: '#config-btn',  title: 'Settings',          body: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.' },
 ];
 
 let _tutStep = 0;
@@ -2408,6 +2529,131 @@ function closeImportModal() {
   document.getElementById('import-modal').classList.add('hidden');
 }
 
+async function importBookmarksBar() {
+  if (!chrome?.bookmarks) {
+    _showToast('Bookmarks API not available');
+    return;
+  }
+  try {
+    const tree    = await chrome.bookmarks.getTree();
+    const root    = tree[0];
+    // Bookmarks bar is always id "1" in Chrome
+    const barNode = (root.children ?? []).find(n => n.id === '1') ?? root.children?.[0];
+    if (!barNode?.children?.length) {
+      _showToast('Bookmarks bar is empty');
+      return;
+    }
+
+    const existing = _existingUrls(); // Set of already-added URLs
+    const newItems = [];
+    let siteCount = 0, groupCount = 0;
+
+    for (const node of barNode.children) {
+      if (node.url) {
+        // Direct bookmark on the bar
+        if (!/^https?:\/\//i.test(node.url) || existing.has(node.url)) continue;
+        let name = node.title || node.url;
+        try { if (!node.title) name = new URL(node.url).hostname.replace(/^www\./, ''); } catch {}
+        newItems.push({ id: uid(), type: 'site', name, url: node.url });
+        existing.add(node.url);
+        siteCount++;
+      } else if (node.children) {
+        // Subfolder → collect new sites recursively (handles nested sub-subfolders)
+        const collected = [];
+        _collectBmNodes(node.children, collected, existing);
+        const fresh = collected.filter(bm => !bm.exists);
+        if (!fresh.length) continue;
+        fresh.forEach(bm => existing.add(bm.url));
+        const folderSites = fresh.map(bm => ({ id: uid(), name: bm.name, url: bm.url }));
+        if (folderSites.length === 1) {
+          newItems.push({ id: uid(), type: 'site', name: folderSites[0].name, url: folderSites[0].url });
+          siteCount++;
+        } else {
+          newItems.push({ id: uid(), type: 'group', name: node.title || 'Folder', items: folderSites });
+          groupCount++;
+        }
+      }
+    }
+
+    if (!newItems.length) {
+      _showToast('All bookmarks bar items already added');
+      return;
+    }
+
+    _snapshotForUndo();
+    items.push(...newItems);
+    save().then(render);
+
+    const parts = [];
+    if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
+    if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
+    _showToast(`Synced ${parts.join(' + ')} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+  } catch {
+    _showToast('Could not read bookmarks');
+  }
+}
+
+async function syncAllBookmarks() {
+  if (!chrome?.bookmarks) {
+    _showToast('Bookmarks API not available');
+    return;
+  }
+  try {
+    const tree = await chrome.bookmarks.getTree();
+    const root = tree[0];
+    const existing = _existingUrls();
+    const newItems = [];
+    let siteCount = 0, groupCount = 0;
+
+    for (const chromeFolder of (root.children ?? [])) {
+      if (!chromeFolder.children) continue;
+
+      for (const child of chromeFolder.children) {
+        if (child.url) {
+          // Direct bookmark inside a top-level Chrome folder
+          if (!/^https?:\/\//i.test(child.url) || existing.has(child.url)) continue;
+          let name = child.title || child.url;
+          try { if (!child.title) name = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
+          newItems.push({ id: uid(), type: 'site', name, url: child.url });
+          existing.add(child.url);
+          siteCount++;
+        } else if (child.children) {
+          // Subfolder → group; _collectBmNodes flattens any nested sub-sub-folders
+          const collected = [];
+          _collectBmNodes(child.children, collected, existing);
+          const fresh = collected.filter(bm => !bm.exists);
+          if (!fresh.length) continue;
+          fresh.forEach(bm => existing.add(bm.url));
+          const folderSites = fresh.map(bm => ({ id: uid(), name: bm.name, url: bm.url }));
+          if (folderSites.length === 1) {
+            newItems.push({ id: uid(), type: 'site', name: folderSites[0].name, url: folderSites[0].url });
+            siteCount++;
+          } else {
+            newItems.push({ id: uid(), type: 'group', name: child.title || 'Folder', items: folderSites });
+            groupCount++;
+          }
+        }
+      }
+    }
+
+    if (!newItems.length) {
+      _showToast('All bookmarks already added');
+      return;
+    }
+
+    _snapshotForUndo();
+    items.push(...newItems);
+    save().then(render);
+
+    const parts = [];
+    if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
+    if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
+    _showToast(`Synced ${parts.join(' + ')} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+  } catch {
+    _showToast('Could not read bookmarks');
+  }
+}
+
 // ─── Clock / Date Widget ─────────────────────────────────────────────────────
 
 const _CLOCK_DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -2650,18 +2896,33 @@ function _srHighlight() {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await load();
-  await loadTheme();
-  await loadTileSize();
-  await loadModalDark();
-  await loadEngine();
-  await loadShortcuts();
+(async () => {
+  items = sampleItems();
+  applyTheme('cream');
+  applyTileSize('m');
+  applyModalDark(false);
   render();
+  (async () => {
+    try { await load();        } catch { items = sampleItems(); }
+    try { await loadTheme();   } catch { applyTheme('cream'); }
+    try { await loadTileSize(); } catch { applyTileSize('m'); }
+    try { await loadModalDark(); } catch { applyModalDark(false); }
+    try { await loadShortcuts(); } catch { /* use defaults */ }
+    try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
+    render();
+  })();
 
-  // Clock — tick immediately then every second
+  // Clock — tick immediately; pause when tab is hidden to save CPU
   _tickClock();
-  setInterval(_tickClock, 1000);
+  let _clockInterval = setInterval(_tickClock, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInterval(_clockInterval);
+    } else {
+      _tickClock();
+      _clockInterval = setInterval(_tickClock, 1000);
+    }
+  });
 
   // Weather — fire and forget (updates UI async)
   _loadWeather();
@@ -2782,7 +3043,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const anyOverlayOpen = [
       'add-modal','edit-modal','rename-modal',
       'import-modal','location-modal','confirm-modal',
-      'search-overlay','tutorial-overlay','settings-modal',
+      'search-overlay','tutorial-overlay','settings-modal','bg-adjust-modal',
     ].some(id => !document.getElementById(id).classList.contains('hidden'));
 
     const groupOpen = !document.getElementById('group-overlay').classList.contains('hidden');
@@ -2792,6 +3053,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── Escape ──
     if (e.key === 'Escape') {
       if (!document.getElementById('settings-modal').classList.contains('hidden'))      { closeSettingsModal(); return; }
+      if (!document.getElementById('bg-adjust-modal').classList.contains('hidden'))    { document.getElementById('bg-adjust-cancel').click(); return; }
       if (groupOpen)                                                                      { closeGroup();     return; }
       if (_selectedIds.size > 0)                                                         { _clearSel();      return; }
       if (_focusedId)                                                                     { _focusTile(null); return; }
@@ -2828,14 +3090,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tileIdx = tiles.findIndex(t => t.dataset.siteId === _gpFocusedSiteId);
         _snapshotForUndo();
         group.items = group.items.filter(s => s.id !== _gpFocusedSiteId);
-        if (group.items.length <= 1) {
-          if (group.items.length === 1) {
-            const rem = group.items[0];
-            items = items.filter(i => i.id !== openGroupId);
-            items.push({ id: uid(), type: 'site', name: rem.name, url: rem.url, favicon: rem.favicon });
-          } else {
-            items = items.filter(i => i.id !== openGroupId);
-          }
+        if (_dissolveGroupIfNeeded(openGroupId)) {
           save(); render(); closeGroup();
         } else {
           const savedGroupId  = openGroupId;
@@ -2976,6 +3231,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Top search bar → open search overlay
   document.getElementById('top-search-bar').addEventListener('click', () => openSearch());
 
+  document.getElementById('history-btn').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://history' });
+  });
+  document.getElementById('downloads-btn').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://downloads' });
+  });
+
   // Engine search bar
   const engineInput = document.getElementById('engine-input');
   engineInput.addEventListener('keydown', e => {
@@ -3013,11 +3275,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('settings-import-bm').addEventListener('click', () => {
     closeSettingsModal(); openImportModal();
   });
+  document.getElementById('settings-sync-bar').addEventListener('click', () => {
+    closeSettingsModal(); importBookmarksBar();
+  });
+  document.getElementById('settings-sync-all').addEventListener('click', () => {
+    closeSettingsModal(); syncAllBookmarks();
+  });
   document.getElementById('settings-export-bm').addEventListener('click', () => {
     doExportBookmarksHtml(); closeSettingsModal();
   });
   document.getElementById('settings-export-json').addEventListener('click', () => {
     doExportJson(); closeSettingsModal();
+  });
+  document.getElementById('settings-clear-all').addEventListener('click', () => {
+    closeSettingsModal();
+    _showConfirm(
+      'Clear All Tiles',
+      `Remove all ${items.length} tile${items.length !== 1 ? 's' : ''} from your grid? This cannot be undone.`,
+      'Clear all',
+      () => { items = []; save(); render(); }
+    );
+  });
+
+  document.getElementById('settings-tutorial').addEventListener('click', () => {
+    closeSettingsModal();
+    _startTutorial();
+  });
+
+  // Quick pill buttons (top bar)
+  document.getElementById('quick-sync-bar').addEventListener('click', () => importBookmarksBar());
+  document.getElementById('quick-sync-all').addEventListener('click', () => syncAllBookmarks());
+  document.getElementById('quick-clear-all').addEventListener('click', () => {
+    _showConfirm(
+      'Clear All Tiles',
+      `Remove all ${items.length} tile${items.length !== 1 ? 's' : ''} from your grid? This cannot be undone.`,
+      'Clear all',
+      () => { items = []; save(); render(); }
+    );
   });
   const jsonImportInput = document.getElementById('json-import-input');
   document.getElementById('settings-import-json').addEventListener('click', () => {
@@ -3081,17 +3375,88 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Image background picker
   const bgImageInput = document.getElementById('bg-image-input');
   document.querySelectorAll('.swatch-image').forEach(el => {
-    el.addEventListener('click', e => { e.stopPropagation(); bgImageInput.click(); });
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (document.body.classList.contains('theme-image') && _bgDataUrl) {
+        // Re-adjust existing image without picking a new file
+        themeSwatches.classList.add('hidden');
+        openBgAdjust(_bgDataUrl);
+      } else {
+        bgImageInput.click();
+      }
+    });
   });
   bgImageInput.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
     const dataUrl = await compressImage(file);
     if (!dataUrl) return;
-    applyBgImage(dataUrl);
-    saveBgImage(dataUrl);
-    themeSwatches.classList.add('hidden');
     e.target.value = '';
+    themeSwatches.classList.add('hidden');
+    // Reset position for new image
+    _bgPosX = 50; _bgPosY = 50; _bgZoom = 100;
+    openBgAdjust(dataUrl);
+  });
+
+  // Background adjust modal wiring
+  const bgPreview = document.getElementById('bg-adjust-preview');
+
+  bgPreview.addEventListener('mousedown', e => {
+    _bgAdjDragging  = true;
+    _bgAdjDragStartX = e.clientX;
+    _bgAdjDragStartY = e.clientY;
+    bgPreview.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!_bgAdjDragging) return;
+    const pr = bgPreview.getBoundingClientRect();
+    const dx = e.clientX - _bgAdjDragStartX;
+    const dy = e.clientY - _bgAdjDragStartY;
+    _bgAdjDragStartX = e.clientX;
+    _bgAdjDragStartY = e.clientY;
+    // Dragging left = show more right side (posX increases); inverted for natural pan feel
+    _bgAdjTmpPosX = Math.max(0, Math.min(100, _bgAdjTmpPosX - (dx / pr.width)  * 100));
+    _bgAdjTmpPosY = Math.max(0, Math.min(100, _bgAdjTmpPosY - (dy / pr.height) * 100));
+    _bgPreviewUpdate();
+  });
+  document.addEventListener('mouseup', () => {
+    if (!_bgAdjDragging) return;
+    _bgAdjDragging = false;
+    bgPreview.classList.remove('dragging');
+  });
+
+  document.getElementById('bg-zoom-slider').addEventListener('input', e => {
+    _bgAdjTmpZoom = Number(e.target.value);
+    _bgPreviewUpdate();
+  });
+
+  document.getElementById('bg-adjust-apply').addEventListener('click', () => {
+    applyBgImage(_bgDataUrl, _bgAdjTmpPosX, _bgAdjTmpPosY, _bgAdjTmpZoom);
+    saveBgImage(_bgDataUrl, _bgAdjTmpPosX, _bgAdjTmpPosY, _bgAdjTmpZoom);
+    closeBgAdjust();
+  });
+
+  document.getElementById('bg-adjust-cancel').addEventListener('click', () => {
+    // Restore previous state
+    if (_bgAdjPrevDataUrl) {
+      applyBgImage(_bgAdjPrevDataUrl, _bgAdjPrevPosX, _bgAdjPrevPosY, _bgAdjPrevZoom);
+    } else {
+      applyTheme('cream');
+      chrome.storage.local.set({ theme: 'cream' });
+    }
+    closeBgAdjust();
+  });
+
+  document.getElementById('bg-adjust-change').addEventListener('click', () => {
+    bgImageInput.click();
+  });
+
+  document.getElementById('bg-adjust-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      // treat backdrop click as cancel
+      document.getElementById('bg-adjust-cancel').click();
+    }
   });
 
   // Weather: temp click → toggle °C/°F
@@ -3144,4 +3509,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('confirm-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('confirm-modal').classList.add('hidden');
   });
-});
+})();
