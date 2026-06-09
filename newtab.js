@@ -2895,13 +2895,20 @@ function _srHighlight() {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 (async () => {
-  try { await load();        } catch { items = sampleItems(); }
-  try { await loadTheme();   } catch { applyTheme('cream'); }
-  try { await loadTileSize(); } catch { applyTileSize('m'); }
-  try { await loadModalDark(); } catch { applyModalDark(false); }
-  try { await loadShortcuts(); } catch { /* use defaults */ }
-  try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
+  items = sampleItems();
+  applyTheme('cream');
+  applyTileSize('m');
+  applyModalDark(false);
   render();
+  (async () => {
+    try { await load();        } catch { items = sampleItems(); }
+    try { await loadTheme();   } catch { applyTheme('cream'); }
+    try { await loadTileSize(); } catch { applyTileSize('m'); }
+    try { await loadModalDark(); } catch { applyModalDark(false); }
+    try { await loadShortcuts(); } catch { /* use defaults */ }
+    try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
+    render();
+  })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
   _tickClock();
