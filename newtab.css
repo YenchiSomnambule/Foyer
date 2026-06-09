@@ -2026,6 +2026,28 @@ body.theme-custom .swatch-custom.active,
   color: rgba(22,17,10,0.90);
 }
 .ssec-action-btn svg { flex-shrink: 0; opacity: 0.55; }
+.ssec-action-btn--full { grid-column: 1 / -1; }
+.ssec-action-btn--danger {
+  background: rgba(200,40,40,0.07);
+  border-color: rgba(200,40,40,0.20);
+  color: rgba(180,30,30,0.85);
+}
+.ssec-action-btn--danger:hover {
+  background: rgba(200,40,40,0.13);
+  border-color: rgba(200,40,40,0.35);
+  color: rgba(160,20,20,1.0);
+}
+.ssec-action-btn--danger svg { opacity: 0.65; }
+body.modal-dark .ssec-action-btn--danger {
+  background: rgba(255,80,80,0.10);
+  border-color: rgba(255,80,80,0.20);
+  color: rgba(255,120,120,0.88);
+}
+body.modal-dark .ssec-action-btn--danger:hover {
+  background: rgba(255,80,80,0.18);
+  border-color: rgba(255,80,80,0.35);
+  color: rgba(255,150,150,1.0);
+}
 
 /* Shortcuts */
 .shortcuts-list { display: flex; flex-direction: column; }

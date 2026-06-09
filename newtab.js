@@ -3285,6 +3285,15 @@ function _srHighlight() {
   document.getElementById('settings-export-json').addEventListener('click', () => {
     doExportJson(); closeSettingsModal();
   });
+  document.getElementById('settings-clear-all').addEventListener('click', () => {
+    closeSettingsModal();
+    _showConfirm(
+      'Clear All Tiles',
+      `Remove all ${items.length} tile${items.length !== 1 ? 's' : ''} from your grid? This cannot be undone.`,
+      'Clear all',
+      () => { items = []; save(); render(); }
+    );
+  });
   const jsonImportInput = document.getElementById('json-import-input');
   document.getElementById('settings-import-json').addEventListener('click', () => {
     jsonImportInput.click(); closeSettingsModal();
