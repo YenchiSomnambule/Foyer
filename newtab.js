@@ -2234,11 +2234,13 @@ function closeBgAdjust() {
 // ─── Tutorial ────────────────────────────────────────────────────────────────
 
 const TUT_STEPS = [
-  { sel: null,         title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in." },
-  { sel: '#add-btn',   title: 'Add a website',      body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
-  { sel: '.tile',      title: 'Open or manage',     body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
-  { sel: '#grid',      title: 'Drag to organise',   body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },
-  { sel: '#theme-btn', title: 'Change the look',    body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
+  { sel: null,           title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in." },
+  { sel: '#add-btn',     title: 'Add a website',     body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
+  { sel: '.tile',        title: 'Open or manage',    body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
+  { sel: '#grid',        title: 'Drag to organise',  body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },
+  { sel: '#quick-btns',  title: 'Quick actions',     body: 'Sync your Chrome bookmark bar or all bookmarks straight into the grid. The red button clears every tile — a confirmation keeps you safe.' },
+  { sel: '#theme-btn',   title: 'Change the look',   body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
+  { sel: '#config-btn',  title: 'Settings',          body: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.' },
 ];
 
 let _tutStep = 0;
@@ -3293,6 +3295,11 @@ function _srHighlight() {
       'Clear all',
       () => { items = []; save(); render(); }
     );
+  });
+
+  document.getElementById('settings-tutorial').addEventListener('click', () => {
+    closeSettingsModal();
+    _startTutorial();
   });
 
   // Quick pill buttons (top bar)
