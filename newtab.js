@@ -3294,6 +3294,18 @@ function _srHighlight() {
       () => { items = []; save(); render(); }
     );
   });
+
+  // Quick pill buttons (top bar)
+  document.getElementById('quick-sync-bar').addEventListener('click', () => importBookmarksBar());
+  document.getElementById('quick-sync-all').addEventListener('click', () => syncAllBookmarks());
+  document.getElementById('quick-clear-all').addEventListener('click', () => {
+    _showConfirm(
+      'Clear All Tiles',
+      `Remove all ${items.length} tile${items.length !== 1 ? 's' : ''} from your grid? This cannot be undone.`,
+      'Clear all',
+      () => { items = []; save(); render(); }
+    );
+  });
   const jsonImportInput = document.getElementById('json-import-input');
   document.getElementById('settings-import-json').addEventListener('click', () => {
     jsonImportInput.click(); closeSettingsModal();
