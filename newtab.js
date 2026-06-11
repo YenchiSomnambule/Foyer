@@ -2581,7 +2581,9 @@ async function importBookmarksBar() {
     }
 
     _snapshotForUndo();
-    items.push(...newItems);
+    const newSites  = newItems.filter(it => it.type === 'site');
+    const newGroups = newItems.filter(it => it.type === 'group');
+    items.push(...newSites, ...newGroups);
     save().then(render);
 
     const parts = [];
