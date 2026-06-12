@@ -83,6 +83,8 @@ body {
   align-items: center;
   gap: 4px;
 }
+/* Page bar is grid-level UI — hide it while a group overlay is open */
+body:has(#group-overlay:not(.hidden)) #page-bar { display: none; }
 .page-btn {
   position: relative;
   width: 42px;
@@ -722,11 +724,11 @@ body {
 .group-page {
   flex: 0 0 100%;
   display: grid;
-  grid-template-columns: repeat(3, 80px);
+  grid-template-columns: repeat(4, 80px);
   gap: 20px 20px;
   justify-content: center;
   padding: 4px 0 16px;
-  min-height: 240px;
+  min-height: 320px;
   align-content: start;
 }
 

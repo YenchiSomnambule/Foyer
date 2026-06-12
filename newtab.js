@@ -84,6 +84,8 @@ let pendingEditFavicon = null;
 let editFaviconEpoch   = 0;
 
 // Group page state
+const GP_COLS     = 4;   // group overlay grid columns
+const GP_PER_PAGE = 16;  // tiles per group page (4×4)
 let groupCurrentPage  = 0;
 let groupTotalPages   = 0;
 let cleanupGroupDrag  = null;
@@ -439,7 +441,6 @@ function _focusGroupTile(siteId) {
 }
 
 function _navGroupGrid(key) {
-  const GP_COLS = 3;
   const pages = document.querySelectorAll('#group-pages-track .group-page');
   if (!pages.length) return;
   const curPage = pages[groupCurrentPage];
@@ -1326,10 +1327,10 @@ function _gpFlipToPage(newPage, placeAtEnd) {
     t.style.zIndex     = '';
   });
 
-  // Enforce 9-per-page
+  // Enforce per-page tile limit
   const targetTiles = [...targetPage.querySelectorAll('.group-site-tile')]
     .filter(t => t !== gpDragSrcEl);
-  if (targetTiles.length >= 9) {
+  if (targetTiles.length >= GP_PER_PAGE) {
     const overflow = targetTiles[targetTiles.length - 1];
     let nextPage = pages[newPage + 1];
     if (!nextPage) {
@@ -1479,10 +1480,10 @@ function openGroup(groupId) {
   dots.innerHTML  = '';
   track.style.transform = 'translateX(0)';
 
-  // Split items into pages of 9
+  // Split items into pages of GP_PER_PAGE
   const allSites = group.items ?? [];
   const pages = [];
-  for (let i = 0; i < allSites.length; i += 9) pages.push(allSites.slice(i, i + 9));
+  for (let i = 0; i < allSites.length; i += GP_PER_PAGE) pages.push(allSites.slice(i, i + GP_PER_PAGE));
   if (pages.length === 0) pages.push([]);
   groupTotalPages = pages.length;
 
