@@ -2311,11 +2311,13 @@ function closeBgAdjust() {
 // ─── Tutorial ────────────────────────────────────────────────────────────────
 
 const TUT_STEPS = [
-  { sel: null,           title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in." },
+  { sel: null,           title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in. Tip: press Enter to step through." },
   { sel: '#add-btn',     title: 'Add a website',     body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
   { sel: '.tile',        title: 'Open or manage',    body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
-  { sel: '#grid',        title: 'Drag to organise',  body: 'Drag icons to rearrange. Drop one onto another to create a folder group.' },
-  { sel: '#quick-btns',  title: 'Quick actions',     body: 'Sync your Chrome bookmark bar or all bookmarks straight into the grid. The red button clears every tile — a confirmation keeps you safe.' },
+  { sel: '#grid',        title: 'Drag to organise',  body: 'Drag icons to rearrange. Drop one onto another to create a folder group. Drag on empty space to select several tiles at once.' },
+  { sel: '#page-bar',    title: 'Ten pages',         body: 'Your grid has 10 pages. Click a number or press 1–9, 0 on your keyboard to switch. Drag any tile — or a multi-selection — onto a number to move it to that page.' },
+  { sel: '#page-bar',    title: 'Name your pages',   body: 'Right-click a number to give that page a name, like "Work" or "Games". The number always stays, so keyboard switching never changes.' },
+  { sel: '#quick-btns',  title: 'Quick actions',     body: 'Hover each icon to see what it does: sync your bookmarks bar, import all bookmarks, or clear every tile (a confirmation keeps you safe).' },
   { sel: '#theme-btn',   title: 'Change the look',   body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
   { sel: '#config-btn',  title: 'Settings',          body: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.' },
 ];
@@ -3248,6 +3250,14 @@ function promptRenamePage(pageKey) {
       if (!document.getElementById('tutorial-overlay').classList.contains('hidden'))    { _tutDone();       return; }
       closeCtxMenu(); closeGroup(); closeAddModal(); closeEditModal();
       document.getElementById('theme-swatches').classList.add('hidden');
+      return;
+    }
+
+    // ── Enter: advance tutorial ──
+    if (e.key === 'Enter' && !isInput &&
+        !document.getElementById('tutorial-overlay').classList.contains('hidden')) {
+      e.preventDefault();  // also stops a focused Next/Skip button from double-firing
+      _tutNext();
       return;
     }
 
