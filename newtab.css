@@ -1201,22 +1201,40 @@ body.theme-cream  .group-site-tile span {
   gap: 8px;
 }
 .quick-pill {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 11px;
+  justify-content: center;
+  width: 30px;
   height: 30px;
+  padding: 0;
   border-radius: 999px;
   border: none;
-  font-size: 11.5px;
-  font-family: var(--font);
-  font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
   transition: background 0.18s, color 0.18s;
 }
-.quick-pill svg { flex-shrink: 0; opacity: 0.70; transition: opacity 0.18s; }
+.quick-pill svg { flex-shrink: 0; opacity: 0.65; transition: opacity 0.18s; }
 .quick-pill:hover svg { opacity: 1; }
+.quick-pill::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15,15,15,0.80);
+  color: rgba(255,255,255,0.92);
+  font-size: 11px;
+  font-family: var(--font);
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 9999;
+}
+.quick-pill:hover::after { opacity: 1; }
 .quick-pill--blue {
   background: transparent;
   color: rgba(0,0,0,0.38);
