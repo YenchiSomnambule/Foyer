@@ -71,6 +71,7 @@ let _pages = {};
 PAGE_KEYS.forEach(k => { _pages[k] = []; });
 
 let items = [];   // alias → always _pages[_currentPage]
+let _pageNames = {};  // page key → custom name (missing = unnamed, digit only)
 let _bookmarkFavicons = {}; // { url: favIconUrl } — populated at boot from chrome.bookmarks
 let ctxTargetId = null;
 let openGroupId = null;
@@ -155,7 +156,8 @@ function _showToast(msg) {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 async function load() {
-  const data = await _storageGet(['pages', 'items']);
+  const data = await _storageGet(['pages', 'items', 'pageNames']);
+  _pageNames = (data.pageNames && typeof data.pageNames === 'object') ? data.pageNames : {};
   if (data.pages && typeof data.pages === 'object') {
     _pages = data.pages;
     PAGE_KEYS.forEach(k => { if (!Array.isArray(_pages[k])) _pages[k] = []; });
@@ -2760,6 +2762,7 @@ async function doExportJson() {
     version: 2,
     exportedAt: new Date().toISOString(),
     pages: JSON.parse(JSON.stringify(_pages)),
+    pageNames: { ..._pageNames },
     theme: stored.theme ?? null,
     customColor: stored.customColor ?? null,
   };
@@ -2866,6 +2869,10 @@ function doImportJson(file) {
         _snapshotForUndo();
         _pages = importedPages;
         items = _pages[_currentPage];
+        if (data.pageNames && typeof data.pageNames === 'object') {
+          _pageNames = data.pageNames;
+          chrome.storage.local.set({ pageNames: { ..._pageNames } });
+        }
         save().then(() => {
           if (data.theme && data.theme !== 'custom') { applyTheme(data.theme); saveTheme(data.theme); }
           else if (data.theme === 'custom' && data.customColor) { applyCustomColor(data.customColor); saveCustomColor(data.customColor); }
@@ -3010,10 +3017,52 @@ function _switchToPage(key) {
 function _updatePageBar() {
   document.querySelectorAll('.page-btn').forEach(btn => {
     const k = btn.dataset.page;
+    const name = (_pageNames[k] ?? '').trim();
+    const isActive = k === _currentPage;
     const hasTiles = (_pages[k] ?? []).length > 0;
-    btn.classList.toggle('active', k === _currentPage);
+    btn.classList.toggle('active', isActive);
     btn.classList.toggle('has-tiles', hasTiles);
+    btn.classList.toggle('named', isActive && !!name);
+    btn.textContent = (isActive && name) ? `${k} · ${name}` : k;
+    if (name && !isActive) btn.setAttribute('data-tooltip', name);
+    else btn.removeAttribute('data-tooltip');
   });
+}
+
+function promptRenamePage(pageKey) {
+  const modal = document.getElementById('rename-modal');
+  const input = document.getElementById('rename-input');
+  input.value = _pageNames[pageKey] ?? '';
+  input.setAttribute('maxlength', '20');
+  input.placeholder = `Page ${pageKey} name (empty = number only)`;
+  modal.classList.remove('hidden');
+  input.focus();
+  input.select();
+
+  const doSave = () => {
+    const val = input.value.trim();
+    if (val) _pageNames[pageKey] = val;
+    else delete _pageNames[pageKey];
+    chrome.storage.local.set({ pageNames: { ..._pageNames } });
+    _updatePageBar();
+    closeModal();
+  };
+  const onKeydown = e => {
+    if (e.key === 'Enter') doSave();
+    if (e.key === 'Escape') closeModal();
+  };
+  document.getElementById('confirm-rename').onclick = doSave;
+  document.getElementById('cancel-rename').onclick = closeModal;
+  input.addEventListener('keydown', onKeydown);
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    input.removeEventListener('keydown', onKeydown);
+    input.removeAttribute('maxlength');
+    input.placeholder = '';
+    document.getElementById('confirm-rename').onclick = null;
+    document.getElementById('cancel-rename').onclick = null;
+  }
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
@@ -3049,9 +3098,14 @@ function _updatePageBar() {
     }
   });
 
-  // Page bar buttons
+  // Page bar buttons — click to switch, right-click to rename
   document.querySelectorAll('.page-btn').forEach(btn => {
     btn.addEventListener('click', () => _switchToPage(btn.dataset.page));
+    btn.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      promptRenamePage(btn.dataset.page);
+    });
   });
 
   // Weather — fire and forget (updates UI async)
