@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Foyer",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Your websites, organized in a clean home screen grid.",
   "chrome_url_overrides": {
     "newtab": "newtab.html"

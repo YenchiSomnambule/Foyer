@@ -159,8 +159,9 @@ async function load() {
   const data = await _storageGet(['pages', 'items', 'pageNames']);
   _pageNames = (data.pageNames && typeof data.pageNames === 'object') ? data.pageNames : {};
   if (data.pages && typeof data.pages === 'object') {
-    _pages = data.pages;
-    PAGE_KEYS.forEach(k => { if (!Array.isArray(_pages[k])) _pages[k] = []; });
+    const src = data.pages;
+    _pages = {};
+    PAGE_KEYS.forEach(k => { _pages[k] = Array.isArray(src[k]) ? src[k] : []; });
   } else if (Array.isArray(data.items)) {
     // migrate old single-page format → page 1
     PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? data.items : []; });
@@ -2797,6 +2798,25 @@ function _showConfirm(title, body, labelOk, onOk) {
   canBtn.addEventListener('click', close);
 }
 
+function _confirmClearAll() {
+  _pages[_currentPage] = items;
+  const total = Object.values(_pages).reduce((s, a) => s + a.length, 0);
+  _showConfirm(
+    'Clear All Tiles',
+    `Remove all ${total} tile${total !== 1 ? 's' : ''} across all 10 pages? You can undo with ${_isMac ? '⌘Z' : 'Ctrl+Z'}.`,
+    'Clear all',
+    () => {
+      _snapshotForUndo();
+      PAGE_KEYS.forEach(k => { _pages[k] = []; });
+      items = _pages[_currentPage];
+      save();
+      render();
+      _updatePageBar();
+      _showToast(`Cleared all tiles · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    }
+  );
+}
+
 function doExportBookmarksHtml() {
   _pages[_currentPage] = items;
   let inner = '';
@@ -2847,9 +2867,9 @@ function doImportJson(file) {
     try {
       data = JSON.parse(e.target.result);
       if (data.pages && typeof data.pages === 'object') {
-        // v2 format
-        importedPages = data.pages;
-        PAGE_KEYS.forEach(k => { if (!Array.isArray(importedPages[k])) importedPages[k] = []; });
+        // v2 format — keep only the 10 known page keys
+        importedPages = {};
+        PAGE_KEYS.forEach(k => { importedPages[k] = Array.isArray(data.pages[k]) ? data.pages[k] : []; });
       } else if (Array.isArray(data.items)) {
         // v1 legacy format — put items on page 1
         importedPages = {};
@@ -3490,12 +3510,7 @@ function promptRenamePage(pageKey) {
   });
   document.getElementById('settings-clear-all').addEventListener('click', () => {
     closeSettingsModal();
-    _showConfirm(
-      'Clear All Tiles',
-      `Remove all ${items.length} tile${items.length !== 1 ? 's' : ''} from your grid? This cannot be undone.`,
-      'Clear all',
-      () => { items = []; save(); render(); }
-    );
+    _confirmClearAll();
   });
 
   document.getElementById('settings-tutorial').addEventListener('click', () => {
@@ -3506,14 +3521,7 @@ function promptRenamePage(pageKey) {
   // Quick pill buttons (top bar)
   document.getElementById('quick-sync-bar').addEventListener('click', () => importBookmarksBar());
   document.getElementById('quick-sync-all').addEventListener('click', () => syncAllBookmarks());
-  document.getElementById('quick-clear-all').addEventListener('click', () => {
-    _showConfirm(
-      'Clear All Tiles',
-      `Remove all ${items.length} tile${items.length !== 1 ? 's' : ''} from your grid? This cannot be undone.`,
-      'Clear all',
-      () => { items = []; save(); render(); }
-    );
-  });
+  document.getElementById('quick-clear-all').addEventListener('click', () => _confirmClearAll());
   const jsonImportInput = document.getElementById('json-import-input');
   document.getElementById('settings-import-json').addEventListener('click', () => {
     jsonImportInput.click(); closeSettingsModal();
