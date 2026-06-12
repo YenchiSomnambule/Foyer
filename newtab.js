@@ -305,26 +305,13 @@ async function _loadWeather() {
     return;
   }
 
-  // No location — try geolocation silently
-  if (!navigator.geolocation) return;
-  _weatherSetStatus('Detecting…');
-  navigator.geolocation.getCurrentPosition(
-    async pos => {
-      const { latitude: lat, longitude: lon } = pos.coords;
-      const geo = await _reverseGeocode(lat, lon);
-      await _applyLocation(lat, lon, geo.city, geo.country);
-    },
-    () => {
-      // Permission denied — show "Set location" prompt
-      document.getElementById('weather-icon').textContent = '📍';
-      document.getElementById('weather-temp').textContent = '--';
-      document.getElementById('weather-condition').textContent = '';
-      document.querySelector('.weather-dot').style.display = 'none';
-      document.getElementById('weather-city').textContent = 'Set location';
-      _showWeatherWidget(true);
-    },
-    { timeout: 8000 }
-  );
+  // No stored location — show prompt; user can opt in to GPS via the location modal
+  document.getElementById('weather-icon').textContent = '📍';
+  document.getElementById('weather-temp').textContent = '--';
+  document.getElementById('weather-condition').textContent = '';
+  document.querySelector('.weather-dot').style.display = 'none';
+  document.getElementById('weather-city').textContent = 'Set location';
+  _showWeatherWidget(true);
 }
 
 // ─── Location search ──────────────────────────────────────────────────────────
