@@ -784,6 +784,7 @@ let pdSX      = 0, pdSY  = 0;
 let pdDropTgt = null;   // current hovered item id
 let pdDropMode= null;   // 'before' | 'after' | 'group' | null
 let pdDragToPage = null; // page key if clone is hovering over a page button
+let pdMultiIds   = null; // array of ids when dragging a multi-selection
 let _suppressClick = false;
 const _PD_DIST = 6;    // px threshold before drag activates
 
@@ -799,6 +800,7 @@ function attachDrag(tile, id) {
       if (!pdActive) {
         if (Math.hypot(ev.clientX - pdSX, ev.clientY - pdSY) < _PD_DIST) return;
         pdActive = true; pdSrcId = id; pdSrcEl = tile;
+        pdMultiIds = (_selectedIds.has(id) && _selectedIds.size > 1) ? [..._selectedIds] : null;
         _initDrag(tile, rect);
       }
       _moveDrag(ev.clientX, ev.clientY);
@@ -826,6 +828,21 @@ function _initDrag(el, rect) {
     filter: 'drop-shadow(0 18px 38px rgba(0,0,0,0.5))',
     willChange: 'transform',
   });
+  if (pdMultiIds && pdMultiIds.length > 1) {
+    const badge = document.createElement('div');
+    badge.textContent = pdMultiIds.length;
+    Object.assign(badge.style, {
+      position: 'absolute', top: '-6px', right: '-6px',
+      background: '#3c78f0', color: '#fff',
+      fontSize: '11px', fontWeight: '700',
+      width: '18px', height: '18px', borderRadius: '50%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+      pointerEvents: 'none',
+    });
+    pdClone.style.position = 'fixed';
+    pdClone.appendChild(badge);
+  }
   document.body.appendChild(pdClone);
   el.style.opacity = '0';
 }
@@ -957,9 +974,10 @@ function _commitDrag() {
   const dropMode= pdDropMode;
   const srcId    = pdSrcId;
   const dropPage = pdDragToPage;
+  const multiIds = pdMultiIds;
 
   pdClone = null; pdSrcEl = null;
-  pdDropTgt = null; pdDropMode = null; pdActive = false; pdSrcId = null; pdDragToPage = null;
+  pdDropTgt = null; pdDropMode = null; pdActive = false; pdSrcId = null; pdDragToPage = null; pdMultiIds = null;
 
   // Drop animation: fade clone out while revealing the source tile
   if (clone) {
@@ -975,19 +993,20 @@ function _commitDrag() {
   document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
   document.querySelectorAll('.page-btn.drag-target').forEach(btn => btn.classList.remove('drag-target'));
 
-  // ── Drop on page button → move tile to that page ──
+  // ── Drop on page button → move tile(s) to that page ──
   if (dropPage) {
+    const moveIds = multiIds && multiIds.length > 1 ? multiIds : [srcId];
     _snapshotForUndo();
-    const srcItem = items.find(i => i.id === srcId);
-    if (srcItem) {
-      items = items.filter(i => i.id !== srcId);
-      _pages[dropPage] = _pages[dropPage] ?? [];
-      _pages[dropPage].push(srcItem);
-      save();
-      render();
-      _updatePageBar();
-      _showToast(`Moved to page ${dropPage} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
-    }
+    const moving = items.filter(i => moveIds.includes(i.id));
+    items = items.filter(i => !moveIds.includes(i.id));
+    _pages[dropPage] = _pages[dropPage] ?? [];
+    _pages[dropPage].push(...moving);
+    _clearSel();
+    save();
+    render();
+    _updatePageBar();
+    const n = moving.length;
+    _showToast(`Moved ${n} tile${n !== 1 ? 's' : ''} to page ${dropPage} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
     _suppressClick = true;
     requestAnimationFrame(() => { _suppressClick = false; });
     return;
