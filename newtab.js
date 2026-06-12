@@ -2396,6 +2396,52 @@ function _tutDone() {
   chrome.storage.local.set({ tutorialDone: true });
 }
 
+// ─── Rate Prompt ──────────────────────────────────────────────────────────────
+
+const RATE_MIN_DAYS  = 7;   // days installed before we ever ask
+const RATE_MIN_OPENS = 30;  // new-tab opens before we ever ask
+const RATE_SHOWN_COOLDOWN_DAYS = 3;   // ignoring the card snoozes it
+const RATE_LATER_SNOOZE_DAYS   = 14;  // explicit "Later" snoozes longer
+const RATE_MAX_ASKS  = 3;   // lifetime cap on prompts
+
+function _rateUrl() {
+  return `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+}
+
+async function _maybeShowRatePrompt() {
+  const DAY = 86400000;
+  const now = Date.now();
+  const data = await _storageGet(['installDate', 'tabOpens', 'rateState', 'tutorialDone']);
+
+  const installDate = data.installDate ?? now;
+  const tabOpens    = (data.tabOpens ?? 0) + 1;
+  chrome.storage.local.set({ installDate, tabOpens });
+
+  const st = data.rateState ?? {};
+  if (st.done) return;
+  if ((st.asks ?? 0) >= RATE_MAX_ASKS) return;
+  if (st.snoozeUntil && now < st.snoozeUntil) return;
+  if (!data.tutorialDone) return;   // never compete with onboarding
+  if (now - installDate < RATE_MIN_DAYS * DAY) return;
+  if (tabOpens < RATE_MIN_OPENS) return;
+
+  // Count the ask + start a short cooldown immediately, so an ignored
+  // card doesn't reappear on every single new tab
+  chrome.storage.local.set({
+    rateState: { ...st, asks: (st.asks ?? 0) + 1, snoozeUntil: now + RATE_SHOWN_COOLDOWN_DAYS * DAY },
+  });
+  setTimeout(() => {
+    if (document.getElementById('tutorial-overlay').classList.contains('hidden')) {
+      document.getElementById('rate-card').classList.remove('hidden');
+    }
+  }, 2200);
+}
+
+function _dismissRateCard(state) {
+  chrome.storage.local.set({ rateState: state });
+  document.getElementById('rate-card').classList.add('hidden');
+}
+
 // ─── Import Bookmarks ─────────────────────────────────────────────────────────
 
 function _existingUrls() {
@@ -3139,6 +3185,18 @@ function promptRenamePage(pageKey) {
   document.getElementById('tutorial-skip').addEventListener('click', _tutDone);
   chrome.storage.local.get('tutorialDone', r => { if (!r.tutorialDone) _startTutorial(); });
 
+  // Rate-us card: nudge engaged users (7+ days, 30+ opens) for a store review
+  _maybeShowRatePrompt();
+  document.getElementById('rate-now').addEventListener('click', () => {
+    _dismissRateCard({ done: true });
+    window.open(_rateUrl(), '_blank');
+  });
+  document.getElementById('rate-later').addEventListener('click', async () => {
+    const { rateState } = await _storageGet(['rateState']);
+    _dismissRateCard({ ...(rateState ?? {}), snoozeUntil: Date.now() + RATE_LATER_SNOOZE_DAYS * 86400000 });
+  });
+  document.getElementById('rate-no').addEventListener('click', () => _dismissRateCard({ done: true }));
+
   // Add button (fixed, bottom-right)
   document.getElementById('add-btn').addEventListener('click', openAddModal);
 
@@ -3517,6 +3575,11 @@ function promptRenamePage(pageKey) {
   document.getElementById('settings-tutorial').addEventListener('click', () => {
     closeSettingsModal();
     _startTutorial();
+  });
+
+  document.getElementById('settings-rate').addEventListener('click', () => {
+    closeSettingsModal();
+    window.open(_rateUrl(), '_blank');
   });
 
   // Quick pill buttons (top bar)

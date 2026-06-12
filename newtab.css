@@ -2056,6 +2056,53 @@ body.modal-dark #search-box {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ─── Rate-us Card ────────────────────────────────────────────────────────────── */
+
+#rate-card {
+  position: fixed;
+  bottom: 100px;           /* clears the 54px + button at bottom: 28px */
+  right: 28px;
+  width: 252px;
+  background: rgba(22,22,28,0.97);
+  color: rgba(255,255,255,0.88);
+  padding: 16px 16px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  z-index: 690;            /* under toast (700) so feedback stays readable */
+  font-family: var(--font);
+  animation: rateCardIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+#rate-card.hidden { display: none; }
+@keyframes rateCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#rate-card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+#rate-card-body  { font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.62); margin-bottom: 12px; }
+#rate-card-actions { display: flex; align-items: center; gap: 6px; }
+#rate-card-actions button {
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 7px 10px;
+  transition: background 0.15s, color 0.15s;
+}
+#rate-now {
+  background: rgba(60,120,240,0.92);
+  color: #fff;
+}
+#rate-now:hover { background: rgba(60,120,240,1); }
+#rate-later, #rate-no {
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+}
+#rate-later:hover, #rate-no:hover { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85); }
+#rate-no { margin-left: auto; }
+
 /* ─── Settings Modal ─────────────────────────────────────────────────────────── */
 
 #settings-card {

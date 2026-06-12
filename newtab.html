@@ -318,6 +318,17 @@
   <!-- Toast / Undo notification -->
   <div id="toast" aria-live="polite"></div>
 
+  <!-- Rate-us card: shown to engaged users after 7 days + 30 opens -->
+  <div id="rate-card" class="hidden" role="dialog" aria-label="Rate Foyer">
+    <div id="rate-card-title">Enjoying Foyer? ⭐</div>
+    <div id="rate-card-body">A quick rating on the Chrome Web Store helps others find it.</div>
+    <div id="rate-card-actions">
+      <button id="rate-now">★ Rate Foyer</button>
+      <button id="rate-later">Later</button>
+      <button id="rate-no">No thanks</button>
+    </div>
+  </div>
+
   <!-- Location Picker Modal -->
   <div id="location-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
@@ -439,6 +450,10 @@
               <button class="ssec-action-btn ssec-action-btn--full" id="settings-tutorial">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Restart tutorial
+              </button>
+              <button class="ssec-action-btn ssec-action-btn--full" id="settings-rate">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Rate Foyer
               </button>
             </div>
           </div>

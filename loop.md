@@ -18,7 +18,8 @@
 - [ ] Quick pills：Sync bookmarks bar、Sync all bookmarks、Clear all tiles（清空**全部 10 頁**、確認 dialog、可 Undo）
 - [ ] Settings → Data：所有按鈕逐一測試（Sync / Import / Export / Clear）
 - [ ] Export JSON → Import 還原（含 pages + 頁面名稱）；舊版 v1 備份（items）匯入後進到頁面 1
-- [ ] Settings → Help：Restart tutorial 正常啟動
+- [ ] Settings → Help：Restart tutorial 正常啟動；Rate Foyer 開啟商店評價頁
+- [ ] Rate 卡片：條件觸發正常（安裝 7 天 + 開 30 次、tutorial 完成後）；Rate now / Later / No thanks 三鍵行為正確、不再重複騷擾
 - [ ] Tutorial：9 步驟全部走完（Enter 鍵可逐步前進），Skip / Esc 正常
 - [ ] 搜尋（`/` 或 Ctrl+K）：輸入關鍵字、鍵盤選擇、Enter 跳轉；結果涵蓋**所有頁面**的 tiles
 - [ ] 主題切換（5 個 preset + 自訂色 + 背景圖）
