@@ -65,7 +65,12 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-let items = [];
+const PAGE_KEYS = ['1','2','3','4','5','6','7','8','9','0'];
+let _currentPage = '1';
+let _pages = {};
+PAGE_KEYS.forEach(k => { _pages[k] = []; });
+
+let items = [];   // alias → always _pages[_currentPage]
 let _bookmarkFavicons = {}; // { url: favIconUrl } — populated at boot from chrome.bookmarks
 let ctxTargetId = null;
 let openGroupId = null;
@@ -116,15 +121,26 @@ let _toastTimer   = null;
 const _isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 function _snapshotForUndo() {
-  _undoStack.push(JSON.parse(JSON.stringify(items)));
+  _pages[_currentPage] = items;
+  _undoStack.push({ page: _currentPage, pages: JSON.parse(JSON.stringify(_pages)) });
   if (_undoStack.length > UNDO_LIMIT) _undoStack.shift();
 }
 
 function doUndo() {
   if (!_undoStack.length) return;
-  items = _undoStack.pop();
+  const snap = _undoStack.pop();
+  if (Array.isArray(snap)) {
+    // legacy snapshot (items array only)
+    items = snap;
+    _pages[_currentPage] = items;
+  } else {
+    _pages = snap.pages;
+    _currentPage = snap.page;
+    items = _pages[_currentPage];
+  }
   save();
   render();
+  _updatePageBar();
   _showToast(_undoStack.length ? `Restored · ${_undoStack.length} more` : 'Restored');
 }
 
@@ -139,12 +155,22 @@ function _showToast(msg) {
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 async function load() {
-  const data = await _storageGet('items');
-  items = data.items ?? sampleItems();
+  const data = await _storageGet(['pages', 'items']);
+  if (data.pages && typeof data.pages === 'object') {
+    _pages = data.pages;
+    PAGE_KEYS.forEach(k => { if (!Array.isArray(_pages[k])) _pages[k] = []; });
+  } else if (Array.isArray(data.items)) {
+    // migrate old single-page format → page 1
+    PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? data.items : []; });
+  } else {
+    PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; });
+  }
+  items = _pages[_currentPage];
 }
 
 function save() {
-  return chrome.storage.local.set({ items });
+  _pages[_currentPage] = items;
+  return chrome.storage.local.set({ pages: _pages });
 }
 
 function _storageGet(keys) {
@@ -757,6 +783,7 @@ let pdActive  = false;
 let pdSX      = 0, pdSY  = 0;
 let pdDropTgt = null;   // current hovered item id
 let pdDropMode= null;   // 'before' | 'after' | 'group' | null
+let pdDragToPage = null; // page key if clone is hovering over a page button
 let _suppressClick = false;
 const _PD_DIST = 6;    // px threshold before drag activates
 
@@ -808,6 +835,28 @@ function _moveDrag(cx, cy) {
   // GPU-composited movement — no layout triggered
   pdClone.style.transition = 'none';
   pdClone.style.transform  = `translate(${cx - pdOffX}px,${cy - pdOffY}px) scale(1.08)`;
+
+  // Check if clone is hovering over a page button — if so, highlight and skip grid logic
+  {
+    const cr  = pdClone.getBoundingClientRect();
+    const pcx = cr.left + cr.width  / 2;
+    const pcy = cr.top  + cr.height / 2;
+    let overPage = null;
+    for (const btn of document.querySelectorAll('.page-btn')) {
+      const r = btn.getBoundingClientRect();
+      if (pcx >= r.left && pcx <= r.right && pcy >= r.top && pcy <= r.bottom) {
+        overPage = btn.dataset.page; break;
+      }
+    }
+    pdDragToPage = (overPage && overPage !== _currentPage) ? overPage : null;
+    document.querySelectorAll('.page-btn').forEach(btn => {
+      btn.classList.toggle('drag-target', btn.dataset.page === pdDragToPage);
+    });
+    if (pdDragToPage) {
+      document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
+      return;
+    }
+  }
 
   // Proportional auto-scroll — speed ramps up as cursor approaches edge
   const app = document.getElementById('app');
@@ -906,10 +955,11 @@ function _commitDrag() {
   const clone   = pdClone;
   const dropTgt = pdDropTgt;
   const dropMode= pdDropMode;
-  const srcId   = pdSrcId;
+  const srcId    = pdSrcId;
+  const dropPage = pdDragToPage;
 
   pdClone = null; pdSrcEl = null;
-  pdDropTgt = null; pdDropMode = null; pdActive = false; pdSrcId = null;
+  pdDropTgt = null; pdDropMode = null; pdActive = false; pdSrcId = null; pdDragToPage = null;
 
   // Drop animation: fade clone out while revealing the source tile
   if (clone) {
@@ -923,6 +973,25 @@ function _commitDrag() {
 
   // Only remove group-highlight decoration; let in-flight FLIP animations complete naturally
   document.querySelectorAll('.drag-group-target').forEach(el => el.classList.remove('drag-group-target'));
+  document.querySelectorAll('.page-btn.drag-target').forEach(btn => btn.classList.remove('drag-target'));
+
+  // ── Drop on page button → move tile to that page ──
+  if (dropPage) {
+    _snapshotForUndo();
+    const srcItem = items.find(i => i.id === srcId);
+    if (srcItem) {
+      items = items.filter(i => i.id !== srcId);
+      _pages[dropPage] = _pages[dropPage] ?? [];
+      _pages[dropPage].push(srcItem);
+      save();
+      render();
+      _updatePageBar();
+      _showToast(`Moved to page ${dropPage} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    }
+    _suppressClick = true;
+    requestAnimationFrame(() => { _suppressClick = false; });
+    return;
+  }
 
   _suppressClick = true;
   requestAnimationFrame(() => { _suppressClick = false; });
@@ -2306,9 +2375,11 @@ function _tutDone() {
 
 function _existingUrls() {
   const s = new Set();
-  for (const item of items) {
-    if (item.type === 'site') s.add(item.url);
-    else if (item.type === 'group') (item.items ?? []).forEach(c => s.add(c.url));
+  for (const pageItems of Object.values(_pages)) {
+    for (const item of pageItems) {
+      if (item.type === 'site') s.add(item.url);
+      else if (item.type === 'group') (item.items ?? []).forEach(c => s.add(c.url));
+    }
   }
   return s;
 }
@@ -2664,11 +2735,12 @@ function _tickClock() {
 // ─── Export / Import JSON Backup ─────────────────────────────────────────────
 
 async function doExportJson() {
-  const stored = await chrome.storage.local.get(['items', 'theme', 'customColor']);
+  _pages[_currentPage] = items;
+  const stored = await chrome.storage.local.get(['theme', 'customColor']);
   const backup = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
-    items: stored.items ?? items,
+    pages: JSON.parse(JSON.stringify(_pages)),
     theme: stored.theme ?? null,
     customColor: stored.customColor ?? null,
   };
@@ -2702,17 +2774,25 @@ function _showConfirm(title, body, labelOk, onOk) {
 }
 
 function doExportBookmarksHtml() {
+  _pages[_currentPage] = items;
   let inner = '';
-  for (const item of items) {
-    if (item.type === 'group') {
-      inner += `    <DT><H3>${escHtml(item.name)}</H3>\n    <DL><p>\n`;
-      for (const site of (item.items ?? [])) {
-        inner += `        <DT><A HREF="${escHtml(site.url)}">${escHtml(site.name)}</A>\n`;
+  for (const pageKey of PAGE_KEYS) {
+    const pageItems = _pages[pageKey] ?? [];
+    if (!pageItems.length) continue;
+    const pageLabel = pageKey === '1' ? 'Page 1' : `Page ${pageKey}`;
+    inner += `    <DT><H3>${escHtml(pageLabel)}</H3>\n    <DL><p>\n`;
+    for (const item of pageItems) {
+      if (item.type === 'group') {
+        inner += `        <DT><H3>${escHtml(item.name)}</H3>\n        <DL><p>\n`;
+        for (const site of (item.items ?? [])) {
+          inner += `            <DT><A HREF="${escHtml(site.url)}">${escHtml(site.name)}</A>\n`;
+        }
+        inner += `        </DL><p>\n`;
+      } else if (item.type === 'site') {
+        inner += `        <DT><A HREF="${escHtml(item.url)}">${escHtml(item.name)}</A>\n`;
       }
-      inner += `    </DL><p>\n`;
-    } else if (item.type === 'site') {
-      inner += `    <DT><A HREF="${escHtml(item.url)}">${escHtml(item.name)}</A>\n`;
     }
+    inner += `    </DL><p>\n`;
   }
 
   const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -2739,28 +2819,40 @@ ${inner}    </DL><p>
 function doImportJson(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    let data;
+    let data, importedPages;
     try {
       data = JSON.parse(e.target.result);
-      if (!Array.isArray(data.items)) throw new Error();
+      if (data.pages && typeof data.pages === 'object') {
+        // v2 format
+        importedPages = data.pages;
+        PAGE_KEYS.forEach(k => { if (!Array.isArray(importedPages[k])) importedPages[k] = []; });
+      } else if (Array.isArray(data.items)) {
+        // v1 legacy format — put items on page 1
+        importedPages = {};
+        PAGE_KEYS.forEach(k => { importedPages[k] = k === '1' ? data.items : []; });
+      } else {
+        throw new Error();
+      }
     } catch {
       _showToast('Invalid backup file');
       return;
     }
 
-    const tileCount = data.items.length;
+    const totalTiles = Object.values(importedPages).reduce((s, arr) => s + arr.length, 0);
     _showConfirm(
       'Restore Backup',
-      `Replace your current ${items.length} tile${items.length !== 1 ? 's' : ''} with ${tileCount} tile${tileCount !== 1 ? 's' : ''} from the backup?`,
+      `Replace all current tiles with ${totalTiles} tile${totalTiles !== 1 ? 's' : ''} from the backup?`,
       'Restore',
       () => {
         _snapshotForUndo();
-        items = data.items;
+        _pages = importedPages;
+        items = _pages[_currentPage];
         save().then(() => {
           if (data.theme && data.theme !== 'custom') { applyTheme(data.theme); saveTheme(data.theme); }
           else if (data.theme === 'custom' && data.customColor) { applyCustomColor(data.customColor); saveCustomColor(data.customColor); }
           render();
-          _showToast(`Restored ${items.length} tile${items.length !== 1 ? 's' : ''} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+          _updatePageBar();
+          _showToast(`Restored ${totalTiles} tile${totalTiles !== 1 ? 's' : ''} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
         });
       }
     );
@@ -2774,12 +2866,14 @@ let _srActiveIdx = -1;
 
 function _flattenSites() {
   const out = [];
-  for (const item of items) {
-    if (item.type === 'site') {
-      out.push({ name: item.name, url: item.url, favicon: item.favicon ?? null, groupName: null });
-    } else if (item.type === 'group') {
-      for (const s of (item.items ?? [])) {
-        out.push({ name: s.name, url: s.url, favicon: s.favicon ?? null, groupName: item.name });
+  for (const pageKey of PAGE_KEYS) {
+    for (const item of (_pages[pageKey] ?? [])) {
+      if (item.type === 'site') {
+        out.push({ name: item.name, url: item.url, favicon: item.favicon ?? null, groupName: null });
+      } else if (item.type === 'group') {
+        for (const s of (item.items ?? [])) {
+          out.push({ name: s.name, url: s.url, favicon: s.favicon ?? null, groupName: item.name });
+        }
       }
     }
   }
@@ -2883,22 +2977,45 @@ function _srHighlight() {
   });
 }
 
+// ─── Page Bar ─────────────────────────────────────────────────────────────────
+
+function _switchToPage(key) {
+  if (!PAGE_KEYS.includes(key) || key === _currentPage) return;
+  _pages[_currentPage] = items;
+  _currentPage = key;
+  items = _pages[_currentPage];
+  render();
+  _updatePageBar();
+}
+
+function _updatePageBar() {
+  document.querySelectorAll('.page-btn').forEach(btn => {
+    const k = btn.dataset.page;
+    const hasTiles = (_pages[k] ?? []).length > 0;
+    btn.classList.toggle('active', k === _currentPage);
+    btn.classList.toggle('has-tiles', hasTiles);
+  });
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 (async () => {
-  items = sampleItems();
+  PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; });
+  items = _pages[_currentPage];
   applyTheme('cream');
   applyTileSize('m');
   applyModalDark(false);
   render();
+  _updatePageBar();
   (async () => {
-    try { await load();        } catch { items = sampleItems(); }
+    try { await load(); } catch { PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; }); items = _pages[_currentPage]; }
     try { await loadTheme();   } catch { applyTheme('cream'); }
     try { await loadTileSize(); } catch { applyTileSize('m'); }
     try { await loadModalDark(); } catch { applyModalDark(false); }
     try { await loadShortcuts(); } catch { /* use defaults */ }
     try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
     render();
+    _updatePageBar();
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -2911,6 +3028,11 @@ function _srHighlight() {
       _tickClock();
       _clockInterval = setInterval(_tickClock, 1000);
     }
+  });
+
+  // Page bar buttons
+  document.querySelectorAll('.page-btn').forEach(btn => {
+    btn.addEventListener('click', () => _switchToPage(btn.dataset.page));
   });
 
   // Weather — fire and forget (updates UI async)
@@ -3147,6 +3269,13 @@ function _srHighlight() {
     if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       doUndo();
+      return;
+    }
+
+    // ── Digit keys 0–9: switch page ──
+    if (!isInput && !anyOverlayOpen && !groupOpen && PAGE_KEYS.includes(e.key)) {
+      e.preventDefault();
+      _switchToPage(e.key);
       return;
     }
 

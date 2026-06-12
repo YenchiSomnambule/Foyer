@@ -45,7 +45,7 @@ body {
   inset: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 88px 48px 120px;
+  padding: 104px 48px 120px;
 }
 
 /* ─── Top widgets strip (clock + weather) ─── */
@@ -71,6 +71,60 @@ body {
 }
 
 .widget-sep.hidden { display: none; }
+
+/* ─── Page Bar ─── */
+#page-bar {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.page-btn {
+  position: relative;
+  width: 28px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  font-size: 11px;
+  font-family: var(--font);
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+  color: var(--text-color);
+  background: transparent;
+  opacity: 0.30;
+  transition: opacity 0.15s, background 0.15s, transform 0.12s;
+}
+.page-btn:hover { opacity: 0.65; background: var(--glass); }
+.page-btn.active {
+  opacity: 1;
+  background: var(--glass);
+}
+/* Dot: page has tiles (hidden on active page — already obviously selected) */
+.page-btn.has-tiles::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+.page-btn.active.has-tiles::after { opacity: 0; }
+/* Drag-target highlight when a tile is dragged over this button */
+.page-btn.drag-target {
+  opacity: 1;
+  background: rgba(60,120,240,0.60);
+  color: #fff;
+  transform: scale(1.12);
+}
 
 /* ─── Search icon button (between config and palette) ─── */
 /* shared style for all top-right icon buttons */
