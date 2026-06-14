@@ -1068,6 +1068,12 @@ function buildSiteTile(item) {
     window.location.href = item.url;
   });
 
+  tile.addEventListener('auxclick', e => {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    window.open(item.url, '_blank');
+  });
+
   attachDrag(tile, item.id);
   attachContextMenu(tile, item.id);
   return tile;
@@ -1162,6 +1168,7 @@ const _PD_DIST = 6;    // px threshold before drag activates
 
 function attachDrag(tile, id) {
   tile.addEventListener('mousedown', e => {
+    if (e.button === 1) { e.preventDefault(); return; }
     if (e.button !== 0) return;
     pdSX = e.clientX; pdSY = e.clientY;
     const rect = tile.getBoundingClientRect();
@@ -1506,12 +1513,20 @@ function buildGroupSiteTile(site, groupId) {
       window.location.href = site.url;
     }
   });
+
+  tile.addEventListener('auxclick', e => {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    window.open(site.url, '_blank');
+  });
+
   tile.addEventListener('contextmenu', e => {
     e.preventDefault();
     showGroupSiteCtx(e, groupId, site.id);
   });
 
   tile.addEventListener('mousedown', e => {
+    if (e.button === 1) { e.preventDefault(); return; }
     if (e.button !== 0) return;
     gpSX = e.clientX; gpSY = e.clientY;
     const rect = tile.getBoundingClientRect();
