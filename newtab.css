@@ -2378,6 +2378,42 @@ body.modal-dark .ssec-action-btn--danger:hover {
   color: rgba(22,17,10,0.90);
 }
 
+/* ─── Language buttons ─────────────────────────────────────────────────────── */
+#lang-btns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.lang-btn {
+  padding: 9px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.05);
+  color: rgba(22,17,10,0.62);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.lang-btn:hover { background: rgba(0,0,0,0.09); }
+.lang-btn.active {
+  background: rgba(60,120,240,0.11);
+  border-color: rgba(60,120,240,0.38);
+  color: rgba(22,17,10,0.90);
+}
+body.modal-dark .lang-btn {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.55);
+}
+body.modal-dark .lang-btn:hover { background: rgba(255,255,255,0.10); }
+body.modal-dark .lang-btn.active {
+  background: rgba(88,150,255,0.18);
+  border-color: rgba(88,150,255,0.42);
+  color: rgba(255,255,255,0.92);
+}
+
 /* ─── Missing keyframe for settings modal entry ────────────────────────────── */
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.94); }

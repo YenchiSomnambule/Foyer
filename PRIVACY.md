@@ -16,6 +16,7 @@ All user data is stored exclusively on your device using `chrome.storage.local`.
 | Theme and tile-size preference | Restores your visual settings on each new tab |
 | Weather location and cache | Avoids redundant API calls; refreshes every 30 minutes |
 | Keyboard shortcut configuration | Restores your custom key bindings on each new tab |
+| Language preference | Restores your chosen interface language on each new tab |
 | Local usage counters (install date, new-tab count) | Decides when to show the optional one-time "rate us" reminder — never leaves your device |
 
 You can clear all stored data at any time by removing the extension or clearing its storage from Chrome's extension management page.

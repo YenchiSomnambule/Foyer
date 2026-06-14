@@ -123,6 +123,373 @@ const UNDO_LIMIT  = 10;
 let _toastTimer   = null;
 const _isMac = /Mac|iPhone|iPad/.test(navigator.userAgent);
 
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+
+const LANGS = [
+  { code: 'en',    label: 'English'  },
+  { code: 'zh-TW', label: '繁體中文' },
+  { code: 'zh-CN', label: '简体中文' },
+  { code: 'ja',    label: '日本語'   },
+];
+let _lang = 'en';
+function _mod() { return _isMac ? '⌘Z' : 'Ctrl+Z'; }
+
+const I18N = {
+  en: {
+    // actions
+    cancel: 'Cancel', add: 'Add', save: 'Save', restore: 'Restore', apply: 'Apply',
+    import: 'Import', selectAll: 'Select all', deselectAll: 'Deselect all',
+    skip: 'Skip', next: 'Next →', done: 'Done ✓', changePhoto: 'Change photo', autoDetect: 'Auto-detect',
+    // modal titles
+    addSite: 'Add Site', editSite: 'Edit Site', rename: 'Rename', importBookmarks: 'Import Bookmarks',
+    weatherLocation: 'Weather Location', adjustBackground: 'Adjust Background', settings: 'Settings',
+    // labels / placeholders
+    url: 'URL', name: 'Name', city: 'City', zoom: 'Zoom',
+    phName: 'My Site', phCity: 'Search city or country…', phSearch: 'Search sites…', phSearchEngine: 'Search Google…',
+    // settings
+    tabGeneral: 'General', tabShortcuts: 'Shortcuts',
+    secLanguage: 'Language', secTileSize: 'Tile size', sizeSmall: 'Small', sizeLarge: 'Large',
+    secWindowStyle: 'Window style', styleLight: 'Light', styleDark: 'Dark',
+    secTheme: 'Theme', secData: 'Data', secHelp: 'Help',
+    syncBar: 'Sync bookmarks bar', syncAll: 'Sync all bookmarks', importBm: 'Import bookmarks',
+    importBackup: 'Import backup', exportBm: 'Export bookmarks', exportBackup: 'Export backup',
+    clearAll: 'Clear all tiles', clearAllOk: 'Clear all', restartTutorial: 'Restart tutorial', rateFoyer: 'Rate Foyer',
+    // shortcuts pane
+    scAddTile: 'Add tile', scSearch: 'Search', scNavigate: 'Navigate tiles', scOpenGroup: 'Open / Enter group',
+    scDeleteTile: 'Delete tile', scClose: 'Close / Go back', scUndo: 'Undo',
+    scHint: 'Click a highlighted shortcut to remap it. Press Esc to cancel.',
+    scConflict: ({ key, name }) => `"${key}" is already used by "${name}"`,
+    // context menu
+    ctxRename: 'Rename', ctxDelete: 'Delete', ctxEdit: 'Edit', ctxRefreshIcon: 'Refresh icon',
+    ctxSetCover: 'Set as cover', ctxRemoveCover: 'Remove cover',
+    ctxGroupN: ({ n }) => `Group ${n} tiles`, ctxDeleteN: ({ n }) => `Delete ${n} tiles`,
+    // tooltips / titles
+    ttSettings: 'Settings', ttSearchSites: 'Search sites', ttHistory: 'Browser history',
+    ttDownloads: 'Downloads', ttChangeTheme: 'Change theme', ttToggleUnit: 'Toggle °C / °F',
+    ttChangeLocation: 'Change location', ttAddSite: 'Add site', ttCloseGroup: 'Close group',
+    ttCloseSettings: 'Close settings',
+    swPink: 'Pink', swBlue: 'Blue', swYellow: 'Yellow', swDark: 'Dark', swCream: 'Cream',
+    swCustom: 'Custom color', swBgImage: 'Background image',
+    // rate card
+    rateTitle: 'Enjoying Foyer? ⭐', rateBody: 'A quick rating on the Chrome Web Store helps others find it.',
+    rateNow: '★ Rate Foyer', rateLater: 'Later', rateNo: 'No thanks',
+    // import
+    nSelected: ({ n }) => `${n} selected`, importLoading: 'Loading…',
+    importCantRead: 'Could not read bookmarks.', importNone: 'No bookmarks found.',
+    bmAdded: 'Added', bmGroup: '→ Group',
+    importBtnN: ({ n }) => `Import ${n} site${n > 1 ? 's' : ''}`,
+    bmNoAccess: 'Bookmarks API unavailable.', bmReload: 'Reload extension',
+    // toasts
+    undoSuffix: ({ mod }) => ` · ${mod} to undo`,
+    toastRestored: 'Restored', toastRestoredMore: ({ n }) => `Restored · ${n} more`,
+    movedNToPage: ({ n, page }) => `Moved ${n} tile${n !== 1 ? 's' : ''} to page ${page}`,
+    addedToGroup: 'Added to group', grouped: 'Grouped',
+    groupedN: ({ n }) => `Grouped ${n} tiles`, deleted: 'Deleted',
+    nDeleted: ({ n }) => `${n} deleted`, clearedAll: 'Cleared all tiles',
+    imported: ({ parts }) => `Imported ${parts}`, synced: ({ parts }) => `Synced ${parts}`,
+    bmApiNa: 'Bookmarks API not available', bmBarEmpty: 'Bookmarks bar is empty',
+    bmAllBarAdded: 'All bookmarks bar items already added', bmCantReadToast: 'Could not read bookmarks',
+    bmAllAdded: 'All bookmarks already added', backupDownloaded: 'Backup downloaded',
+    bmHtmlDownloaded: 'Bookmarks HTML downloaded', invalidBackup: 'Invalid backup file',
+    restoredNTiles: ({ n }) => `Restored ${n} tile${n !== 1 ? 's' : ''}`,
+    partGroups: ({ n }) => `${n} group${n > 1 ? 's' : ''}`, partSites: ({ n }) => `${n} site${n > 1 ? 's' : ''}`,
+    // confirm dialogs
+    confirmClearTitle: 'Clear All Tiles',
+    confirmClearBody: ({ n, mod }) => `Remove all ${n} tile${n !== 1 ? 's' : ''} across all 10 pages? You can undo with ${mod}.`,
+    confirmRestoreTitle: 'Restore Backup',
+    confirmRestoreBody: ({ n }) => `Replace all current tiles with ${n} tile${n !== 1 ? 's' : ''} from the backup?`,
+    // weather
+    wDetecting: 'Detecting…', wUnavailable: 'Unavailable', wSetLocation: 'Set location', wmoUnknown: 'Unknown',
+    wmoClear: 'Clear', wmoMostlyClear: 'Mostly clear', wmoPartlyCloudy: 'Partly cloudy', wmoOvercast: 'Overcast',
+    wmoFog: 'Fog', wmoIcyFog: 'Icy fog', wmoDrizzle: 'Drizzle', wmoHeavyDrizzle: 'Heavy drizzle',
+    wmoLightRain: 'Light rain', wmoRain: 'Rain', wmoHeavyRain: 'Heavy rain', wmoLightSnow: 'Light snow',
+    wmoSnow: 'Snow', wmoHeavySnow: 'Heavy snow', wmoSnowGrains: 'Snow grains', wmoShowers: 'Showers',
+    wmoRainShowers: 'Rain showers', wmoHeavyShowers: 'Heavy showers', wmoSnowShowers: 'Snow showers',
+    wmoHeavySnowShowers: 'Heavy snow showers', wmoThunderstorm: 'Thunderstorm',
+    // location search
+    locSearching: 'Searching…', locNoResults: 'No results', locSearchFailed: 'Search failed',
+    // search overlay
+    srNoResults: ({ q }) => `No results for "${q}"`,
+    // page rename
+    pageNamePh: ({ k }) => `Page ${k} name (empty = number only)`,
+    // tutorial
+    tutWelcomeT: 'Welcome to Foyer',
+    tutWelcomeB: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in. Tip: press Enter to step through.",
+    tutAddT: 'Add a website', tutAddB: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.',
+    tutOpenT: 'Open or manage', tutOpenB: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.',
+    tutDragT: 'Drag to organise', tutDragB: 'Drag icons to rearrange. Drop one onto another to create a folder group. Drag on empty space to select several tiles at once.',
+    tutPagesT: 'Ten pages', tutPagesB: 'Your grid has 10 pages. Click a number or press 1–9, 0 on your keyboard to switch. Drag any tile — or a multi-selection — onto a number to move it to that page.',
+    tutNameT: 'Name your pages', tutNameB: 'Right-click a number to give that page a name, like "Work" or "Games". The number always stays, so keyboard switching never changes.',
+    tutQuickT: 'Quick actions', tutQuickB: 'Hover each icon to see what it does: sync your bookmarks bar, import all bookmarks, or clear every tile (a confirmation keeps you safe).',
+    tutThemeT: 'Change the look', tutThemeB: 'Pick a preset theme or dial in a custom colour. Saves automatically.',
+    tutSettingsT: 'Settings', tutSettingsB: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.',
+  },
+  'zh-TW': {
+    cancel: '取消', add: '新增', save: '儲存', restore: '還原', apply: '套用',
+    import: '匯入', selectAll: '全選', deselectAll: '取消全選',
+    skip: '略過', next: '下一步 →', done: '完成 ✓', changePhoto: '更換相片', autoDetect: '自動偵測',
+    addSite: '新增網站', editSite: '編輯網站', rename: '重新命名', importBookmarks: '匯入書籤',
+    weatherLocation: '天氣地點', adjustBackground: '調整背景', settings: '設定',
+    url: '網址', name: '名稱', city: '城市', zoom: '縮放',
+    phName: '我的網站', phCity: '搜尋城市或國家…', phSearch: '搜尋網站…', phSearchEngine: '搜尋 Google…',
+    tabGeneral: '一般', tabShortcuts: '快速鍵',
+    secLanguage: '語言', secTileSize: '圖示大小', sizeSmall: '小', sizeLarge: '大',
+    secWindowStyle: '視窗樣式', styleLight: '淺色', styleDark: '深色',
+    secTheme: '主題', secData: '資料', secHelp: '說明',
+    syncBar: '同步書籤列', syncAll: '同步所有書籤', importBm: '匯入書籤',
+    importBackup: '匯入備份', exportBm: '匯出書籤', exportBackup: '匯出備份',
+    clearAll: '清除所有圖示', clearAllOk: '全部清除', restartTutorial: '重新教學', rateFoyer: '為 Foyer 評分',
+    scAddTile: '新增圖示', scSearch: '搜尋', scNavigate: '瀏覽圖示', scOpenGroup: '開啟／進入群組',
+    scDeleteTile: '刪除圖示', scClose: '關閉／返回', scUndo: '復原',
+    scHint: '點擊標示的快速鍵即可重新設定。按 Esc 取消。',
+    scConflict: ({ key, name }) => `「${key}」已被「${name}」使用`,
+    ctxRename: '重新命名', ctxDelete: '刪除', ctxEdit: '編輯', ctxRefreshIcon: '重新整理圖示',
+    ctxSetCover: '設為封面', ctxRemoveCover: '移除封面',
+    ctxGroupN: ({ n }) => `組成群組（${n} 個）`, ctxDeleteN: ({ n }) => `刪除 ${n} 個圖示`,
+    ttSettings: '設定', ttSearchSites: '搜尋網站', ttHistory: '瀏覽記錄',
+    ttDownloads: '下載項目', ttChangeTheme: '變更主題', ttToggleUnit: '切換 °C／°F',
+    ttChangeLocation: '變更地點', ttAddSite: '新增網站', ttCloseGroup: '關閉群組',
+    ttCloseSettings: '關閉設定',
+    swPink: '粉紅', swBlue: '藍色', swYellow: '黃色', swDark: '深色', swCream: '奶油',
+    swCustom: '自訂顏色', swBgImage: '背景圖片',
+    rateTitle: '喜歡 Foyer 嗎？⭐', rateBody: '在 Chrome 線上應用程式商店給個評分，能幫助更多人發現它。',
+    rateNow: '★ 為 Foyer 評分', rateLater: '稍後', rateNo: '不用了',
+    nSelected: ({ n }) => `已選 ${n} 項`, importLoading: '載入中…',
+    importCantRead: '無法讀取書籤。', importNone: '找不到書籤。',
+    bmAdded: '已加入', bmGroup: '→ 群組',
+    importBtnN: ({ n }) => `匯入 ${n} 個網站`,
+    bmNoAccess: '書籤 API 無法使用。', bmReload: '重新載入擴充功能',
+    undoSuffix: ({ mod }) => ` · 按 ${mod} 復原`,
+    toastRestored: '已還原', toastRestoredMore: ({ n }) => `已還原 · 還有 ${n} 步`,
+    movedNToPage: ({ n, page }) => `已移動 ${n} 個圖示至第 ${page} 頁`,
+    addedToGroup: '已加入群組', grouped: '已組成群組',
+    groupedN: ({ n }) => `已將 ${n} 個圖示組成群組`, deleted: '已刪除',
+    nDeleted: ({ n }) => `已刪除 ${n} 項`, clearedAll: '已清除所有圖示',
+    imported: ({ parts }) => `已匯入 ${parts}`, synced: ({ parts }) => `已同步 ${parts}`,
+    bmApiNa: '書籤 API 無法使用', bmBarEmpty: '書籤列是空的',
+    bmAllBarAdded: '書籤列項目皆已加入', bmCantReadToast: '無法讀取書籤',
+    bmAllAdded: '所有書籤皆已加入', backupDownloaded: '已下載備份',
+    bmHtmlDownloaded: '已下載書籤 HTML', invalidBackup: '備份檔無效',
+    restoredNTiles: ({ n }) => `已還原 ${n} 個圖示`,
+    partGroups: ({ n }) => `${n} 個群組`, partSites: ({ n }) => `${n} 個網站`,
+    confirmClearTitle: '清除所有圖示',
+    confirmClearBody: ({ n, mod }) => `要清除全部 10 頁共 ${n} 個圖示嗎？可按 ${mod} 復原。`,
+    confirmRestoreTitle: '還原備份',
+    confirmRestoreBody: ({ n }) => `要用備份中的 ${n} 個圖示取代目前所有圖示嗎？`,
+    wDetecting: '偵測中…', wUnavailable: '無法取得', wSetLocation: '設定地點', wmoUnknown: '未知',
+    wmoClear: '晴朗', wmoMostlyClear: '大致晴朗', wmoPartlyCloudy: '局部多雲', wmoOvercast: '陰天',
+    wmoFog: '霧', wmoIcyFog: '凍霧', wmoDrizzle: '毛毛雨', wmoHeavyDrizzle: '強毛毛雨',
+    wmoLightRain: '小雨', wmoRain: '雨', wmoHeavyRain: '大雨', wmoLightSnow: '小雪',
+    wmoSnow: '雪', wmoHeavySnow: '大雪', wmoSnowGrains: '米雪', wmoShowers: '陣雨',
+    wmoRainShowers: '陣雨', wmoHeavyShowers: '強陣雨', wmoSnowShowers: '陣雪',
+    wmoHeavySnowShowers: '強陣雪', wmoThunderstorm: '雷雨',
+    locSearching: '搜尋中…', locNoResults: '無結果', locSearchFailed: '搜尋失敗',
+    srNoResults: ({ q }) => `找不到「${q}」的結果`,
+    pageNamePh: ({ k }) => `第 ${k} 頁名稱（留空則僅顯示數字）`,
+    tutWelcomeT: '歡迎使用 Foyer',
+    tutWelcomeB: '你的網站，整齊排列在乾淨的主畫面網格中。這是個快速導覽——或點「略過」直接開始。提示：按 Enter 可逐步前進。',
+    tutAddT: '新增網站', tutAddB: '點 + 即可新增任何網站。貼上網址、命名，它就會加入網格。',
+    tutOpenT: '開啟或管理', tutOpenB: '點圖示即可開啟網站。右鍵可重新命名、編輯或刪除。',
+    tutDragT: '拖曳整理', tutDragB: '拖曳圖示可重新排列。把一個拖到另一個上可建立資料夾群組。在空白處拖曳可一次選取多個圖示。',
+    tutPagesT: '十個頁面', tutPagesB: '你的網格共有 10 頁。點數字或按鍵盤 1–9、0 即可切換。把圖示（或多選）拖到數字上，即可移到該頁。',
+    tutNameT: '為頁面命名', tutNameB: '右鍵點數字即可為該頁命名，例如「工作」或「遊戲」。數字始終保留，所以鍵盤切換不受影響。',
+    tutQuickT: '快速操作', tutQuickB: '把游標移到各圖示上即可看到功能：同步書籤列、匯入所有書籤，或清除所有圖示（會先確認以保安全）。',
+    tutThemeT: '變更外觀', tutThemeB: '挑選預設主題或自訂顏色，會自動儲存。',
+    tutSettingsT: '設定', tutSettingsB: '匯入書籤、匯出備份、設定圖示大小、自訂快速鍵。隨時可從「設定 → 說明」重新教學。',
+  },
+  'zh-CN': {
+    cancel: '取消', add: '添加', save: '保存', restore: '恢复', apply: '应用',
+    import: '导入', selectAll: '全选', deselectAll: '取消全选',
+    skip: '跳过', next: '下一步 →', done: '完成 ✓', changePhoto: '更换图片', autoDetect: '自动检测',
+    addSite: '添加网站', editSite: '编辑网站', rename: '重命名', importBookmarks: '导入书签',
+    weatherLocation: '天气地点', adjustBackground: '调整背景', settings: '设置',
+    url: '网址', name: '名称', city: '城市', zoom: '缩放',
+    phName: '我的网站', phCity: '搜索城市或国家…', phSearch: '搜索网站…', phSearchEngine: '搜索 Google…',
+    tabGeneral: '常规', tabShortcuts: '快捷键',
+    secLanguage: '语言', secTileSize: '图标大小', sizeSmall: '小', sizeLarge: '大',
+    secWindowStyle: '窗口样式', styleLight: '浅色', styleDark: '深色',
+    secTheme: '主题', secData: '数据', secHelp: '帮助',
+    syncBar: '同步书签栏', syncAll: '同步所有书签', importBm: '导入书签',
+    importBackup: '导入备份', exportBm: '导出书签', exportBackup: '导出备份',
+    clearAll: '清除所有图标', clearAllOk: '全部清除', restartTutorial: '重新教程', rateFoyer: '为 Foyer 评分',
+    scAddTile: '添加图标', scSearch: '搜索', scNavigate: '浏览图标', scOpenGroup: '打开／进入分组',
+    scDeleteTile: '删除图标', scClose: '关闭／返回', scUndo: '撤销',
+    scHint: '点击高亮的快捷键即可重新设置。按 Esc 取消。',
+    scConflict: ({ key, name }) => `“${key}”已被“${name}”占用`,
+    ctxRename: '重命名', ctxDelete: '删除', ctxEdit: '编辑', ctxRefreshIcon: '刷新图标',
+    ctxSetCover: '设为封面', ctxRemoveCover: '移除封面',
+    ctxGroupN: ({ n }) => `组成分组（${n} 个）`, ctxDeleteN: ({ n }) => `删除 ${n} 个图标`,
+    ttSettings: '设置', ttSearchSites: '搜索网站', ttHistory: '浏览历史',
+    ttDownloads: '下载内容', ttChangeTheme: '更改主题', ttToggleUnit: '切换 °C／°F',
+    ttChangeLocation: '更改地点', ttAddSite: '添加网站', ttCloseGroup: '关闭分组',
+    ttCloseSettings: '关闭设置',
+    swPink: '粉色', swBlue: '蓝色', swYellow: '黄色', swDark: '深色', swCream: '奶油',
+    swCustom: '自定义颜色', swBgImage: '背景图片',
+    rateTitle: '喜欢 Foyer 吗？⭐', rateBody: '在 Chrome 应用商店给个评分，能帮助更多人发现它。',
+    rateNow: '★ 为 Foyer 评分', rateLater: '稍后', rateNo: '不用了',
+    nSelected: ({ n }) => `已选 ${n} 项`, importLoading: '加载中…',
+    importCantRead: '无法读取书签。', importNone: '未找到书签。',
+    bmAdded: '已添加', bmGroup: '→ 分组',
+    importBtnN: ({ n }) => `导入 ${n} 个网站`,
+    bmNoAccess: '书签 API 不可用。', bmReload: '重新加载扩展程序',
+    undoSuffix: ({ mod }) => ` · 按 ${mod} 撤销`,
+    toastRestored: '已恢复', toastRestoredMore: ({ n }) => `已恢复 · 还有 ${n} 步`,
+    movedNToPage: ({ n, page }) => `已移动 ${n} 个图标至第 ${page} 页`,
+    addedToGroup: '已加入分组', grouped: '已组成分组',
+    groupedN: ({ n }) => `已将 ${n} 个图标组成分组`, deleted: '已删除',
+    nDeleted: ({ n }) => `已删除 ${n} 项`, clearedAll: '已清除所有图标',
+    imported: ({ parts }) => `已导入 ${parts}`, synced: ({ parts }) => `已同步 ${parts}`,
+    bmApiNa: '书签 API 不可用', bmBarEmpty: '书签栏是空的',
+    bmAllBarAdded: '书签栏项目均已添加', bmCantReadToast: '无法读取书签',
+    bmAllAdded: '所有书签均已添加', backupDownloaded: '已下载备份',
+    bmHtmlDownloaded: '已下载书签 HTML', invalidBackup: '备份文件无效',
+    restoredNTiles: ({ n }) => `已恢复 ${n} 个图标`,
+    partGroups: ({ n }) => `${n} 个分组`, partSites: ({ n }) => `${n} 个网站`,
+    confirmClearTitle: '清除所有图标',
+    confirmClearBody: ({ n, mod }) => `要清除全部 10 页共 ${n} 个图标吗？可按 ${mod} 撤销。`,
+    confirmRestoreTitle: '恢复备份',
+    confirmRestoreBody: ({ n }) => `要用备份中的 ${n} 个图标替换当前所有图标吗？`,
+    wDetecting: '检测中…', wUnavailable: '无法获取', wSetLocation: '设置地点', wmoUnknown: '未知',
+    wmoClear: '晴', wmoMostlyClear: '大致晴朗', wmoPartlyCloudy: '局部多云', wmoOvercast: '阴天',
+    wmoFog: '雾', wmoIcyFog: '冻雾', wmoDrizzle: '毛毛雨', wmoHeavyDrizzle: '强毛毛雨',
+    wmoLightRain: '小雨', wmoRain: '雨', wmoHeavyRain: '大雨', wmoLightSnow: '小雪',
+    wmoSnow: '雪', wmoHeavySnow: '大雪', wmoSnowGrains: '米雪', wmoShowers: '阵雨',
+    wmoRainShowers: '阵雨', wmoHeavyShowers: '强阵雨', wmoSnowShowers: '阵雪',
+    wmoHeavySnowShowers: '强阵雪', wmoThunderstorm: '雷暴',
+    locSearching: '搜索中…', locNoResults: '无结果', locSearchFailed: '搜索失败',
+    srNoResults: ({ q }) => `未找到“${q}”的结果`,
+    pageNamePh: ({ k }) => `第 ${k} 页名称（留空则仅显示数字）`,
+    tutWelcomeT: '欢迎使用 Foyer',
+    tutWelcomeB: '你的网站，整齐排列在简洁的主屏网格中。这是快速导览——或点“跳过”直接开始。提示：按 Enter 可逐步前进。',
+    tutAddT: '添加网站', tutAddB: '点 + 即可添加任何网站。粘贴网址、命名，它就会加入网格。',
+    tutOpenT: '打开或管理', tutOpenB: '点图标即可打开网站。右键可重命名、编辑或删除。',
+    tutDragT: '拖动整理', tutDragB: '拖动图标可重新排列。把一个拖到另一个上可创建文件夹分组。在空白处拖动可一次选取多个图标。',
+    tutPagesT: '十个页面', tutPagesB: '你的网格共有 10 页。点数字或按键盘 1–9、0 即可切换。把图标（或多选）拖到数字上，即可移到该页。',
+    tutNameT: '为页面命名', tutNameB: '右键点数字即可为该页命名，例如“工作”或“游戏”。数字始终保留，所以键盘切换不受影响。',
+    tutQuickT: '快速操作', tutQuickB: '把光标移到各图标上即可看到功能：同步书签栏、导入所有书签，或清除所有图标（会先确认以保安全）。',
+    tutThemeT: '更改外观', tutThemeB: '挑选预设主题或自定义颜色，会自动保存。',
+    tutSettingsT: '设置', tutSettingsB: '导入书签、导出备份、设置图标大小、自定义快捷键。随时可从“设置 → 帮助”重新教程。',
+  },
+  ja: {
+    cancel: 'キャンセル', add: '追加', save: '保存', restore: '復元', apply: '適用',
+    import: 'インポート', selectAll: 'すべて選択', deselectAll: '選択解除',
+    skip: 'スキップ', next: '次へ →', done: '完了 ✓', changePhoto: '写真を変更', autoDetect: '自動検出',
+    addSite: 'サイトを追加', editSite: 'サイトを編集', rename: '名前を変更', importBookmarks: 'ブックマークをインポート',
+    weatherLocation: '天気の地域', adjustBackground: '背景を調整', settings: '設定',
+    url: 'URL', name: '名前', city: '都市', zoom: 'ズーム',
+    phName: 'マイサイト', phCity: '都市または国を検索…', phSearch: 'サイトを検索…', phSearchEngine: 'Google で検索…',
+    tabGeneral: '一般', tabShortcuts: 'ショートカット',
+    secLanguage: '言語', secTileSize: 'アイコンサイズ', sizeSmall: '小', sizeLarge: '大',
+    secWindowStyle: 'ウィンドウスタイル', styleLight: 'ライト', styleDark: 'ダーク',
+    secTheme: 'テーマ', secData: 'データ', secHelp: 'ヘルプ',
+    syncBar: 'ブックマークバーを同期', syncAll: 'すべてのブックマークを同期', importBm: 'ブックマークをインポート',
+    importBackup: 'バックアップをインポート', exportBm: 'ブックマークをエクスポート', exportBackup: 'バックアップをエクスポート',
+    clearAll: 'すべてのアイコンを消去', clearAllOk: 'すべて消去', restartTutorial: 'チュートリアルを再開', rateFoyer: 'Foyer を評価',
+    scAddTile: 'アイコンを追加', scSearch: '検索', scNavigate: 'アイコンを移動', scOpenGroup: 'グループを開く／入る',
+    scDeleteTile: 'アイコンを削除', scClose: '閉じる／戻る', scUndo: '元に戻す',
+    scHint: 'ハイライトされたショートカットをクリックして再設定。Esc でキャンセル。',
+    scConflict: ({ key, name }) => `「${key}」は「${name}」で既に使われています`,
+    ctxRename: '名前を変更', ctxDelete: '削除', ctxEdit: '編集', ctxRefreshIcon: 'アイコンを更新',
+    ctxSetCover: 'カバーに設定', ctxRemoveCover: 'カバーを解除',
+    ctxGroupN: ({ n }) => `${n} 個をグループ化`, ctxDeleteN: ({ n }) => `${n} 個のアイコンを削除`,
+    ttSettings: '設定', ttSearchSites: 'サイトを検索', ttHistory: '閲覧履歴',
+    ttDownloads: 'ダウンロード', ttChangeTheme: 'テーマを変更', ttToggleUnit: '°C／°F を切替',
+    ttChangeLocation: '地域を変更', ttAddSite: 'サイトを追加', ttCloseGroup: 'グループを閉じる',
+    ttCloseSettings: '設定を閉じる',
+    swPink: 'ピンク', swBlue: 'ブルー', swYellow: 'イエロー', swDark: 'ダーク', swCream: 'クリーム',
+    swCustom: 'カスタムカラー', swBgImage: '背景画像',
+    rateTitle: 'Foyer は気に入りましたか？⭐', rateBody: 'Chrome ウェブストアでの評価が、ほかの人の発見につながります。',
+    rateNow: '★ Foyer を評価', rateLater: 'あとで', rateNo: '結構です',
+    nSelected: ({ n }) => `${n} 件選択中`, importLoading: '読み込み中…',
+    importCantRead: 'ブックマークを読み取れませんでした。', importNone: 'ブックマークが見つかりません。',
+    bmAdded: '追加済み', bmGroup: '→ グループ',
+    importBtnN: ({ n }) => `${n} 件のサイトをインポート`,
+    bmNoAccess: 'ブックマーク API を利用できません。', bmReload: '拡張機能を再読み込み',
+    undoSuffix: ({ mod }) => ` · ${mod} で元に戻す`,
+    toastRestored: '復元しました', toastRestoredMore: ({ n }) => `復元しました · あと ${n} 件`,
+    movedNToPage: ({ n, page }) => `${n} 個のアイコンを ${page} ページへ移動しました`,
+    addedToGroup: 'グループに追加しました', grouped: 'グループ化しました',
+    groupedN: ({ n }) => `${n} 個のアイコンをグループ化しました`, deleted: '削除しました',
+    nDeleted: ({ n }) => `${n} 件削除しました`, clearedAll: 'すべてのアイコンを消去しました',
+    imported: ({ parts }) => `${parts}をインポートしました`, synced: ({ parts }) => `${parts}を同期しました`,
+    bmApiNa: 'ブックマーク API を利用できません', bmBarEmpty: 'ブックマークバーは空です',
+    bmAllBarAdded: 'ブックマークバーの項目はすべて追加済みです', bmCantReadToast: 'ブックマークを読み取れませんでした',
+    bmAllAdded: 'すべてのブックマークは追加済みです', backupDownloaded: 'バックアップをダウンロードしました',
+    bmHtmlDownloaded: 'ブックマーク HTML をダウンロードしました', invalidBackup: 'バックアップファイルが無効です',
+    restoredNTiles: ({ n }) => `${n} 個のアイコンを復元しました`,
+    partGroups: ({ n }) => `${n} グループ`, partSites: ({ n }) => `${n} サイト`,
+    confirmClearTitle: 'すべてのアイコンを消去',
+    confirmClearBody: ({ n, mod }) => `全 10 ページの ${n} 個のアイコンをすべて消去しますか？${mod} で元に戻せます。`,
+    confirmRestoreTitle: 'バックアップを復元',
+    confirmRestoreBody: ({ n }) => `現在のすべてのアイコンを、バックアップの ${n} 個で置き換えますか？`,
+    wDetecting: '検出中…', wUnavailable: '取得不可', wSetLocation: '地域を設定', wmoUnknown: '不明',
+    wmoClear: '快晴', wmoMostlyClear: 'おおむね晴れ', wmoPartlyCloudy: '一部曇り', wmoOvercast: '曇り',
+    wmoFog: '霧', wmoIcyFog: '着氷性の霧', wmoDrizzle: '霧雨', wmoHeavyDrizzle: '強い霧雨',
+    wmoLightRain: '小雨', wmoRain: '雨', wmoHeavyRain: '大雨', wmoLightSnow: '小雪',
+    wmoSnow: '雪', wmoHeavySnow: '大雪', wmoSnowGrains: '霧雪', wmoShowers: 'にわか雨',
+    wmoRainShowers: 'にわか雨', wmoHeavyShowers: '強いにわか雨', wmoSnowShowers: 'にわか雪',
+    wmoHeavySnowShowers: '強いにわか雪', wmoThunderstorm: '雷雨',
+    locSearching: '検索中…', locNoResults: '結果なし', locSearchFailed: '検索に失敗しました',
+    srNoResults: ({ q }) => `「${q}」の結果はありません`,
+    pageNamePh: ({ k }) => `${k} ページの名前（空欄で数字のみ）`,
+    tutWelcomeT: 'Foyer へようこそ',
+    tutWelcomeB: 'あなたのサイトを、すっきりしたホーム画面のグリッドに整理します。簡単なツアーです。「スキップ」ですぐ始められます。ヒント：Enter で次へ進めます。',
+    tutAddT: 'サイトを追加', tutAddB: '+ を押せばどんなサイトも追加できます。URL を貼り付けて名前を付けると、グリッドに加わります。',
+    tutOpenT: '開く・管理', tutOpenB: 'アイコンをクリックでサイトを開きます。右クリックで名前変更・編集・削除ができます。',
+    tutDragT: 'ドラッグで整理', tutDragB: 'アイコンをドラッグで並べ替え。重ねるとフォルダグループを作成。空白部分をドラッグすると複数のアイコンをまとめて選択できます。',
+    tutPagesT: '10 ページ', tutPagesB: 'グリッドは 10 ページあります。数字をクリックするかキーボードの 1–9、0 で切り替え。アイコン（複数選択も可）を数字へドラッグするとそのページへ移動します。',
+    tutNameT: 'ページに名前を', tutNameB: '数字を右クリックすると、そのページに「仕事」や「ゲーム」などの名前を付けられます。数字は常に残るので、キーボード切替は変わりません。',
+    tutQuickT: 'クイック操作', tutQuickB: '各アイコンにカーソルを合わせると機能がわかります：ブックマークバーを同期、すべてのブックマークをインポート、すべてのアイコンを消去（確認があり安全です）。',
+    tutThemeT: '見た目を変更', tutThemeB: 'プリセットのテーマを選ぶか、好きな色を指定できます。自動的に保存されます。',
+    tutSettingsT: '設定', tutSettingsB: 'ブックマークのインポート、バックアップのエクスポート、アイコンサイズの設定、ショートカットのカスタマイズ。「設定 → ヘルプ」からいつでもチュートリアルを再開できます。',
+  },
+};
+
+function t(key, params = {}) {
+  const dict = I18N[_lang] || I18N.en;
+  let v = dict[key];
+  if (v == null) v = I18N.en[key];
+  if (v == null) return key;
+  if (typeof v === 'function') return v(params);
+  return v.replace(/\{(\w+)\}/g, (_, k) => (params[k] ?? ''));
+}
+
+function _undoSuffix() { return t('undoSuffix', { mod: _mod() }); }
+
+function _applyStaticI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-label]').forEach(el => {
+    // Keep any leading icon (e.g. <svg>); replace only the trailing text node
+    let node = null;
+    el.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) node = n; });
+    if (node) node.nodeValue = ` ${t(el.dataset.i18nLabel)}`;
+    else el.appendChild(document.createTextNode(` ${t(el.dataset.i18nLabel)}`));
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  document.querySelectorAll('[data-i18n-tooltip]').forEach(el => {
+    el.setAttribute('data-tooltip', t(el.dataset.i18nTooltip));
+    el.setAttribute('aria-label', t(el.dataset.i18nTooltip));
+  });
+}
+
+function applyLanguage(lang, { save: persist = true } = {}) {
+  _lang = (I18N[lang]) ? lang : 'en';
+  document.documentElement.lang = _lang;
+  _applyStaticI18n();
+  // Refresh dynamic UI that may already be on screen
+  if (_weatherData) _renderWeather();
+  if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) _renderTutStep();
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === _lang));
+  if (persist) chrome.storage.local.set({ lang: _lang });
+}
+
+async function loadLang() {
+  const r = await _storageGet(['lang']);
+  applyLanguage(r.lang || 'en', { save: false });
+}
+
 function _snapshotForUndo() {
   _pages[_currentPage] = items;
   _undoStack.push({ page: _currentPage, pages: JSON.parse(JSON.stringify(_pages)) });
@@ -144,7 +511,7 @@ function doUndo() {
   save();
   render();
   _updatePageBar();
-  _showToast(_undoStack.length ? `Restored · ${_undoStack.length} more` : 'Restored');
+  _showToast(_undoStack.length ? t('toastRestoredMore', { n: _undoStack.length }) : t('toastRestored'));
 }
 
 function _showToast(msg) {
@@ -213,30 +580,30 @@ function sampleItems() {
 // ─── Weather ──────────────────────────────────────────────────────────────────
 
 const WMO = {
-  0:  ['☀️',  'Clear'],
-  1:  ['🌤️', 'Mostly clear'],
-  2:  ['⛅',  'Partly cloudy'],
-  3:  ['☁️',  'Overcast'],
-  45: ['🌫️', 'Fog'],
-  48: ['🌫️', 'Icy fog'],
-  51: ['🌦️', 'Drizzle'],
-  53: ['🌦️', 'Drizzle'],
-  55: ['🌧️', 'Heavy drizzle'],
-  61: ['🌧️', 'Light rain'],
-  63: ['🌧️', 'Rain'],
-  65: ['🌧️', 'Heavy rain'],
-  71: ['❄️',  'Light snow'],
-  73: ['❄️',  'Snow'],
-  75: ['❄️',  'Heavy snow'],
-  77: ['🌨️', 'Snow grains'],
-  80: ['🌦️', 'Showers'],
-  81: ['🌧️', 'Rain showers'],
-  82: ['🌧️', 'Heavy showers'],
-  85: ['🌨️', 'Snow showers'],
-  86: ['🌨️', 'Heavy snow showers'],
-  95: ['⛈️',  'Thunderstorm'],
-  96: ['⛈️',  'Thunderstorm'],
-  99: ['⛈️',  'Thunderstorm'],
+  0:  ['☀️',  'wmoClear'],
+  1:  ['🌤️', 'wmoMostlyClear'],
+  2:  ['⛅',  'wmoPartlyCloudy'],
+  3:  ['☁️',  'wmoOvercast'],
+  45: ['🌫️', 'wmoFog'],
+  48: ['🌫️', 'wmoIcyFog'],
+  51: ['🌦️', 'wmoDrizzle'],
+  53: ['🌦️', 'wmoDrizzle'],
+  55: ['🌧️', 'wmoHeavyDrizzle'],
+  61: ['🌧️', 'wmoLightRain'],
+  63: ['🌧️', 'wmoRain'],
+  65: ['🌧️', 'wmoHeavyRain'],
+  71: ['❄️',  'wmoLightSnow'],
+  73: ['❄️',  'wmoSnow'],
+  75: ['❄️',  'wmoHeavySnow'],
+  77: ['🌨️', 'wmoSnowGrains'],
+  80: ['🌦️', 'wmoShowers'],
+  81: ['🌧️', 'wmoRainShowers'],
+  82: ['🌧️', 'wmoHeavyShowers'],
+  85: ['🌨️', 'wmoSnowShowers'],
+  86: ['🌨️', 'wmoHeavySnowShowers'],
+  95: ['⛈️',  'wmoThunderstorm'],
+  96: ['⛈️',  'wmoThunderstorm'],
+  99: ['⛈️',  'wmoThunderstorm'],
 };
 
 let _weatherData = null;   // { tempC, code, city, country, lat, lon, fetchedAt }
@@ -251,7 +618,8 @@ function _showWeatherWidget(show) {
 function _renderWeather() {
   if (!_weatherData) return;
   const { tempC, code, city, country } = _weatherData;
-  const [emoji, desc] = WMO[code] ?? ['🌡️', 'Unknown'];
+  const [emoji, descKey] = WMO[code] ?? ['🌡️', 'wmoUnknown'];
+  const desc = t(descKey);
   const temp = _weatherUnit === 'F'
     ? Math.round(tempC * 9 / 5 + 32) + '°F'
     : Math.round(tempC) + '°C';
@@ -309,7 +677,7 @@ async function _applyLocation(lat, lon, city, country) {
     });
     _renderWeather();
   } catch {
-    document.getElementById('weather-city').textContent = 'Unavailable';
+    document.getElementById('weather-city').textContent = t('wUnavailable');
   }
 }
 
@@ -341,7 +709,7 @@ async function _loadWeather() {
   document.getElementById('weather-temp').textContent = '--';
   document.getElementById('weather-condition').textContent = '';
   document.querySelector('.weather-dot').style.display = 'none';
-  document.getElementById('weather-city').textContent = 'Set location';
+  document.getElementById('weather-city').textContent = t('wSetLocation');
   _showWeatherWidget(true);
 }
 
@@ -365,14 +733,14 @@ let _locationSearchTimer = null;
 async function _doLocationSearch(query) {
   const resultsEl = document.getElementById('location-results');
   if (!query.trim()) { resultsEl.innerHTML = ''; return; }
-  resultsEl.innerHTML = '<div class="loc-status">Searching…</div>';
+  resultsEl.innerHTML = `<div class="loc-status">${t('locSearching')}</div>`;
   try {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=7&language=en&format=json`;
     const res = await fetch(url);
     const j = await res.json();
     const list = j.results ?? [];
     if (!list.length) {
-      resultsEl.innerHTML = '<div class="loc-status">No results</div>';
+      resultsEl.innerHTML = `<div class="loc-status">${t('locNoResults')}</div>`;
       return;
     }
     resultsEl.innerHTML = list.map((r, i) =>
@@ -388,7 +756,7 @@ async function _doLocationSearch(query) {
       });
     });
   } catch {
-    resultsEl.innerHTML = '<div class="loc-status">Search failed</div>';
+    resultsEl.innerHTML = `<div class="loc-status">${t('locSearchFailed')}</div>`;
   }
 }
 
@@ -1010,7 +1378,7 @@ function _commitDrag() {
     render();
     _updatePageBar();
     const n = moving.length;
-    _showToast(`Moved ${n} tile${n !== 1 ? 's' : ''} to page ${dropPage} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    _showToast(t('movedNToPage', { n, page: dropPage }) + _undoSuffix());
     _suppressClick = true;
     requestAnimationFrame(() => { _suppressClick = false; });
     return;
@@ -1070,7 +1438,7 @@ function doGroup(srcId, tgtId) {
       items = items.filter(i => i.id !== srcId);
     }
     save();
-    _showToast(`Added to group · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    _showToast(t('addedToGroup') + _undoSuffix());
   } else if (src.type === 'site' && tgt.type === 'site') {
     // Create a new group from two sites
     const newGroup = {
@@ -1084,13 +1452,13 @@ function doGroup(srcId, tgtId) {
     items.splice(tgtIdx, 1, newGroup);
     items = items.filter(i => i.id !== srcId);
     save();
-    _showToast(`Grouped · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    _showToast(t('grouped') + _undoSuffix());
   } else if (src.type === 'group' && tgt.type === 'site') {
     src.items = src.items ?? [];
     src.items.push({ id: uid(), name: tgt.name, url: tgt.url });
     items = items.filter(i => i.id !== tgtId);
     save();
-    _showToast(`Added to group · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    _showToast(t('addedToGroup') + _undoSuffix());
   }
 }
 
@@ -1596,8 +1964,8 @@ function showGroupSiteCtx(e, groupId, siteId) {
   const isCover = group.cover === siteId;
   const menu = document.getElementById('context-menu');
   menu.innerHTML = `
-    <button class="ctx-item" data-action="cover">${isCover ? 'Remove cover' : 'Set as cover'}</button>
-    <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+    <button class="ctx-item" data-action="cover">${isCover ? t('ctxRemoveCover') : t('ctxSetCover')}</button>
+    <button class="ctx-item ctx-danger" data-action="delete">${t('ctxDelete')}</button>
   `;
   menu.querySelector('[data-action="cover"]').addEventListener('click', () => {
     if (isCover) delete group.cover; else group.cover = siteId;
@@ -1613,7 +1981,7 @@ function showGroupSiteCtx(e, groupId, siteId) {
     render();
     closeCtxMenu();
     closeGroup();
-    _showToast(`Deleted · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    _showToast(t('deleted') + _undoSuffix());
   });
   positionAndShow(menu, e.clientX, e.clientY);
 }
@@ -1659,7 +2027,7 @@ function _groupSelectedTiles(anchorId) {
   _clearSel();
   closeCtxMenu();
   save().then(render);
-  _showToast(`Grouped ${selected.length} tiles · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+  _showToast(t('groupedN', { n: selected.length }) + _undoSuffix());
 }
 
 function showCtxMenu(x, y, id) {
@@ -1669,8 +2037,8 @@ function showCtxMenu(x, y, id) {
   if (_selectedIds.size > 1 && _selectedIds.has(id)) {
     const count = _selectedIds.size;
     menu.innerHTML = `
-      <button class="ctx-item" data-action="group-sel">Group ${count} tiles</button>
-      <button class="ctx-item ctx-danger" data-action="delete-sel">Delete ${count} tiles</button>
+      <button class="ctx-item" data-action="group-sel">${t('ctxGroupN', { n: count })}</button>
+      <button class="ctx-item ctx-danger" data-action="delete-sel">${t('ctxDeleteN', { n: count })}</button>
     `;
     menu.querySelector('[data-action="group-sel"]').addEventListener('click', () => {
       _groupSelectedTiles(id);
@@ -1681,7 +2049,7 @@ function showCtxMenu(x, y, id) {
       _clearSel();
       save().then(render);
       closeCtxMenu();
-      _showToast(`${count} deleted · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+      _showToast(t('nDeleted', { n: count }) + _undoSuffix());
     });
     positionAndShow(menu, x, y);
     return;
@@ -1690,17 +2058,17 @@ function showCtxMenu(x, y, id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   const editBtn = item.type === 'site'
-    ? `<button class="ctx-item" data-action="edit">Edit</button>` : '';
+    ? `<button class="ctx-item" data-action="edit">${t('ctxEdit')}</button>` : '';
   const refreshIconBtn = item.type === 'site'
-    ? `<button class="ctx-item" data-action="refresh-icon">Refresh icon</button>` : '';
+    ? `<button class="ctx-item" data-action="refresh-icon">${t('ctxRefreshIcon')}</button>` : '';
   const removeCoverBtn = (item.type === 'group' && item.cover)
-    ? `<button class="ctx-item" data-action="remove-cover">Remove cover</button>` : '';
+    ? `<button class="ctx-item" data-action="remove-cover">${t('ctxRemoveCover')}</button>` : '';
   menu.innerHTML = `
-    <button class="ctx-item" data-action="rename">Rename</button>
+    <button class="ctx-item" data-action="rename">${t('ctxRename')}</button>
     ${editBtn}
     ${refreshIconBtn}
     ${removeCoverBtn}
-    <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+    <button class="ctx-item ctx-danger" data-action="delete">${t('ctxDelete')}</button>
   `;
   menu.querySelector('[data-action="rename"]').addEventListener('click', () => {
     closeCtxMenu();
@@ -1731,7 +2099,7 @@ function showCtxMenu(x, y, id) {
     items = items.filter(i => i.id !== id);
     save().then(render);
     closeCtxMenu();
-    _showToast(`Deleted · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    _showToast(t('deleted') + _undoSuffix());
   });
   positionAndShow(menu, x, y);
 }
@@ -2313,15 +2681,15 @@ function closeBgAdjust() {
 // ─── Tutorial ────────────────────────────────────────────────────────────────
 
 const TUT_STEPS = [
-  { sel: null,           title: 'Welcome to Foyer',  body: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in. Tip: press Enter to step through." },
-  { sel: '#add-btn',     title: 'Add a website',     body: 'Tap + to add any site. Paste a URL, give it a name, and it joins the grid.' },
-  { sel: '.tile',        title: 'Open or manage',    body: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.' },
-  { sel: '#grid',        title: 'Drag to organise',  body: 'Drag icons to rearrange. Drop one onto another to create a folder group. Drag on empty space to select several tiles at once.' },
-  { sel: '#page-bar',    title: 'Ten pages',         body: 'Your grid has 10 pages. Click a number or press 1–9, 0 on your keyboard to switch. Drag any tile — or a multi-selection — onto a number to move it to that page.' },
-  { sel: '#page-bar',    title: 'Name your pages',   body: 'Right-click a number to give that page a name, like "Work" or "Games". The number always stays, so keyboard switching never changes.' },
-  { sel: '#quick-btns',  title: 'Quick actions',     body: 'Hover each icon to see what it does: sync your bookmarks bar, import all bookmarks, or clear every tile (a confirmation keeps you safe).' },
-  { sel: '#theme-btn',   title: 'Change the look',   body: 'Pick a preset theme or dial in a custom colour. Saves automatically.' },
-  { sel: '#config-btn',  title: 'Settings',          body: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.' },
+  { sel: null,          key: 'tutWelcome' },
+  { sel: '#add-btn',    key: 'tutAdd' },
+  { sel: '.tile',       key: 'tutOpen' },
+  { sel: '#grid',       key: 'tutDrag' },
+  { sel: '#page-bar',   key: 'tutPages' },
+  { sel: '#page-bar',   key: 'tutName' },
+  { sel: '#quick-btns', key: 'tutQuick' },
+  { sel: '#theme-btn',  key: 'tutTheme' },
+  { sel: '#config-btn', key: 'tutSettings' },
 ];
 
 let _tutStep = 0;
@@ -2352,9 +2720,9 @@ function _renderTutStep() {
   const card   = document.getElementById('tutorial-card');
   const isLast = _tutStep === TUT_STEPS.length - 1;
 
-  document.getElementById('tutorial-title').textContent = step.title;
-  document.getElementById('tutorial-body').textContent  = step.body;
-  document.getElementById('tutorial-next').textContent  = isLast ? 'Done ✓' : 'Next →';
+  document.getElementById('tutorial-title').textContent = t(step.key + 'T');
+  document.getElementById('tutorial-body').textContent  = t(step.key + 'B');
+  document.getElementById('tutorial-next').textContent  = isLast ? t('done') : t('next');
   document.getElementById('tutorial-dots').innerHTML    = TUT_STEPS.map((_, i) =>
     `<span class="t-dot${i === _tutStep ? ' on' : ''}"></span>`).join('');
 
@@ -2474,15 +2842,15 @@ async function openImportModal() {
   const btn   = document.getElementById('confirm-import');
 
   modal.classList.remove('hidden');
-  list.innerHTML = '<div class="bm-loading">Loading…</div>';
+  list.innerHTML = `<div class="bm-loading">${t('importLoading')}</div>`;
   btn.disabled = true;
-  btn.textContent = 'Import';
-  document.getElementById('import-sel-count').textContent = '0 selected';
+  btn.textContent = t('import');
+  document.getElementById('import-sel-count').textContent = t('nSelected', { n: 0 });
 
   if (!chrome?.bookmarks) {
     list.innerHTML = `<div class="bm-empty" id="bm-no-access">
-      書籤 API 不可用。<br>
-      <button id="bm-reload-ext">重新載入擴充功能</button>
+      ${t('bmNoAccess')}<br>
+      <button id="bm-reload-ext">${t('bmReload')}</button>
     </div>`;
     document.getElementById('bm-reload-ext').addEventListener('click', () => {
       chrome?.runtime?.reload?.();
@@ -2521,7 +2889,7 @@ async function openImportModal() {
 
     _renderImportList(sections);
   } catch {
-    list.innerHTML = '<div class="bm-empty">Could not read bookmarks.</div>';
+    list.innerHTML = `<div class="bm-empty">${t('importCantRead')}</div>`;
   }
 }
 
@@ -2535,7 +2903,7 @@ function _bmItemHtml(bm) {
       <span class="bm-name">${escHtml(bm.name)}</span>
       <span class="bm-url">${escHtml(bm.hostname)}</span>
     </div>
-    ${bm.exists ? '<span class="bm-exists-badge">Added</span>' : ''}
+    ${bm.exists ? `<span class="bm-exists-badge">${t('bmAdded')}</span>` : ''}
   </label>`;
 }
 
@@ -2543,7 +2911,7 @@ function _renderImportList(sections) {
   const list = document.getElementById('import-list');
 
   if (!sections.length) {
-    list.innerHTML = '<div class="bm-empty">No bookmarks found.</div>';
+    list.innerHTML = `<div class="bm-empty">${t('importNone')}</div>`;
     return;
   }
 
@@ -2560,7 +2928,7 @@ function _renderImportList(sections) {
             <path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/>
           </svg>
           <span class="bm-folder-label">${escHtml(folder.name)}</span>
-          <span class="bm-group-badge">→ Group</span>
+          <span class="bm-group-badge">${t('bmGroup')}</span>
         </div>
         <div class="bm-folder-items">${folder.bookmarks.map(_bmItemHtml).join('')}</div>
       </div>`;
@@ -2603,9 +2971,9 @@ function _renderImportList(sections) {
 function _updateImportCount() {
   const n   = document.querySelectorAll('.bm-check:checked').length;
   const btn = document.getElementById('confirm-import');
-  document.getElementById('import-sel-count').textContent = `${n} selected`;
+  document.getElementById('import-sel-count').textContent = t('nSelected', { n });
   btn.disabled   = n === 0;
-  btn.textContent = n > 0 ? `Import ${n} site${n > 1 ? 's' : ''}` : 'Import';
+  btn.textContent = n > 0 ? t('importBtnN', { n }) : t('import');
 }
 
 function _bmSelectAll(checked) {
@@ -2649,9 +3017,9 @@ function doImportBookmarks() {
   closeImportModal();
 
   const parts = [];
-  if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
-  if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
-  _showToast(`Imported ${parts.join(' + ')}`);
+  if (groupCount > 0) parts.push(t('partGroups', { n: groupCount }));
+  if (siteCount  > 0) parts.push(t('partSites', { n: siteCount }));
+  _showToast(t('imported', { parts: parts.join(' + ') }));
 }
 
 function closeImportModal() {
@@ -2660,7 +3028,7 @@ function closeImportModal() {
 
 async function importBookmarksBar() {
   if (!chrome?.bookmarks) {
-    _showToast('Bookmarks API not available');
+    _showToast(t('bmApiNa'));
     return;
   }
   try {
@@ -2669,7 +3037,7 @@ async function importBookmarksBar() {
     // Bookmarks bar is always id "1" in Chrome
     const barNode = (root.children ?? []).find(n => n.id === '1') ?? root.children?.[0];
     if (!barNode?.children?.length) {
-      _showToast('Bookmarks bar is empty');
+      _showToast(t('bmBarEmpty'));
       return;
     }
 
@@ -2705,7 +3073,7 @@ async function importBookmarksBar() {
     }
 
     if (!newItems.length) {
-      _showToast('All bookmarks bar items already added');
+      _showToast(t('bmAllBarAdded'));
       return;
     }
 
@@ -2716,17 +3084,17 @@ async function importBookmarksBar() {
     save().then(render);
 
     const parts = [];
-    if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
-    if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
-    _showToast(`Synced ${parts.join(' + ')} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    if (groupCount > 0) parts.push(t('partGroups', { n: groupCount }));
+    if (siteCount  > 0) parts.push(t('partSites', { n: siteCount }));
+    _showToast(t('synced', { parts: parts.join(' + ') }) + _undoSuffix());
   } catch {
-    _showToast('Could not read bookmarks');
+    _showToast(t('bmCantReadToast'));
   }
 }
 
 async function syncAllBookmarks() {
   if (!chrome?.bookmarks) {
-    _showToast('Bookmarks API not available');
+    _showToast(t('bmApiNa'));
     return;
   }
   try {
@@ -2768,7 +3136,7 @@ async function syncAllBookmarks() {
     }
 
     if (!newItems.length) {
-      _showToast('All bookmarks already added');
+      _showToast(t('bmAllAdded'));
       return;
     }
 
@@ -2777,11 +3145,11 @@ async function syncAllBookmarks() {
     save().then(render);
 
     const parts = [];
-    if (groupCount > 0) parts.push(`${groupCount} group${groupCount > 1 ? 's' : ''}`);
-    if (siteCount  > 0) parts.push(`${siteCount} site${siteCount > 1 ? 's' : ''}`);
-    _showToast(`Synced ${parts.join(' + ')} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+    if (groupCount > 0) parts.push(t('partGroups', { n: groupCount }));
+    if (siteCount  > 0) parts.push(t('partSites', { n: siteCount }));
+    _showToast(t('synced', { parts: parts.join(' + ') }) + _undoSuffix());
   } catch {
-    _showToast('Could not read bookmarks');
+    _showToast(t('bmCantReadToast'));
   }
 }
 
@@ -2823,7 +3191,7 @@ async function doExportJson() {
   a.download = `foyer-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  _showToast('Backup downloaded');
+  _showToast(t('backupDownloaded'));
 }
 
 function _showConfirm(title, body, labelOk, onOk) {
@@ -2849,9 +3217,9 @@ function _confirmClearAll() {
   _pages[_currentPage] = items;
   const total = Object.values(_pages).reduce((s, a) => s + a.length, 0);
   _showConfirm(
-    'Clear All Tiles',
-    `Remove all ${total} tile${total !== 1 ? 's' : ''} across all 10 pages? You can undo with ${_isMac ? '⌘Z' : 'Ctrl+Z'}.`,
-    'Clear all',
+    t('confirmClearTitle'),
+    t('confirmClearBody', { n: total, mod: _mod() }),
+    t('clearAllOk'),
     () => {
       _snapshotForUndo();
       PAGE_KEYS.forEach(k => { _pages[k] = []; });
@@ -2859,7 +3227,7 @@ function _confirmClearAll() {
       save();
       render();
       _updatePageBar();
-      _showToast(`Cleared all tiles · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+      _showToast(t('clearedAll') + _undoSuffix());
     }
   );
 }
@@ -2904,7 +3272,7 @@ ${inner}    </DL><p>
   a.download = `foyer-bookmarks-${new Date().toISOString().slice(0,10)}.html`;
   a.click();
   URL.revokeObjectURL(url);
-  _showToast('Bookmarks HTML downloaded');
+  _showToast(t('bmHtmlDownloaded'));
 }
 
 function doImportJson(file) {
@@ -2925,15 +3293,15 @@ function doImportJson(file) {
         throw new Error();
       }
     } catch {
-      _showToast('Invalid backup file');
+      _showToast(t('invalidBackup'));
       return;
     }
 
     const totalTiles = Object.values(importedPages).reduce((s, arr) => s + arr.length, 0);
     _showConfirm(
-      'Restore Backup',
-      `Replace all current tiles with ${totalTiles} tile${totalTiles !== 1 ? 's' : ''} from the backup?`,
-      'Restore',
+      t('confirmRestoreTitle'),
+      t('confirmRestoreBody', { n: totalTiles }),
+      t('restore'),
       () => {
         _snapshotForUndo();
         _pages = importedPages;
@@ -2947,7 +3315,7 @@ function doImportJson(file) {
           else if (data.theme === 'custom' && data.customColor) { applyCustomColor(data.customColor); saveCustomColor(data.customColor); }
           render();
           _updatePageBar();
-          _showToast(`Restored ${totalTiles} tile${totalTiles !== 1 ? 's' : ''} · ${_isMac ? '⌘Z' : 'Ctrl+Z'} to undo`);
+          _showToast(t('restoredNTiles', { n: totalTiles }) + _undoSuffix());
         });
       }
     );
@@ -3022,7 +3390,7 @@ function _renderSearch(raw) {
   }
 
   if (!list.length) {
-    el.innerHTML = `<div class="sr-empty">No results for "${escHtml(raw.trim())}"</div>`;
+    el.innerHTML = `<div class="sr-empty">${escHtml(t('srNoResults', { q: raw.trim() }))}</div>`;
     _srActiveIdx = -1;
     return;
   }
@@ -3103,7 +3471,7 @@ function promptRenamePage(pageKey) {
   const input = document.getElementById('rename-input');
   input.value = _pageNames[pageKey] ?? '';
   input.setAttribute('maxlength', '20');
-  input.placeholder = `Page ${pageKey} name (empty = number only)`;
+  input.placeholder = t('pageNamePh', { k: pageKey });
   modal.classList.remove('hidden');
   input.focus();
   input.select();
@@ -3145,6 +3513,7 @@ function promptRenamePage(pageKey) {
   render();
   _updatePageBar();
   (async () => {
+    try { await loadLang();    } catch { applyLanguage('en', { save: false }); }
     try { await load(); } catch { PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; }); items = _pages[_currentPage]; }
     try { await loadTheme();   } catch { applyTheme('cream'); }
     try { await loadTileSize(); } catch { applyTileSize('m'); }
@@ -3153,6 +3522,7 @@ function promptRenamePage(pageKey) {
     try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
     render();
     _updatePageBar();
+    _loadWeather();   // after loadLang so weather text uses the chosen language
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -3177,8 +3547,10 @@ function promptRenamePage(pageKey) {
     });
   });
 
-  // Weather — fire and forget (updates UI async)
-  _loadWeather();
+  // Language buttons (Settings → General)
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+  });
 
   // Tutorial: wire buttons first, then check if first launch
   document.getElementById('tutorial-next').addEventListener('click', _tutNext);
@@ -3289,9 +3661,9 @@ function promptRenamePage(pageKey) {
         const key = e.key;
         const conflict = Object.entries(_shortcuts).find(([a, k]) => k === key && a !== _scListening.action);
         if (conflict) {
-          const names = { addTile: 'Add tile', search: 'Search' };
+          const names = { addTile: t('scAddTile'), search: t('scSearch') };
           document.getElementById('sc-conflict-msg').textContent =
-            `"${key}" is already used by "${names[conflict[0]] || conflict[0]}"`;
+            t('scConflict', { key, name: names[conflict[0]] || conflict[0] });
           return;
         }
         _shortcuts[_scListening.action] = key;
@@ -3375,7 +3747,7 @@ function promptRenamePage(pageKey) {
           const nt = np ? [...np.querySelectorAll('.group-site-tile')] : [];
           if (nt.length) _focusGroupTile(nt[Math.min(tileIdx, nt.length - 1)].dataset.siteId);
         }
-        _showToast('Deleted · ' + (_isMac ? '⌘' : 'Ctrl') + '+Z to undo');
+        _showToast(t('deleted') + _undoSuffix());
         return;
       }
     }
@@ -3423,7 +3795,7 @@ function promptRenamePage(pageKey) {
       render();
       const remaining = [...document.querySelectorAll('#grid .tile')];
       if (remaining.length) _focusTile(remaining[Math.min(idx, remaining.length - 1)].dataset.id);
-      _showToast('Deleted · ' + (_isMac ? '⌘' : 'Ctrl') + '+Z to undo');
+      _showToast(t('deleted') + _undoSuffix());
       return;
     }
 
@@ -3758,14 +4130,14 @@ function promptRenamePage(pageKey) {
   document.getElementById('location-use-gps').addEventListener('click', () => {
     closeLocationModal();
     if (!navigator.geolocation) return;
-    _weatherSetStatus('Detecting…');
+    _weatherSetStatus(t('wDetecting'));
     navigator.geolocation.getCurrentPosition(
       async pos => {
         const { latitude: lat, longitude: lon } = pos.coords;
         const geo = await _reverseGeocode(lat, lon);
         await _applyLocation(lat, lon, geo.city, geo.country);
       },
-      () => { document.getElementById('weather-city').textContent = 'Set location'; },
+      () => { document.getElementById('weather-city').textContent = t('wSetLocation'); },
       { timeout: 8000 }
     );
   });

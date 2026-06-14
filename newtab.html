@@ -36,9 +36,9 @@
     <div id="weather-widget" class="hidden">
       <div id="weather-main">
         <span id="weather-icon"></span>
-        <span id="weather-temp" title="Toggle °C / °F"></span>
+        <span id="weather-temp" title="Toggle °C / °F" data-i18n-title="ttToggleUnit"></span>
       </div>
-      <button id="weather-city-btn" title="Change location">
+      <button id="weather-city-btn" title="Change location" data-i18n-title="ttChangeLocation">
         <span id="weather-condition"></span>
         <span class="weather-dot">·</span>
         <span id="weather-city">Detecting…</span>
@@ -52,19 +52,19 @@
   <!-- Engine search bar (center top) -->
   <div id="engine-search-bar">
     <img id="engine-favicon" src="https://www.google.com/favicon.ico" width="16" height="16" alt="" draggable="false">
-    <input type="text" id="engine-input" placeholder="Search Google…" autocomplete="off" spellcheck="false" aria-label="Search Google">
+    <input type="text" id="engine-input" placeholder="Search Google…" autocomplete="off" spellcheck="false" aria-label="Search Google" data-i18n-ph="phSearchEngine" data-i18n-aria="phSearchEngine">
   </div>
 
   <!-- Marquee selection box -->
   <div id="sel-box"></div>
 
   <!-- Fixed Add Button -->
-  <button id="add-btn" aria-label="Add site">+</button>
+  <button id="add-btn" aria-label="Add site" data-i18n-aria="ttAddSite">+</button>
 
   <!-- Add Site Modal -->
   <div id="add-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <h2 class="modal-title">Add Site</h2>
+      <h2 class="modal-title" data-i18n="addSite">Add Site</h2>
 
       <!-- Live favicon preview -->
       <div id="favicon-preview-box">
@@ -73,16 +73,16 @@
       </div>
 
       <div class="input-group">
-        <label>URL</label>
+        <label data-i18n="url">URL</label>
         <input type="url" id="url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false">
       </div>
       <div class="input-group">
-        <label>Name</label>
-        <input type="text" id="name-input" placeholder="My Site" autocomplete="off">
+        <label data-i18n="name">Name</label>
+        <input type="text" id="name-input" placeholder="My Site" autocomplete="off" data-i18n-ph="phName">
       </div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="cancel-add">Cancel</button>
-        <button class="btn-confirm" id="confirm-add">Add</button>
+        <button class="btn-cancel" id="cancel-add" data-i18n="cancel">Cancel</button>
+        <button class="btn-confirm" id="confirm-add" data-i18n="add">Add</button>
       </div>
     </div>
   </div>
@@ -90,7 +90,7 @@
   <!-- Edit Site Modal -->
   <div id="edit-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <h2 class="modal-title">Edit Site</h2>
+      <h2 class="modal-title" data-i18n="editSite">Edit Site</h2>
 
       <div id="edit-favicon-preview-box">
         <img id="edit-favicon-preview-img" alt="" style="display:none" draggable="false">
@@ -98,16 +98,16 @@
       </div>
 
       <div class="input-group">
-        <label>URL</label>
+        <label data-i18n="url">URL</label>
         <input type="url" id="edit-url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false">
       </div>
       <div class="input-group">
-        <label>Name</label>
-        <input type="text" id="edit-name-input" placeholder="My Site" autocomplete="off">
+        <label data-i18n="name">Name</label>
+        <input type="text" id="edit-name-input" placeholder="My Site" autocomplete="off" data-i18n-ph="phName">
       </div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="cancel-edit">Cancel</button>
-        <button class="btn-confirm" id="confirm-edit">Save</button>
+        <button class="btn-cancel" id="cancel-edit" data-i18n="cancel">Cancel</button>
+        <button class="btn-confirm" id="confirm-edit" data-i18n="save">Save</button>
       </div>
     </div>
   </div>
@@ -115,14 +115,14 @@
   <!-- Rename Modal -->
   <div id="rename-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <h2 class="modal-title">Rename</h2>
+      <h2 class="modal-title" data-i18n="rename">Rename</h2>
       <div class="input-group">
-        <label>Name</label>
+        <label data-i18n="name">Name</label>
         <input type="text" id="rename-input" autocomplete="off">
       </div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="cancel-rename">Cancel</button>
-        <button class="btn-confirm" id="confirm-rename">Save</button>
+        <button class="btn-cancel" id="cancel-rename" data-i18n="cancel">Cancel</button>
+        <button class="btn-confirm" id="confirm-rename" data-i18n="save">Save</button>
       </div>
     </div>
   </div>
@@ -147,44 +147,44 @@
       </div>
       <!-- Page indicator dots -->
       <div id="group-dots"></div>
-      <button id="close-group" aria-label="Close group">✕</button>
+      <button id="close-group" aria-label="Close group" data-i18n-aria="ttCloseGroup">✕</button>
     </div>
   </div>
 
   <!-- Import Bookmarks Modal -->
   <div id="import-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card" id="import-card">
-      <h2 class="modal-title">Import Bookmarks</h2>
+      <h2 class="modal-title" data-i18n="importBookmarks">Import Bookmarks</h2>
       <div id="import-toolbar">
         <span id="import-sel-count">0 selected</span>
         <div id="import-toolbar-btns">
-          <button id="import-select-all">Select all</button>
-          <button id="import-deselect-all">Deselect all</button>
+          <button id="import-select-all" data-i18n="selectAll">Select all</button>
+          <button id="import-deselect-all" data-i18n="deselectAll">Deselect all</button>
         </div>
       </div>
       <div id="import-list"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="cancel-import">Cancel</button>
-        <button class="btn-confirm" id="confirm-import" disabled>Import</button>
+        <button class="btn-cancel" id="cancel-import" data-i18n="cancel">Cancel</button>
+        <button class="btn-confirm" id="confirm-import" disabled data-i18n="import">Import</button>
       </div>
     </div>
   </div>
 
   <!-- Context Menu -->
   <div id="context-menu" class="hidden" role="menu">
-    <button class="ctx-item" data-action="rename">Rename</button>
-    <button class="ctx-item ctx-danger" data-action="delete">Delete</button>
+    <button class="ctx-item" data-action="rename" data-i18n="ctxRename">Rename</button>
+    <button class="ctx-item ctx-danger" data-action="delete" data-i18n="ctxDelete">Delete</button>
   </div>
 
   <!-- Quick action pills -->
   <div id="quick-btns">
-    <button class="quick-pill quick-pill--blue" id="quick-sync-bar" data-tooltip="Sync bookmarks bar" aria-label="Sync bookmarks bar">
+    <button class="quick-pill quick-pill--blue" id="quick-sync-bar" data-tooltip="Sync bookmarks bar" aria-label="Sync bookmarks bar" data-i18n-tooltip="syncBar">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="3" rx="1"/><path d="M8 8h8v13l-4-3-4 3V8z"/></svg>
     </button>
-    <button class="quick-pill quick-pill--blue" id="quick-sync-all" data-tooltip="Sync all bookmarks" aria-label="Sync all bookmarks">
+    <button class="quick-pill quick-pill--blue" id="quick-sync-all" data-tooltip="Sync all bookmarks" aria-label="Sync all bookmarks" data-i18n-tooltip="syncAll">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     </button>
-    <button class="quick-pill quick-pill--red" id="quick-clear-all" data-tooltip="Clear all tiles" aria-label="Clear all tiles">
+    <button class="quick-pill quick-pill--red" id="quick-clear-all" data-tooltip="Clear all tiles" aria-label="Clear all tiles" data-i18n-tooltip="clearAll">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
     </button>
   </div>
@@ -192,7 +192,7 @@
   <!-- Theme Picker -->
   <div id="theme-picker">
     <!-- Config button (opens settings modal) -->
-    <button id="config-btn" class="top-btn" title="Settings" aria-label="Settings">
+    <button id="config-btn" class="top-btn" title="Settings" aria-label="Settings" data-i18n-title="ttSettings" data-i18n-aria="ttSettings">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -200,14 +200,14 @@
     </button>
 
     <!-- Search icon button -->
-    <button id="top-search-bar" class="top-btn" title="Search sites" aria-label="Search sites">
+    <button id="top-search-bar" class="top-btn" title="Search sites" aria-label="Search sites" data-i18n-title="ttSearchSites" data-i18n-aria="ttSearchSites">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
     </button>
 
     <!-- History button -->
-    <button id="history-btn" class="top-btn" title="Browser history" aria-label="Browser history">
+    <button id="history-btn" class="top-btn" title="Browser history" aria-label="Browser history" data-i18n-title="ttHistory" data-i18n-aria="ttHistory">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="1 4 1 10 7 10"/>
         <path d="M3.51 15a9 9 0 1 0 .49-4.5"/>
@@ -216,7 +216,7 @@
     </button>
 
     <!-- Downloads button -->
-    <button id="downloads-btn" class="top-btn" title="Downloads" aria-label="Downloads">
+    <button id="downloads-btn" class="top-btn" title="Downloads" aria-label="Downloads" data-i18n-title="ttDownloads" data-i18n-aria="ttDownloads">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
@@ -225,7 +225,7 @@
     </button>
 
     <!-- Theme / colour button -->
-    <button id="theme-btn" class="top-btn" title="Change theme" aria-label="Change theme">
+    <button id="theme-btn" class="top-btn" title="Change theme" aria-label="Change theme" data-i18n-title="ttChangeTheme" data-i18n-aria="ttChangeTheme">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/>
         <circle cx="8.5"  cy="7.5" r="1.5"/><circle cx="6.5"  cy="12"   r="1.5"/>
@@ -233,14 +233,14 @@
       </svg>
     </button>
     <div id="theme-swatches" class="hidden">
-      <button class="swatch" data-theme="pink"   title="Pink"></button>
-      <button class="swatch" data-theme="blue"   title="Blue"></button>
-      <button class="swatch" data-theme="yellow" title="Yellow"></button>
-      <button class="swatch" data-theme="dark"   title="Dark"></button>
-      <button class="swatch" data-theme="cream"  title="Cream"></button>
-      <button class="swatch swatch-custom" id="swatch-custom" title="Custom color"></button>
+      <button class="swatch" data-theme="pink"   title="Pink"   data-i18n-title="swPink"></button>
+      <button class="swatch" data-theme="blue"   title="Blue"   data-i18n-title="swBlue"></button>
+      <button class="swatch" data-theme="yellow" title="Yellow" data-i18n-title="swYellow"></button>
+      <button class="swatch" data-theme="dark"   title="Dark"   data-i18n-title="swDark"></button>
+      <button class="swatch" data-theme="cream"  title="Cream"  data-i18n-title="swCream"></button>
+      <button class="swatch swatch-custom" id="swatch-custom" title="Custom color" data-i18n-title="swCustom"></button>
       <div class="swatch-separator"></div>
-      <button class="swatch swatch-image" id="swatch-image" title="Background image">
+      <button class="swatch swatch-image" id="swatch-image" title="Background image" data-i18n-title="swBgImage">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -263,7 +263,7 @@
       <h2 class="modal-title" id="confirm-modal-title"></h2>
       <p id="confirm-modal-body"></p>
       <div class="modal-actions">
-        <button class="btn-cancel" id="confirm-modal-cancel">Cancel</button>
+        <button class="btn-cancel" id="confirm-modal-cancel" data-i18n="cancel">Cancel</button>
         <button class="btn-danger" id="confirm-modal-ok">Restore</button>
       </div>
     </div>
@@ -272,17 +272,17 @@
   <!-- Background Adjust Modal -->
   <div id="bg-adjust-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card" id="bg-adjust-card">
-      <h2 class="modal-title">Adjust Background</h2>
+      <h2 class="modal-title" data-i18n="adjustBackground">Adjust Background</h2>
       <div id="bg-adjust-preview"></div>
       <div class="bg-adjust-row">
-        <span class="bg-adjust-label">Zoom</span>
+        <span class="bg-adjust-label" data-i18n="zoom">Zoom</span>
         <input type="range" id="bg-zoom-slider" min="100" max="300" step="1" value="100">
         <span class="bg-adjust-label" id="bg-zoom-val">1.0×</span>
       </div>
       <div class="modal-actions" style="margin-top:14px">
-        <button class="btn-cancel" id="bg-adjust-change">Change photo</button>
-        <button class="btn-cancel" id="bg-adjust-cancel">Cancel</button>
-        <button class="btn-confirm" id="bg-adjust-apply">Apply</button>
+        <button class="btn-cancel" id="bg-adjust-change" data-i18n="changePhoto">Change photo</button>
+        <button class="btn-cancel" id="bg-adjust-cancel" data-i18n="cancel">Cancel</button>
+        <button class="btn-confirm" id="bg-adjust-apply" data-i18n="apply">Apply</button>
       </div>
     </div>
   </div>
@@ -295,7 +295,7 @@
       <p id="tutorial-body"></p>
       <div id="tutorial-dots"></div>
       <div id="tutorial-actions">
-        <button id="tutorial-skip">Skip</button>
+        <button id="tutorial-skip" data-i18n="skip">Skip</button>
         <button id="tutorial-next">Next →</button>
       </div>
     </div>
@@ -308,7 +308,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input type="text" id="search-input" placeholder="Search sites…" autocomplete="off" spellcheck="false" aria-label="Search">
+        <input type="text" id="search-input" placeholder="Search sites…" autocomplete="off" spellcheck="false" aria-label="Search" data-i18n-ph="phSearch">
         <kbd>esc</kbd>
       </div>
       <div id="search-results" role="listbox"></div>
@@ -320,27 +320,27 @@
 
   <!-- Rate-us card: shown to engaged users after 7 days + 30 opens -->
   <div id="rate-card" class="hidden" role="dialog" aria-label="Rate Foyer">
-    <div id="rate-card-title">Enjoying Foyer? ⭐</div>
-    <div id="rate-card-body">A quick rating on the Chrome Web Store helps others find it.</div>
+    <div id="rate-card-title" data-i18n="rateTitle">Enjoying Foyer? ⭐</div>
+    <div id="rate-card-body" data-i18n="rateBody">A quick rating on the Chrome Web Store helps others find it.</div>
     <div id="rate-card-actions">
-      <button id="rate-now">★ Rate Foyer</button>
-      <button id="rate-later">Later</button>
-      <button id="rate-no">No thanks</button>
+      <button id="rate-now" data-i18n="rateNow">★ Rate Foyer</button>
+      <button id="rate-later" data-i18n="rateLater">Later</button>
+      <button id="rate-no" data-i18n="rateNo">No thanks</button>
     </div>
   </div>
 
   <!-- Location Picker Modal -->
   <div id="location-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <h2 class="modal-title">Weather Location</h2>
+      <h2 class="modal-title" data-i18n="weatherLocation">Weather Location</h2>
       <div class="input-group">
-        <label>City</label>
-        <input type="text" id="location-input" placeholder="Search city or country…" autocomplete="off" spellcheck="false">
+        <label data-i18n="city">City</label>
+        <input type="text" id="location-input" placeholder="Search city or country…" autocomplete="off" spellcheck="false" data-i18n-ph="phCity">
       </div>
       <div id="location-results"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="cancel-location">Cancel</button>
-        <button class="btn-cancel" id="location-use-gps">
+        <button class="btn-cancel" id="cancel-location" data-i18n="cancel">Cancel</button>
+        <button class="btn-cancel" id="location-use-gps" data-i18n-label="autoDetect">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
             <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
@@ -356,12 +356,12 @@
   <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div id="settings-card">
       <div id="settings-header">
-        <h2>Settings</h2>
-        <button id="close-settings" aria-label="Close settings">✕</button>
+        <h2 data-i18n="settings">Settings</h2>
+        <button id="close-settings" aria-label="Close settings" data-i18n-aria="ttCloseSettings">✕</button>
       </div>
       <nav id="settings-tabs">
-        <button class="stab active" data-pane="general">General</button>
-        <button class="stab" data-pane="shortcuts">Shortcuts</button>
+        <button class="stab active" data-pane="general" data-i18n="tabGeneral">General</button>
+        <button class="stab" data-pane="shortcuts" data-i18n="tabShortcuts">Shortcuts</button>
       </nav>
       <div id="settings-body">
 
@@ -369,22 +369,32 @@
         <div class="settings-pane" id="spane-general">
 
           <div class="ssec">
-            <div class="ssec-title">Tile size</div>
-            <div class="size-slider-wrap">
-              <span class="size-slider-label">Small</span>
-              <input type="range" id="tile-size-slider" min="1" max="5" step="1" value="3">
-              <span class="size-slider-label">Large</span>
+            <div class="ssec-title" data-i18n="secLanguage">Language</div>
+            <div id="lang-btns">
+              <button class="lang-btn" data-lang="en">English</button>
+              <button class="lang-btn" data-lang="zh-TW">繁體中文</button>
+              <button class="lang-btn" data-lang="zh-CN">简体中文</button>
+              <button class="lang-btn" data-lang="ja">日本語</button>
             </div>
           </div>
 
           <div class="ssec">
-            <div class="ssec-title">Window style</div>
+            <div class="ssec-title" data-i18n="secTileSize">Tile size</div>
+            <div class="size-slider-wrap">
+              <span class="size-slider-label" data-i18n="sizeSmall">Small</span>
+              <input type="range" id="tile-size-slider" min="1" max="5" step="1" value="3">
+              <span class="size-slider-label" data-i18n="sizeLarge">Large</span>
+            </div>
+          </div>
+
+          <div class="ssec">
+            <div class="ssec-title" data-i18n="secWindowStyle">Window style</div>
             <div class="modal-style-btns">
-              <button class="modal-style-btn active" id="modal-style-light">
+              <button class="modal-style-btn active" id="modal-style-light" data-i18n-label="styleLight">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                 Light
               </button>
-              <button class="modal-style-btn" id="modal-style-dark">
+              <button class="modal-style-btn" id="modal-style-dark" data-i18n-label="styleDark">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 Dark
               </button>
@@ -392,15 +402,15 @@
           </div>
 
           <div class="ssec">
-            <div class="ssec-title">Theme</div>
+            <div class="ssec-title" data-i18n="secTheme">Theme</div>
             <div id="settings-swatches">
-              <button class="swatch" data-theme="cream"  title="Cream"></button>
-              <button class="swatch" data-theme="blue"   title="Blue"></button>
-              <button class="swatch" data-theme="pink"   title="Pink"></button>
-              <button class="swatch" data-theme="yellow" title="Yellow"></button>
-              <button class="swatch" data-theme="dark"   title="Dark"></button>
-              <button class="swatch swatch-custom" id="settings-swatch-custom" title="Custom color"></button>
-              <button class="swatch swatch-image" id="settings-swatch-image" title="Background image">
+              <button class="swatch" data-theme="cream"  title="Cream"  data-i18n-title="swCream"></button>
+              <button class="swatch" data-theme="blue"   title="Blue"   data-i18n-title="swBlue"></button>
+              <button class="swatch" data-theme="pink"   title="Pink"   data-i18n-title="swPink"></button>
+              <button class="swatch" data-theme="yellow" title="Yellow" data-i18n-title="swYellow"></button>
+              <button class="swatch" data-theme="dark"   title="Dark"   data-i18n-title="swDark"></button>
+              <button class="swatch swatch-custom" id="settings-swatch-custom" title="Custom color" data-i18n-title="swCustom"></button>
+              <button class="swatch swatch-image" id="settings-swatch-image" title="Background image" data-i18n-title="swBgImage">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2"/>
                   <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -411,33 +421,33 @@
           </div>
 
           <div class="ssec">
-            <div class="ssec-title">Data</div>
+            <div class="ssec-title" data-i18n="secData">Data</div>
             <div class="ssec-btns">
-              <button class="ssec-action-btn" id="settings-sync-bar">
+              <button class="ssec-action-btn" id="settings-sync-bar" data-i18n-label="syncBar">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
                 Sync bookmarks bar
               </button>
-              <button class="ssec-action-btn" id="settings-sync-all">
+              <button class="ssec-action-btn" id="settings-sync-all" data-i18n-label="syncAll">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
                 Sync all bookmarks
               </button>
-              <button class="ssec-action-btn" id="settings-import-bm">
+              <button class="ssec-action-btn" id="settings-import-bm" data-i18n-label="importBm">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                 Import bookmarks
               </button>
-              <button class="ssec-action-btn" id="settings-import-json">
+              <button class="ssec-action-btn" id="settings-import-json" data-i18n-label="importBackup">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 Import backup
               </button>
-              <button class="ssec-action-btn" id="settings-export-bm">
+              <button class="ssec-action-btn" id="settings-export-bm" data-i18n-label="exportBm">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
                 Export bookmarks
               </button>
-              <button class="ssec-action-btn" id="settings-export-json">
+              <button class="ssec-action-btn" id="settings-export-json" data-i18n-label="exportBackup">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export backup
               </button>
-              <button class="ssec-action-btn ssec-action-btn--full ssec-action-btn--danger" id="settings-clear-all">
+              <button class="ssec-action-btn ssec-action-btn--full ssec-action-btn--danger" id="settings-clear-all" data-i18n-label="clearAll">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 Clear all tiles
               </button>
@@ -445,13 +455,13 @@
           </div>
 
           <div class="ssec">
-            <div class="ssec-title">Help</div>
+            <div class="ssec-title" data-i18n="secHelp">Help</div>
             <div class="ssec-btns">
-              <button class="ssec-action-btn ssec-action-btn--full" id="settings-tutorial">
+              <button class="ssec-action-btn ssec-action-btn--full" id="settings-tutorial" data-i18n-label="restartTutorial">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Restart tutorial
               </button>
-              <button class="ssec-action-btn ssec-action-btn--full" id="settings-rate">
+              <button class="ssec-action-btn ssec-action-btn--full" id="settings-rate" data-i18n-label="rateFoyer">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 Rate Foyer
               </button>
@@ -464,36 +474,36 @@
         <div class="settings-pane hidden" id="spane-shortcuts">
           <div class="shortcuts-list">
             <div class="sc-row">
-              <span class="sc-action">Add tile</span>
+              <span class="sc-action" data-i18n="scAddTile">Add tile</span>
               <span class="sc-keys"><kbd class="sc-key editable" data-action="addTile">n</kbd></span>
             </div>
             <div class="sc-row">
-              <span class="sc-action">Search</span>
+              <span class="sc-action" data-i18n="scSearch">Search</span>
               <span class="sc-keys"><kbd class="sc-key editable" data-action="search">/</kbd></span>
             </div>
             <div class="sc-row sc-fixed">
-              <span class="sc-action">Navigate tiles</span>
+              <span class="sc-action" data-i18n="scNavigate">Navigate tiles</span>
               <span class="sc-keys"><kbd class="sc-key">↑</kbd><kbd class="sc-key">↓</kbd><kbd class="sc-key">←</kbd><kbd class="sc-key">→</kbd></span>
             </div>
             <div class="sc-row sc-fixed">
-              <span class="sc-action">Open / Enter group</span>
+              <span class="sc-action" data-i18n="scOpenGroup">Open / Enter group</span>
               <span class="sc-keys"><kbd class="sc-key">Enter</kbd></span>
             </div>
             <div class="sc-row sc-fixed">
-              <span class="sc-action">Delete tile</span>
+              <span class="sc-action" data-i18n="scDeleteTile">Delete tile</span>
               <span class="sc-keys"><kbd class="sc-key">Del</kbd></span>
             </div>
             <div class="sc-row sc-fixed">
-              <span class="sc-action">Close / Go back</span>
+              <span class="sc-action" data-i18n="scClose">Close / Go back</span>
               <span class="sc-keys"><kbd class="sc-key">Esc</kbd></span>
             </div>
             <div class="sc-row sc-fixed">
-              <span class="sc-action">Undo</span>
+              <span class="sc-action" data-i18n="scUndo">Undo</span>
               <span class="sc-keys"><kbd class="sc-key">⌘Z</kbd><span class="sc-sep">/</span><kbd class="sc-key">Ctrl+Z</kbd></span>
             </div>
           </div>
           <p id="sc-conflict-msg" class="sc-conflict"></p>
-          <p class="sc-hint">Click a highlighted shortcut to remap it. Press Esc to cancel.</p>
+          <p class="sc-hint" data-i18n="scHint">Click a highlighted shortcut to remap it. Press Esc to cancel.</p>
         </div>
 
       </div>
