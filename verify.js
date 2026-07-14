@@ -40,12 +40,21 @@ function log(emoji, label, detail='') {
 function find(msg) { findings.push(msg); console.log(`   ⚠️  ${msg}`); }
 async function shot(page, name) {
   const p = path.join(SHOTS, `${name}.png`);
-  await page.screenshot({ path: p });
+  try {
+    await page.screenshot({ path: p, timeout: 10000 });
+  } catch {
+    // Screenshots are auxiliary — some headless environments hang on font
+    // readiness; never let that fail the functional checks.
+    return null;
+  }
   return p;
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+  });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   await ctx.addInitScript(CHROME_MOCK);
 

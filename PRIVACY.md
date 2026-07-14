@@ -1,6 +1,6 @@
 # Privacy Policy — Foyer New Tab
 
-**Last updated: June 2026**
+**Last updated: July 2026**
 
 Foyer is a Chrome extension that replaces your new tab page with a personal site-grid dashboard. This policy explains what data the extension accesses and how it is handled.
 
@@ -13,13 +13,21 @@ All user data is stored exclusively on your device using `chrome.storage.local`.
 | Data | Purpose |
 |---|---|
 | Your site list, groups, and pages (including custom page names) | Persists your grid layout across browser sessions |
+| Custom tile icons you upload | Displayed in place of the site's favicon; stored only on this device |
 | Theme and tile-size preference | Restores your visual settings on each new tab |
+| Search engine choice | Restores your preferred engine for the search bar |
 | Weather location and cache | Avoids redundant API calls; refreshes every 30 minutes |
 | Keyboard shortcut configuration | Restores your custom key bindings on each new tab |
 | Language preference | Restores your chosen interface language on each new tab |
 | Local usage counters (install date, new-tab count) | Decides when to show the optional one-time "rate us" reminder — never leaves your device |
 
 You can clear all stored data at any time by removing the extension or clearing its storage from Chrome's extension management page.
+
+---
+
+## Cross-device sync (optional, off by default)
+
+If you enable **Sync across devices** in Settings → Data, your site list and page names are also written to `chrome.storage.sync`. This data is replicated between your devices by **Chrome's own sync infrastructure**, tied to the Google account you use for Chrome sync — the extension itself still sends nothing to any server of its own, and no third-party service is involved. Uploaded custom icons and large cached favicons are excluded from the synced payload and remain local. Turning the toggle off stops this device from reading or writing sync data.
 
 ---
 
@@ -42,6 +50,12 @@ These APIs are third-party services with their own privacy policies. No API key 
 ## Bookmarks
 
 The extension can read your Chrome bookmarks via the `bookmarks` permission when you choose to import them. Bookmarks are read locally and added to your grid — they are never sent to any external server. The extension never creates, edits, or deletes bookmarks.
+
+---
+
+## Most-visited sites (optional permission)
+
+The extension declares `topSites` as an **optional** permission. It is only requested if you click "Suggest my most visited sites" in the Add Site dialog, and Chrome asks for your explicit approval at that moment. When granted, your most-visited list is read locally to show suggestion chips — it is never transmitted anywhere.
 
 ---
 

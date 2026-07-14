@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Foyer",
-  "version": "2.3.0",
-  "description": "Your websites, organized in a clean home screen grid.",
+  "version": "2.4.0",
+  "description": "Your websites in a clean new-tab grid — pages, folders, quick search, weather, and free cross-device sync.",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
@@ -10,6 +10,7 @@
     "service_worker": "background.js"
   },
   "permissions": ["storage", "bookmarks"],
+  "optional_permissions": ["topSites"],
   "host_permissions": [
     "https://api.open-meteo.com/*",
     "https://geocoding-api.open-meteo.com/*",

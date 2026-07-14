@@ -145,7 +145,8 @@ const I18N = {
     weatherLocation: 'Weather Location', adjustBackground: 'Adjust Background', settings: 'Settings',
     // labels / placeholders
     url: 'URL', name: 'Name', city: 'City', zoom: 'Zoom',
-    phName: 'My Site', phCity: 'Search city or country…', phSearch: 'Search sites…', phSearchEngine: 'Search Google…',
+    phName: 'My Site', phCity: 'Search city or country…', phSearch: 'Search sites…',
+    phSearchEngine: ({ engine }) => `Search ${engine}…`,
     // settings
     tabGeneral: 'General', tabShortcuts: 'Shortcuts',
     secLanguage: 'Language', secTileSize: 'Tile size', sizeSmall: 'Small', sizeLarge: 'Large',
@@ -223,6 +224,24 @@ const I18N = {
     tutQuickT: 'Quick actions', tutQuickB: 'Hover each icon to see what it does: sync your bookmarks bar, import all bookmarks, or clear every tile (a confirmation keeps you safe).',
     tutThemeT: 'Change the look', tutThemeB: 'Pick a preset theme or dial in a custom colour. Saves automatically.',
     tutSettingsT: 'Settings', tutSettingsB: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.',
+    // search engine / web search
+    srSearchWeb: ({ engine, q }) => `Search ${engine} for “${q}”`,
+    ttChangeEngine: 'Change search engine',
+    // window style
+    styleAuto: 'Auto',
+    // cross-device sync
+    cloudSyncTitle: 'Sync across devices',
+    cloudSyncDesc: 'Backs up your tiles to your Google account and keeps every Chrome with Foyer in sync.',
+    cloudSyncOn: 'Sync enabled', cloudSyncOff: 'Sync disabled on this device',
+    cloudSyncFull: 'Too much data to sync — tiles stay on this device',
+    cloudSyncErr: 'Sync failed — will retry on the next change',
+    cloudSyncPulled: 'Tiles updated from another device',
+    // most-visited suggestions
+    topSitesTitle: 'Most visited',
+    topSitesShow: 'Suggest my most visited sites',
+    topSitesEmpty: 'No new suggestions',
+    // custom icons
+    uploadIcon: 'Upload icon', resetIcon: 'Reset icon',
   },
   'zh-TW': {
     cancel: '取消', add: '新增', save: '儲存', restore: '還原', apply: '套用',
@@ -231,7 +250,8 @@ const I18N = {
     addSite: '新增網站', editSite: '編輯網站', rename: '重新命名', importBookmarks: '匯入書籤',
     weatherLocation: '天氣地點', adjustBackground: '調整背景', settings: '設定',
     url: '網址', name: '名稱', city: '城市', zoom: '縮放',
-    phName: '我的網站', phCity: '搜尋城市或國家…', phSearch: '搜尋網站…', phSearchEngine: '搜尋 Google…',
+    phName: '我的網站', phCity: '搜尋城市或國家…', phSearch: '搜尋網站…',
+    phSearchEngine: ({ engine }) => `搜尋 ${engine}…`,
     tabGeneral: '一般', tabShortcuts: '快速鍵',
     secLanguage: '語言', secTileSize: '圖示大小', sizeSmall: '小', sizeLarge: '大',
     secWindowStyle: '視窗樣式', styleLight: '淺色', styleDark: '深色',
@@ -296,6 +316,19 @@ const I18N = {
     tutQuickT: '快速操作', tutQuickB: '把游標移到各圖示上即可看到功能：同步書籤列、匯入所有書籤，或清除所有圖示（會先確認以保安全）。',
     tutThemeT: '變更外觀', tutThemeB: '挑選預設主題或自訂顏色，會自動儲存。',
     tutSettingsT: '設定', tutSettingsB: '匯入書籤、匯出備份、設定圖示大小、自訂快速鍵。隨時可從「設定 → 說明」重新教學。',
+    srSearchWeb: ({ engine, q }) => `用 ${engine} 搜尋「${q}」`,
+    ttChangeEngine: '更換搜尋引擎',
+    styleAuto: '自動',
+    cloudSyncTitle: '跨裝置同步',
+    cloudSyncDesc: '將圖示備份到你的 Google 帳戶，並在所有安裝 Foyer 的 Chrome 之間保持同步。',
+    cloudSyncOn: '已開啟同步', cloudSyncOff: '已關閉此裝置的同步',
+    cloudSyncFull: '資料量過大無法同步——圖示僅保留在本機',
+    cloudSyncErr: '同步失敗——下次變更時會再試',
+    cloudSyncPulled: '已從其他裝置更新圖示',
+    topSitesTitle: '最常造訪',
+    topSitesShow: '推薦我最常造訪的網站',
+    topSitesEmpty: '沒有新的建議',
+    uploadIcon: '上傳圖示', resetIcon: '重設圖示',
   },
   'zh-CN': {
     cancel: '取消', add: '添加', save: '保存', restore: '恢复', apply: '应用',
@@ -304,7 +337,8 @@ const I18N = {
     addSite: '添加网站', editSite: '编辑网站', rename: '重命名', importBookmarks: '导入书签',
     weatherLocation: '天气地点', adjustBackground: '调整背景', settings: '设置',
     url: '网址', name: '名称', city: '城市', zoom: '缩放',
-    phName: '我的网站', phCity: '搜索城市或国家…', phSearch: '搜索网站…', phSearchEngine: '搜索 Google…',
+    phName: '我的网站', phCity: '搜索城市或国家…', phSearch: '搜索网站…',
+    phSearchEngine: ({ engine }) => `搜索 ${engine}…`,
     tabGeneral: '常规', tabShortcuts: '快捷键',
     secLanguage: '语言', secTileSize: '图标大小', sizeSmall: '小', sizeLarge: '大',
     secWindowStyle: '窗口样式', styleLight: '浅色', styleDark: '深色',
@@ -369,6 +403,19 @@ const I18N = {
     tutQuickT: '快速操作', tutQuickB: '把光标移到各图标上即可看到功能：同步书签栏、导入所有书签，或清除所有图标（会先确认以保安全）。',
     tutThemeT: '更改外观', tutThemeB: '挑选预设主题或自定义颜色，会自动保存。',
     tutSettingsT: '设置', tutSettingsB: '导入书签、导出备份、设置图标大小、自定义快捷键。随时可从“设置 → 帮助”重新教程。',
+    srSearchWeb: ({ engine, q }) => `用 ${engine} 搜索“${q}”`,
+    ttChangeEngine: '更换搜索引擎',
+    styleAuto: '自动',
+    cloudSyncTitle: '跨设备同步',
+    cloudSyncDesc: '将图标备份到你的 Google 账户，并在所有安装 Foyer 的 Chrome 之间保持同步。',
+    cloudSyncOn: '已开启同步', cloudSyncOff: '已关闭此设备的同步',
+    cloudSyncFull: '数据量过大无法同步——图标仅保留在本地',
+    cloudSyncErr: '同步失败——下次更改时会重试',
+    cloudSyncPulled: '已从其他设备更新图标',
+    topSitesTitle: '最常访问',
+    topSitesShow: '推荐我最常访问的网站',
+    topSitesEmpty: '没有新的建议',
+    uploadIcon: '上传图标', resetIcon: '重置图标',
   },
   ja: {
     cancel: 'キャンセル', add: '追加', save: '保存', restore: '復元', apply: '適用',
@@ -377,7 +424,8 @@ const I18N = {
     addSite: 'サイトを追加', editSite: 'サイトを編集', rename: '名前を変更', importBookmarks: 'ブックマークをインポート',
     weatherLocation: '天気の地域', adjustBackground: '背景を調整', settings: '設定',
     url: 'URL', name: '名前', city: '都市', zoom: 'ズーム',
-    phName: 'マイサイト', phCity: '都市または国を検索…', phSearch: 'サイトを検索…', phSearchEngine: 'Google で検索…',
+    phName: 'マイサイト', phCity: '都市または国を検索…', phSearch: 'サイトを検索…',
+    phSearchEngine: ({ engine }) => `${engine} で検索…`,
     tabGeneral: '一般', tabShortcuts: 'ショートカット',
     secLanguage: '言語', secTileSize: 'アイコンサイズ', sizeSmall: '小', sizeLarge: '大',
     secWindowStyle: 'ウィンドウスタイル', styleLight: 'ライト', styleDark: 'ダーク',
@@ -442,6 +490,19 @@ const I18N = {
     tutQuickT: 'クイック操作', tutQuickB: '各アイコンにカーソルを合わせると機能がわかります：ブックマークバーを同期、すべてのブックマークをインポート、すべてのアイコンを消去（確認があり安全です）。',
     tutThemeT: '見た目を変更', tutThemeB: 'プリセットのテーマを選ぶか、好きな色を指定できます。自動的に保存されます。',
     tutSettingsT: '設定', tutSettingsB: 'ブックマークのインポート、バックアップのエクスポート、アイコンサイズの設定、ショートカットのカスタマイズ。「設定 → ヘルプ」からいつでもチュートリアルを再開できます。',
+    srSearchWeb: ({ engine, q }) => `${engine} で「${q}」を検索`,
+    ttChangeEngine: '検索エンジンを変更',
+    styleAuto: '自動',
+    cloudSyncTitle: 'デバイス間同期',
+    cloudSyncDesc: 'アイコンを Google アカウントにバックアップし、Foyer を入れたすべての Chrome と同期します。',
+    cloudSyncOn: '同期をオンにしました', cloudSyncOff: 'このデバイスの同期をオフにしました',
+    cloudSyncFull: 'データが大きすぎて同期できません——このデバイスにのみ保存されます',
+    cloudSyncErr: '同期に失敗しました——次の変更時に再試行します',
+    cloudSyncPulled: '他のデバイスからアイコンを更新しました',
+    topSitesTitle: 'よく見るサイト',
+    topSitesShow: 'よく見るサイトから提案',
+    topSitesEmpty: '新しい提案はありません',
+    uploadIcon: 'アイコンをアップロード', resetIcon: 'アイコンをリセット',
   },
 };
 
@@ -478,6 +539,7 @@ function applyLanguage(lang, { save: persist = true } = {}) {
   _lang = (I18N[lang]) ? lang : 'en';
   document.documentElement.lang = _lang;
   _applyStaticI18n();
+  _updateEngineBar();
   // Refresh dynamic UI that may already be on screen
   if (_weatherData) _renderWeather();
   if (!document.getElementById('tutorial-overlay').classList.contains('hidden')) _renderTutStep();
@@ -542,7 +604,16 @@ async function load() {
 
 function save() {
   _pages[_currentPage] = items;
-  return chrome.storage.local.set({ pages: _pages });
+  _pagesAt = Date.now();
+  const p = chrome.storage.local.set({ pages: _pages, pagesAt: _pagesAt });
+  _scheduleSyncPush();
+  return p;
+}
+
+function savePageNames() {
+  _pagesAt = Date.now();
+  chrome.storage.local.set({ pageNames: { ..._pageNames }, pagesAt: _pagesAt });
+  _scheduleSyncPush();
 }
 
 function _storageGet(keys) {
@@ -575,6 +646,153 @@ function sampleItems() {
     { id: uid(), type: 'site', name: 'GitHub',   url: 'https://github.com' },
     { id: uid(), type: 'site', name: 'Twitter',  url: 'https://twitter.com' },
   ];
+}
+
+// ─── Cross-Device Sync (chrome.storage.sync) ────────────────────────────────
+// Opt-in. Tiles + page names are chunked into storage.sync items (8KB each);
+// conflict resolution is last-write-wins on the pagesAt timestamp. Custom icons
+// and data:-URI favicons are stripped from the payload (too large for quota) —
+// they stay in storage.local on the device that created them.
+
+let _cloudSync    = false;
+let _pagesAt      = 0;     // timestamp of the last local tile/page-name change
+let _syncPushTimer = null;
+const _SYNC_CHUNK   = 2000;   // UTF-16 units per chunk — ≤ ~6KB UTF-8, safely under the 8KB/item quota
+const _SYNC_MAX_LEN = 90000;  // stay under the 100KB total storage.sync quota
+
+function _syncAvailable() { return !!chrome.storage?.sync; }
+
+function _syncPayload() {
+  _pages[_currentPage] = items;
+  const pages = JSON.parse(JSON.stringify(_pages));
+  const strip = site => {
+    delete site.icon; // custom uploaded icons are data URLs — local-only
+    if (site.favicon && (site.favicon.startsWith('data:') || site.favicon.length > 500)) delete site.favicon;
+  };
+  Object.values(pages).forEach(arr => arr.forEach(it => {
+    if (it.type === 'group') (it.items ?? []).forEach(strip);
+    else strip(it);
+  }));
+  return JSON.stringify({ pages, pageNames: _pageNames });
+}
+
+function _scheduleSyncPush() {
+  if (!_cloudSync || !_syncAvailable()) return;
+  clearTimeout(_syncPushTimer);
+  _syncPushTimer = setTimeout(_pushSync, 1500);
+}
+
+async function _pushSync() {
+  if (!_cloudSync || !_syncAvailable()) return;
+  if (!_pagesAt) {
+    _pagesAt = Date.now();
+    chrome.storage.local.set({ pagesAt: _pagesAt });
+  }
+  const payload = _syncPayload();
+  if (payload.length > _SYNC_MAX_LEN) { _showToast(t('cloudSyncFull')); return; }
+  const chunks = [];
+  for (let i = 0; i < payload.length; i += _SYNC_CHUNK) chunks.push(payload.slice(i, i + _SYNC_CHUNK));
+  const obj = { sv_meta: { v: 1, at: _pagesAt, n: chunks.length } };
+  chunks.forEach((c, i) => { obj['sv_' + i] = c; });
+  try {
+    const old = await chrome.storage.sync.get('sv_meta');
+    await chrome.storage.sync.set(obj);
+    // Drop stale chunks left over from a previous, larger payload
+    const oldN = old.sv_meta?.n ?? 0;
+    if (oldN > chunks.length) {
+      const stale = [];
+      for (let i = chunks.length; i < oldN; i++) stale.push('sv_' + i);
+      await chrome.storage.sync.remove(stale);
+    }
+  } catch (e) {
+    _showToast(t(String(e?.message ?? '').includes('QUOTA') ? 'cloudSyncFull' : 'cloudSyncErr'));
+  }
+}
+
+// Replaces local tiles with the synced payload described by meta. Returns true on success.
+async function _adoptSyncData(meta) {
+  if (!meta || !Number.isInteger(meta.n) || meta.n <= 0) return false;
+  const keys = [];
+  for (let i = 0; i < meta.n; i++) keys.push('sv_' + i);
+  let r;
+  try { r = await chrome.storage.sync.get(keys); } catch { return false; }
+  let payload = '';
+  for (let i = 0; i < meta.n; i++) {
+    if (typeof r['sv_' + i] !== 'string') return false; // incomplete — a push may be in flight
+    payload += r['sv_' + i];
+  }
+  let data;
+  try { data = JSON.parse(payload); } catch { return false; }
+  if (!data.pages || typeof data.pages !== 'object') return false;
+
+  const fresh = {};
+  PAGE_KEYS.forEach(k => { fresh[k] = Array.isArray(data.pages[k]) ? data.pages[k] : []; });
+  _pages = fresh;
+  items = _pages[_currentPage];
+  _pageNames = (data.pageNames && typeof data.pageNames === 'object') ? data.pageNames : {};
+  _pagesAt = meta.at ?? Date.now();
+  await chrome.storage.local.set({ pages: _pages, pageNames: { ..._pageNames }, pagesAt: _pagesAt });
+  render();
+  _updatePageBar();
+  return true;
+}
+
+function _updateSyncToggle() {
+  const btn = document.getElementById('cloud-sync-toggle');
+  if (!btn) return;
+  btn.classList.toggle('on', _cloudSync);
+  btn.setAttribute('aria-checked', String(_cloudSync));
+  btn.disabled = !_syncAvailable();
+}
+
+async function _initCloudSync() {
+  if (!_syncAvailable()) { _updateSyncToggle(); return; }
+  const loc = await _storageGet(['cloudSync', 'pagesAt']);
+  _cloudSync = !!loc.cloudSync;
+  _pagesAt = loc.pagesAt ?? 0;
+
+  let meta = null;
+  try { meta = (await chrome.storage.sync.get('sv_meta')).sv_meta; } catch {}
+
+  // Fresh install on a device whose account already syncs Foyer → join automatically
+  if (meta && loc.cloudSync === undefined) {
+    _cloudSync = true;
+    chrome.storage.local.set({ cloudSync: true });
+  }
+
+  if (_cloudSync && meta && (meta.at ?? 0) > _pagesAt) {
+    await _adoptSyncData(meta);
+  } else if (_cloudSync && _pagesAt > (meta?.at ?? 0)) {
+    _scheduleSyncPush();
+  }
+
+  // Live updates: another device (or another new-tab page) pushed newer tiles
+  chrome.storage.onChanged?.addListener((changes, area) => {
+    if (area !== 'sync' || !_cloudSync || !changes.sv_meta) return;
+    const m = changes.sv_meta.newValue;
+    if (m && (m.at ?? 0) > _pagesAt) {
+      _adoptSyncData(m).then(ok => { if (ok) _showToast(t('cloudSyncPulled')); });
+    }
+  });
+
+  _updateSyncToggle();
+}
+
+async function _setCloudSync(on) {
+  _cloudSync = on;
+  chrome.storage.local.set({ cloudSync: on });
+  _updateSyncToggle();
+  if (!on) { _showToast(t('cloudSyncOff')); return; }
+
+  let meta = null;
+  try { meta = (await chrome.storage.sync.get('sv_meta')).sv_meta; } catch {}
+  if (meta && (meta.at ?? 0) > _pagesAt) {
+    const ok = await _adoptSyncData(meta);
+    _showToast(t(ok ? 'cloudSyncPulled' : 'cloudSyncOn'));
+  } else {
+    _pushSync();
+    _showToast(t('cloudSyncOn'));
+  }
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────
@@ -918,19 +1136,28 @@ function _updateShortcutDisplay() {
   });
 }
 
-function applyModalDark(dark) {
-  _modalDark = dark;
+const _sysDarkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+// mode: false | true | 'auto' — 'auto' follows the OS colour scheme
+function applyModalDark(mode) {
+  _modalDark = mode;
+  const dark = mode === 'auto' ? !!_sysDarkMq?.matches : !!mode;
   document.body.classList.toggle('modal-dark', dark);
+  const activeId = mode === 'auto' ? 'modal-style-auto' : (mode ? 'modal-style-dark' : 'modal-style-light');
   document.querySelectorAll('.modal-style-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.id === (dark ? 'modal-style-dark' : 'modal-style-light'));
+    btn.classList.toggle('active', btn.id === activeId);
   });
   const slider = document.getElementById('tile-size-slider');
   if (slider) _updateSliderFill(slider);
 }
 
+_sysDarkMq?.addEventListener?.('change', () => {
+  if (_modalDark === 'auto') applyModalDark('auto');
+});
+
 async function loadModalDark() {
   const r = await _storageGet('modalDark');
-  applyModalDark(!!r.modalDark);
+  applyModalDark(r.modalDark === 'auto' ? 'auto' : !!r.modalDark);
 }
 
 async function loadShortcuts() {
@@ -951,8 +1178,84 @@ const TILE_SIZES = {
 };
 const SIZE_KEYS = ['xs', 's', 'm', 'l', 'xl'];
 
+// ─── Search Engine ────────────────────────────────────────────────────────────
+
+const SEARCH_ENGINES = {
+  google:     { name: 'Google',       url: 'https://www.google.com/search?q=',   domain: 'www.google.com' },
+  bing:       { name: 'Bing',         url: 'https://www.bing.com/search?q=',     domain: 'www.bing.com' },
+  duckduckgo: { name: 'DuckDuckGo',   url: 'https://duckduckgo.com/?q=',         domain: 'duckduckgo.com' },
+  baidu:      { name: '百度',          url: 'https://www.baidu.com/s?wd=',        domain: 'www.baidu.com' },
+  yahoojp:    { name: 'Yahoo! JAPAN', url: 'https://search.yahoo.co.jp/search?p=', domain: 'www.yahoo.co.jp' },
+  ecosia:     { name: 'Ecosia',       url: 'https://www.ecosia.org/search?q=',   domain: 'www.ecosia.org' },
+};
+let _searchEngine = 'google';
+
+function _engine() { return SEARCH_ENGINES[_searchEngine] ?? SEARCH_ENGINES.google; }
+
 function _engineUrl(q) {
-  return 'https://www.google.com/search?q=' + encodeURIComponent(q);
+  return _engine().url + encodeURIComponent(q);
+}
+
+function _engineFaviconUrl(engine) {
+  return `https://${engine.domain}/favicon.ico`;
+}
+
+function _updateEngineBar() {
+  const eng = _engine();
+  const img = document.getElementById('engine-favicon');
+  if (img) {
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(eng.domain)}&sz=32`;
+    };
+    img.src = _engineFaviconUrl(eng);
+  }
+  const input = document.getElementById('engine-input');
+  if (input) {
+    input.placeholder = t('phSearchEngine', { engine: eng.name });
+    input.setAttribute('aria-label', t('phSearchEngine', { engine: eng.name }));
+  }
+  const btn = document.getElementById('engine-btn');
+  if (btn) {
+    btn.title = t('ttChangeEngine');
+    btn.setAttribute('aria-label', t('ttChangeEngine'));
+  }
+  document.querySelectorAll('.engine-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.engine === _searchEngine));
+}
+
+function _buildEngineMenu() {
+  const menu = document.getElementById('engine-menu');
+  if (!menu) return;
+  menu.innerHTML = Object.entries(SEARCH_ENGINES).map(([key, eng]) => `
+    <button class="engine-item${key === _searchEngine ? ' active' : ''}" data-engine="${key}">
+      <img src="${_engineFaviconUrl(eng)}" width="16" height="16" alt="" draggable="false">
+      <span>${escHtml(eng.name)}</span>
+    </button>
+  `).join('');
+  menu.querySelectorAll('.engine-item img').forEach(img => {
+    img.onerror = () => {
+      img.onerror = null;
+      const key = img.closest('.engine-item')?.dataset.engine;
+      const eng = SEARCH_ENGINES[key];
+      if (eng) img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(eng.domain)}&sz=32`;
+    };
+  });
+  menu.querySelectorAll('.engine-item').forEach(el => {
+    el.addEventListener('click', () => {
+      _searchEngine = el.dataset.engine;
+      chrome.storage.local.set({ searchEngine: _searchEngine });
+      _updateEngineBar();
+      menu.classList.add('hidden');
+      document.getElementById('engine-input')?.focus();
+    });
+  });
+}
+
+async function loadSearchEngine() {
+  const r = await _storageGet('searchEngine');
+  if (r.searchEngine && SEARCH_ENGINES[r.searchEngine]) _searchEngine = r.searchEngine;
+  _updateEngineBar();
 }
 
 let _currentTileSize = 'm';
@@ -1047,8 +1350,9 @@ function buildSiteTile(item) {
   const img      = tile.querySelector('img');
   const fallback = tile.querySelector('.tile-icon-fallback');
 
-  // Stored favicon → bookmark bar favicon (exact match) → external chain
+  // Custom icon → stored favicon → bookmark bar favicon (exact match) → external chain
   const sources = [
+    ...(item.icon ? [item.icon] : []),
     ...(item.favicon ? [item.favicon] : []),
     ...(_bookmarkFavicons[item.url] ? [_bookmarkFavicons[item.url]] : []),
     ...getFaviconSources(item.url),
@@ -1056,7 +1360,7 @@ function buildSiteTile(item) {
 
   tryFaviconChain(img, fallback, sources, 0, resolvedSrc => {
     // Auto-persist the working URL so future renders skip the chain probing
-    if (resolvedSrc && !item.favicon) {
+    if (resolvedSrc && !item.favicon && resolvedSrc !== item.icon) {
       item.favicon = resolvedSrc;
       debouncedSave();
     }
@@ -1102,6 +1406,7 @@ function buildGroupTile(item) {
     const img      = tile.querySelector('img');
     const fallback = tile.querySelector('.tile-icon-fallback');
     const sources  = [
+      ...(coverSite.icon ? [coverSite.icon] : []),
       ...(coverSite.favicon ? [coverSite.favicon] : []),
       ...getFaviconSources(coverSite.url),
     ].filter((v, i, a) => a.indexOf(v) === i);
@@ -1133,6 +1438,7 @@ function buildGroupTile(item) {
       const img    = cell.querySelector('img');
       const letter = cell.querySelector('.mini-letter');
       const sources = [
+        ...(site.icon ? [site.icon] : []),
         ...(site.favicon ? [site.favicon] : []),
         ...getFaviconSources(site.url),
       ].filter((v, j, a) => a.indexOf(v) === j);
@@ -1502,6 +1808,7 @@ function buildGroupSiteTile(site, groupId) {
   const img      = tile.querySelector('img');
   const fallback = tile.querySelector('.group-site-fallback');
   const sources  = [
+    ...(site.icon ? [site.icon] : []),
     ...(site.favicon ? [site.favicon] : []),
     ...getFaviconSources(site.url),
   ].filter((v, i, a) => a.indexOf(v) === i);
@@ -2178,6 +2485,8 @@ function openEditModal(id) {
   if (!item || item.type !== 'site') return;
   editTargetId = id;
   pendingEditFavicon = item.favicon ?? null;
+  pendingEditIcon = undefined;
+  _updateEditIconButtons(item);
 
   const editUrlEl = document.getElementById('edit-url-input');
   editUrlEl.value  = item.url;
@@ -2195,6 +2504,7 @@ function openEditModal(id) {
   editFaviconEpoch++;
   const epoch   = editFaviconEpoch;
   const sources = [
+    ...(item.icon ? [item.icon] : []),
     ...(item.favicon ? [item.favicon] : []),
     ...getFaviconSources(item.url),
   ].filter((v, i, a) => a.indexOf(v) === i);
@@ -2236,6 +2546,9 @@ function onEditUrlInput(rawValue) {
 }
 
 function loadEditFaviconPreview(rawValue) {
+  // A custom icon (pending or saved) always wins over the URL's favicon
+  const cur = items.find(i => i.id === editTargetId);
+  if (pendingEditIcon || (pendingEditIcon === undefined && cur?.icon)) return;
   let url = rawValue.trim();
   if (!url) return;
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
@@ -2290,6 +2603,8 @@ function saveEdit() {
   item.name = name || item.name;
   // Clear cached favicon so it re-resolves with the new URL
   item.favicon = pendingEditFavicon ?? undefined;
+  if (pendingEditIcon === null) delete item.icon;
+  else if (typeof pendingEditIcon === 'string') item.icon = pendingEditIcon;
 
   save().then(render);
   closeEditModal();
@@ -2342,6 +2657,7 @@ function openAddModal() {
   clearUrlError(urlInput);
   resetFaviconPreview();
   pendingFavicon = null;
+  _refreshTopSites();
   document.getElementById('add-modal').classList.remove('hidden');
   urlInput.focus();
 }
@@ -2354,6 +2670,7 @@ function openAddModalForGroup(groupId) {
   clearUrlError(urlInput);
   resetFaviconPreview();
   pendingFavicon = null;
+  _refreshTopSites();
   document.getElementById('add-modal').classList.remove('hidden');
   urlInput.focus();
 }
@@ -2470,6 +2787,105 @@ function addSite() {
   });
   save().then(render);
   closeAddModal();
+}
+
+// ─── Most-Visited Suggestions (optional topSites permission) ─────────────────
+
+async function _topSitesPermitted() {
+  if (!chrome.permissions?.contains) return false;
+  try { return await chrome.permissions.contains({ permissions: ['topSites'] }); }
+  catch { return false; }
+}
+
+// Shows either the suggestion chips (permission granted) or the enable button.
+async function _refreshTopSites() {
+  const sec       = document.getElementById('top-sites-sec');
+  const enableBtn = document.getElementById('top-sites-enable');
+  if (!sec || !enableBtn) return;
+  sec.classList.add('hidden');
+  enableBtn.classList.add('hidden');
+  if (await _topSitesPermitted()) {
+    _renderTopSiteChips();
+  } else if (chrome.permissions?.request) {
+    enableBtn.classList.remove('hidden');
+  }
+}
+
+function _renderTopSiteChips() {
+  if (!chrome.topSites?.get) return;
+  chrome.topSites.get(list => {
+    if (chrome.runtime.lastError || !Array.isArray(list)) return;
+    const sec   = document.getElementById('top-sites-sec');
+    const chips = document.getElementById('top-sites-chips');
+    const existing = new Set([..._existingUrls()].map(u => u.replace(/\/+$/, '')));
+    const suggestions = list
+      .filter(s => s.url && /^https?:/i.test(s.url) && !existing.has(s.url.replace(/\/+$/, '')))
+      .slice(0, 8);
+    if (!suggestions.length) {
+      chips.innerHTML = `<span class="ts-empty">${escHtml(t('topSitesEmpty'))}</span>`;
+      sec.classList.remove('hidden');
+      return;
+    }
+    chips.innerHTML = suggestions.map((s, i) => `
+      <button class="ts-chip" data-idx="${i}" title="${escHtml(s.url)}">
+        <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(s.url).hostname)}&sz=32"
+             width="16" height="16" alt="" draggable="false">
+        <span>${escHtml(s.title || new URL(s.url).hostname.replace(/^www\./, ''))}</span>
+      </button>
+    `).join('');
+    chips.querySelectorAll('.ts-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const s = suggestions[+chip.dataset.idx];
+        if (!s) return;
+        const name = (s.title || new URL(s.url).hostname.replace(/^www\./, '')).slice(0, 40);
+        if (_addTargetGroupId) {
+          const group = items.find(i => i.id === _addTargetGroupId);
+          if (group) {
+            group.items = group.items ?? [];
+            group.items.push({ id: uid(), name, url: s.url });
+          }
+        } else {
+          items.push({ id: uid(), type: 'site', name, url: s.url });
+        }
+        save().then(render);
+        chip.remove(); // keep the modal open so several chips can be added in a row
+        _showToast(t('bmAdded'));
+      });
+    });
+    sec.classList.remove('hidden');
+  });
+}
+
+// ─── Custom Tile Icon ────────────────────────────────────────────────────────
+
+// undefined = untouched, null = remove custom icon, string = new data-URL icon
+let pendingEditIcon;
+
+function compressIcon(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const S = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = S; canvas.height = S;
+      // centre-crop to a square so the tile icon isn't distorted
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, S, S);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+function _updateEditIconButtons(item) {
+  const resetBtn = document.getElementById('edit-reset-icon');
+  if (!resetBtn) return;
+  const hasCustom = pendingEditIcon != null || (pendingEditIcon === undefined && !!item?.icon);
+  resetBtn.classList.toggle('hidden', !hasCustom);
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -3323,7 +3739,7 @@ function doImportJson(file) {
         items = _pages[_currentPage];
         if (data.pageNames && typeof data.pageNames === 'object') {
           _pageNames = data.pageNames;
-          chrome.storage.local.set({ pageNames: { ..._pageNames } });
+          savePageNames();
         }
         save().then(() => {
           if (data.theme && data.theme !== 'custom') { applyTheme(data.theme); saveTheme(data.theme); }
@@ -3347,10 +3763,10 @@ function _flattenSites() {
   for (const pageKey of PAGE_KEYS) {
     for (const item of (_pages[pageKey] ?? [])) {
       if (item.type === 'site') {
-        out.push({ name: item.name, url: item.url, favicon: item.favicon ?? null, groupName: null });
+        out.push({ name: item.name, url: item.url, favicon: item.icon ?? item.favicon ?? null, groupName: null });
       } else if (item.type === 'group') {
         for (const s of (item.items ?? [])) {
-          out.push({ name: s.name, url: s.url, favicon: s.favicon ?? null, groupName: item.name });
+          out.push({ name: s.name, url: s.url, favicon: s.icon ?? s.favicon ?? null, groupName: item.name });
         }
       }
     }
@@ -3404,11 +3820,24 @@ function _renderSearch(raw) {
     });
   }
 
-  if (!list.length) {
+  if (!list.length && !q) {
     el.innerHTML = `<div class="sr-empty">${escHtml(t('srNoResults', { q: raw.trim() }))}</div>`;
     _srActiveIdx = -1;
     return;
   }
+
+  // Trailing "search the web" row — quick search doubles as a web search box
+  const webRow = q ? `
+    <div class="sr-item sr-web" role="option" data-url="${escHtml(_engineUrl(raw.trim()))}" data-idx="${list.length}">
+      <div class="sr-icon sr-web-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <div class="sr-text">
+        <div class="sr-name">${escHtml(t('srSearchWeb', { engine: _engine().name, q: raw.trim() }))}</div>
+      </div>
+    </div>` : '';
 
   el.innerHTML = list.map((site, i) => `
     <div class="sr-item${i === _srActiveIdx ? ' active' : ''}" role="option"
@@ -3426,7 +3855,7 @@ function _renderSearch(raw) {
         ? `<span class="sr-group" title="${escHtml(site.groupName)}">${escHtml(site.groupName)}</span>`
         : ''}
     </div>
-  `).join('');
+  `).join('') + webRow;
 
   // Show cached favicons
   el.querySelectorAll('.sr-icon[data-fav]').forEach(icon => {
@@ -3495,7 +3924,7 @@ function promptRenamePage(pageKey) {
     const val = input.value.trim();
     if (val) _pageNames[pageKey] = val;
     else delete _pageNames[pageKey];
-    chrome.storage.local.set({ pageNames: { ..._pageNames } });
+    savePageNames();
     _updatePageBar();
     closeModal();
   };
@@ -3534,10 +3963,12 @@ function promptRenamePage(pageKey) {
     try { await loadTileSize(); } catch { applyTileSize('m'); }
     try { await loadModalDark(); } catch { applyModalDark(false); }
     try { await loadShortcuts(); } catch { /* use defaults */ }
+    try { await loadSearchEngine(); } catch { /* default engine */ }
     try { _loadBookmarkFavicons(); } catch { /* bookmarks unavailable */ }
     render();
     _updatePageBar();
     _loadWeather();   // after loadLang so weather text uses the chosen language
+    try { await _initCloudSync(); } catch { /* sync unavailable */ }
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -3920,6 +4351,64 @@ function promptRenamePage(pageKey) {
     }
   });
 
+  // Engine picker menu
+  _buildEngineMenu();
+  _updateEngineBar();
+  const engineMenu = document.getElementById('engine-menu');
+  document.getElementById('engine-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    engineMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', e => {
+    if (!engineMenu.classList.contains('hidden') &&
+        !e.target.closest('#engine-btn') && !e.target.closest('#engine-menu')) {
+      engineMenu.classList.add('hidden');
+    }
+  });
+
+  // Cross-device sync toggle (Settings → Data)
+  document.getElementById('cloud-sync-toggle').addEventListener('click', () => {
+    _setCloudSync(!_cloudSync);
+  });
+
+  // Most-visited suggestions (Add modal)
+  document.getElementById('top-sites-enable').addEventListener('click', async () => {
+    try {
+      const granted = await chrome.permissions.request({ permissions: ['topSites'] });
+      if (granted) {
+        document.getElementById('top-sites-enable').classList.add('hidden');
+        _renderTopSiteChips();
+      }
+    } catch { /* request denied or unavailable */ }
+  });
+
+  // Custom tile icon (Edit modal)
+  const iconFileInput = document.getElementById('icon-file-input');
+  document.getElementById('edit-upload-icon').addEventListener('click', () => iconFileInput.click());
+  iconFileInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const dataUrl = await compressIcon(file);
+    if (!dataUrl) return;
+    pendingEditIcon = dataUrl;
+    const img    = document.getElementById('edit-favicon-preview-img');
+    const letter = document.getElementById('edit-favicon-preview-letter');
+    editFaviconEpoch++;   // cancel any favicon chain in flight
+    img.onerror = null;
+    img.onload  = null;
+    img.src = dataUrl;
+    img.style.display = '';
+    letter.style.display = 'none';
+    document.getElementById('edit-favicon-preview-box').classList.add('loaded');
+    _updateEditIconButtons(null);
+  });
+  document.getElementById('edit-reset-icon').addEventListener('click', () => {
+    pendingEditIcon = null;
+    _updateEditIconButtons(null);
+    loadEditFaviconPreview(document.getElementById('edit-url-input').value);
+  });
+
 
   // Config button → open settings modal
   document.getElementById('config-btn').addEventListener('click', e => {
@@ -4000,6 +4489,10 @@ function promptRenamePage(pageKey) {
   document.getElementById('modal-style-dark').addEventListener('click', () => {
     applyModalDark(true);
     chrome.storage.local.set({ modalDark: true });
+  });
+  document.getElementById('modal-style-auto').addEventListener('click', () => {
+    applyModalDark('auto');
+    chrome.storage.local.set({ modalDark: 'auto' });
   });
 
   // Shortcut key remapping
