@@ -242,6 +242,15 @@ const I18N = {
     topSitesEmpty: 'No new suggestions',
     // custom icons
     uploadIcon: 'Upload icon', resetIcon: 'Reset icon',
+    // auto backups
+    restoreFromBackup: 'Restore from backup', close: 'Close',
+    backupsTitle: 'Restore from Backup',
+    backupsDesc: 'Foyer saves a copy of your tiles once a day and before any big change, such as clearing or importing. Backups stay on this device.',
+    backupsEmpty: 'No backups yet. One is made automatically each day you use Foyer.',
+    bkReason_daily: 'Daily backup', bkReason_clear: 'Before clearing all',
+    bkReason_import: 'Before importing', bkReason_restore: 'Before restoring',
+    bkReason_sync: 'Before syncing from another device',
+    confirmRestoreBackupBody: ({ n, when }) => `Replace all current tiles with the ${n} site${n !== 1 ? 's' : ''} saved on ${when}? Your current tiles will be backed up first.`,
   },
   'zh-TW': {
     cancel: '取消', add: '新增', save: '儲存', restore: '還原', apply: '套用',
@@ -329,6 +338,15 @@ const I18N = {
     topSitesShow: '推薦我最常造訪的網站',
     topSitesEmpty: '沒有新的建議',
     uploadIcon: '上傳圖示', resetIcon: '重設圖示',
+    // auto backups
+    restoreFromBackup: '從備份還原', close: '關閉',
+    backupsTitle: '從備份還原',
+    backupsDesc: 'Foyer 每天會自動備份一次，在清除、匯入等大幅變動前也會先備份。備份只存在這台裝置上。',
+    backupsEmpty: '還沒有備份。每天使用 Foyer 時會自動建立一份。',
+    bkReason_daily: '每日備份', bkReason_clear: '清除全部之前',
+    bkReason_import: '匯入之前', bkReason_restore: '還原之前',
+    bkReason_sync: '從其他裝置同步之前',
+    confirmRestoreBackupBody: ({ n, when }) => `要用 ${when} 備份的 ${n} 個網站取代目前所有圖示嗎？目前的圖示會先自動備份。`,
   },
   'zh-CN': {
     cancel: '取消', add: '添加', save: '保存', restore: '恢复', apply: '应用',
@@ -416,6 +434,15 @@ const I18N = {
     topSitesShow: '推荐我最常访问的网站',
     topSitesEmpty: '没有新的建议',
     uploadIcon: '上传图标', resetIcon: '重置图标',
+    // auto backups
+    restoreFromBackup: '从备份恢复', close: '关闭',
+    backupsTitle: '从备份恢复',
+    backupsDesc: 'Foyer 每天会自动备份一次，在清除、导入等较大变动前也会先备份。备份只保存在这台设备上。',
+    backupsEmpty: '还没有备份。每天使用 Foyer 时会自动创建一份。',
+    bkReason_daily: '每日备份', bkReason_clear: '清除全部之前',
+    bkReason_import: '导入之前', bkReason_restore: '恢复之前',
+    bkReason_sync: '从其他设备同步之前',
+    confirmRestoreBackupBody: ({ n, when }) => `要用 ${when} 备份的 ${n} 个网站替换当前所有图标吗？当前的图标会先自动备份。`,
   },
   ja: {
     cancel: 'キャンセル', add: '追加', save: '保存', restore: '復元', apply: '適用',
@@ -503,6 +530,15 @@ const I18N = {
     topSitesShow: 'よく見るサイトから提案',
     topSitesEmpty: '新しい提案はありません',
     uploadIcon: 'アイコンをアップロード', resetIcon: 'アイコンをリセット',
+    // auto backups
+    restoreFromBackup: 'バックアップから復元', close: '閉じる',
+    backupsTitle: 'バックアップから復元',
+    backupsDesc: 'Foyer は 1 日 1 回、また消去やインポートなど大きな変更の前に自動でバックアップします。バックアップはこのデバイスにのみ保存されます。',
+    backupsEmpty: 'バックアップはまだありません。Foyer を使う日ごとに自動で作成されます。',
+    bkReason_daily: '毎日のバックアップ', bkReason_clear: 'すべて消去する前',
+    bkReason_import: 'インポートする前', bkReason_restore: '復元する前',
+    bkReason_sync: '他のデバイスから同期する前',
+    confirmRestoreBackupBody: ({ n, when }) => `現在のアイコンを ${when} に保存された ${n} 件のサイトに置き換えますか？現在のアイコンは先にバックアップされます。`,
   },
 };
 
@@ -556,6 +592,34 @@ function _snapshotForUndo() {
   _pages[_currentPage] = items;
   _undoStack.push({ page: _currentPage, pages: JSON.parse(JSON.stringify(_pages)) });
   if (_undoStack.length > UNDO_LIMIT) _undoStack.shift();
+  _persistUndo();
+}
+
+// The undo history lives in storage.session (memory-backed, cleared when the
+// browser quits) so closing the tab right after a mistake doesn't lose it.
+let _undoPersistTimer = null;
+function _persistUndo() {
+  if (!chrome.storage?.session) return;
+  clearTimeout(_undoPersistTimer);
+  _undoPersistTimer = setTimeout(() => {
+    const blobs = {};
+    const stack = _undoStack
+      .filter(s => !Array.isArray(s))
+      .map(s => ({ page: s.page, pages: _compactPages(s.pages, blobs) }));
+    chrome.storage.session.set({ undoStack: stack, undoBlobs: blobs }).catch(() => {});
+  }, 150);
+}
+
+async function _loadUndo() {
+  if (!chrome.storage?.session) return;
+  const r = await chrome.storage.session.get(['undoStack', 'undoBlobs']);
+  if (!Array.isArray(r.undoStack)) return;
+  _undoStack.length = 0;
+  r.undoStack.slice(-UNDO_LIMIT).forEach(s => {
+    if (s && s.pages && PAGE_KEYS.includes(s.page)) {
+      _undoStack.push({ page: s.page, pages: _expandPages(s.pages, r.undoBlobs ?? {}) });
+    }
+  });
 }
 
 function doUndo() {
@@ -570,6 +634,7 @@ function doUndo() {
     _currentPage = snap.page;
     items = _pages[_currentPage];
   }
+  _persistUndo();
   save();
   render();
   _updatePageBar();
@@ -593,9 +658,11 @@ async function load() {
     const src = data.pages;
     _pages = {};
     PAGE_KEYS.forEach(k => { _pages[k] = Array.isArray(src[k]) ? src[k] : []; });
+    _hasRealData = true;
   } else if (Array.isArray(data.items)) {
     // migrate old single-page format → page 1
     PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? data.items : []; });
+    _hasRealData = true;
   } else {
     PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; });
   }
@@ -604,6 +671,7 @@ async function load() {
 
 function save() {
   _pages[_currentPage] = items;
+  _hasRealData = true;
   _pagesAt = Date.now();
   const p = chrome.storage.local.set({ pages: _pages, pagesAt: _pagesAt });
   _scheduleSyncPush();
@@ -621,6 +689,214 @@ function _storageGet(keys) {
     chrome.storage.local.get(keys),
     new Promise(resolve => setTimeout(() => resolve({}), 3000))
   ]);
+}
+
+// ─── Auto Backups ────────────────────────────────────────────────────────────
+// Local-only safety net. A snapshot of all pages is kept once a day and before
+// anything that wipes or replaces tiles (clear all, import, restore, adopting
+// tiles synced from another device). Large data: URLs (custom icons, covers)
+// are stored once in a shared table and referenced by hash, so ten snapshots
+// don't hold ten copies of the same image.
+
+const BACKUP_LIMIT  = 10;
+const BACKUP_DAY_MS = 24 * 60 * 60 * 1000;
+const _BLOB_REF     = '@blob:';
+let _hasRealData    = false;              // false while showing first-run sample tiles
+let _backupQueue    = Promise.resolve();  // serialises backup writes
+
+function _hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36) + s.length.toString(36);
+}
+
+function _blobify(obj, blobs) {
+  const o = { ...obj };
+  for (const [k, v] of Object.entries(o)) {
+    if (typeof v === 'string' && v.startsWith('data:')) {
+      const h = _hashStr(v);
+      blobs[h] = v;
+      o[k] = _BLOB_REF + h;
+    }
+  }
+  return o;
+}
+
+function _unblobify(obj, blobs) {
+  const o = { ...obj };
+  for (const [k, v] of Object.entries(o)) {
+    if (typeof v === 'string' && v.startsWith(_BLOB_REF)) {
+      const data = blobs[v.slice(_BLOB_REF.length)];
+      if (data) o[k] = data; else delete o[k];
+    }
+  }
+  return o;
+}
+
+// Returns a deep copy of pages with data: URLs swapped for references into blobs.
+function _compactPages(pages, blobs) {
+  const out = {};
+  PAGE_KEYS.forEach(k => {
+    out[k] = (pages[k] ?? []).map(it => {
+      const c = _blobify(it, blobs);
+      if (Array.isArray(it.items)) c.items = it.items.map(s => _blobify(s, blobs));
+      return c;
+    });
+  });
+  return out;
+}
+
+function _expandPages(pages, blobs) {
+  const out = {};
+  PAGE_KEYS.forEach(k => {
+    out[k] = (Array.isArray(pages?.[k]) ? pages[k] : []).map(it => {
+      const c = _unblobify(it, blobs);
+      if (Array.isArray(it.items)) c.items = it.items.map(s => _unblobify(s, blobs));
+      return c;
+    });
+  });
+  return out;
+}
+
+function _countSites(pages) {
+  let n = 0;
+  Object.values(pages).forEach(arr => arr.forEach(it => {
+    n += it.type === 'group' ? (it.items ?? []).length : 1;
+  }));
+  return n;
+}
+
+// Snapshot the current tiles. Captures state synchronously, so callers may
+// mutate _pages right after calling this.
+function _createBackup(reason) {
+  if (!_hasRealData) return _backupQueue;
+  _pages[_currentPage] = items;
+  const n = _countSites(_pages);
+  if (n === 0) return _backupQueue;          // nothing worth keeping
+  const blobs = {};
+  const pages = _compactPages(_pages, blobs);
+  const pageNames = { ..._pageNames };
+  const fp = _hashStr(JSON.stringify({ pages, pageNames }));
+  const entry = { id: uid(), at: Date.now(), reason, n, fp, pages, pageNames };
+  _backupQueue = _backupQueue.then(() => _writeBackup(entry, blobs)).catch(() => {});
+  return _backupQueue;
+}
+
+async function _writeBackup(entry, blobs) {
+  // No timeout race here: a slow read must never be mistaken for "no backups".
+  const r = await chrome.storage.local.get(['backups', 'backupBlobs']);
+  let list = Array.isArray(r.backups) ? r.backups : [];
+  const last = list[list.length - 1];
+  if (last && last.fp === entry.fp) {
+    // Same tiles as the newest backup: just relabel it with the newer, more telling reason
+    if (last.reason === entry.reason) return;
+    list = [...list.slice(0, -1), { ...last, at: entry.at, reason: entry.reason }];
+  } else {
+    list = [...list, entry].slice(-BACKUP_LIMIT);
+  }
+  const pool = { ...(r.backupBlobs ?? {}), ...blobs };
+  // Drop oldest snapshots until the write fits in the storage quota
+  while (list.length) {
+    const used = {};
+    for (const m of JSON.stringify(list).matchAll(/@blob:([a-z0-9]+)/g)) {
+      if (pool[m[1]]) used[m[1]] = pool[m[1]];
+    }
+    try {
+      await chrome.storage.local.set({ backups: list, backupBlobs: used });
+      return;
+    } catch {
+      if (list.length === 1) return;
+      list = list.slice(1);
+    }
+  }
+}
+
+async function _getBackups() {
+  try {
+    const r = await chrome.storage.local.get(['backups', 'backupBlobs']);
+    return { list: Array.isArray(r.backups) ? r.backups : [], blobs: r.backupBlobs ?? {} };
+  } catch {
+    return { list: [], blobs: {} };
+  }
+}
+
+async function _maybeDailyBackup() {
+  const { list } = await _getBackups();
+  const last = list.reduce((m, b) => Math.max(m, b.at ?? 0), 0);
+  if (Date.now() - last >= BACKUP_DAY_MS) _createBackup('daily');
+}
+
+async function _restoreBackup(id) {
+  const { list, blobs } = await _getBackups();
+  const b = list.find(x => x.id === id);
+  if (!b) return;
+  const pages = _expandPages(b.pages, blobs);
+  _createBackup('restore');   // keep the current tiles so this restore can be reversed too
+  _snapshotForUndo();
+  _pages = pages;
+  items = _pages[_currentPage];
+  _pageNames = (b.pageNames && typeof b.pageNames === 'object') ? { ...b.pageNames } : {};
+  savePageNames();
+  save();
+  render();
+  _updatePageBar();
+  _showToast(t('restoredNTiles', { n: b.n }) + _undoSuffix());
+}
+
+function _fmtBackupTime(at) {
+  try {
+    return new Date(at).toLocaleString(_lang, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return new Date(at).toLocaleString();
+  }
+}
+
+async function openBackupsModal() {
+  const modal = document.getElementById('backups-modal');
+  const listEl = document.getElementById('backups-list');
+  listEl.innerHTML = '';
+  modal.classList.remove('hidden');
+  const { list } = await _getBackups();
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'backups-empty';
+    empty.textContent = t('backupsEmpty');
+    listEl.appendChild(empty);
+    return;
+  }
+  [...list].reverse().forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'backup-row';
+    const info = document.createElement('div');
+    info.className = 'backup-info';
+    const when = document.createElement('div');
+    when.className = 'backup-when';
+    when.textContent = _fmtBackupTime(b.at);
+    const meta = document.createElement('div');
+    meta.className = 'backup-meta';
+    meta.textContent = `${t('bkReason_' + b.reason)} · ${t('partSites', { n: b.n })}`;
+    info.append(when, meta);
+    const btn = document.createElement('button');
+    btn.className = 'backup-restore-btn';
+    btn.textContent = t('restore');
+    btn.addEventListener('click', () => {
+      closeBackupsModal();
+      _showConfirm(
+        t('confirmRestoreTitle'),
+        t('confirmRestoreBackupBody', { n: b.n, when: _fmtBackupTime(b.at) }),
+        t('restore'),
+        () => _restoreBackup(b.id)
+      );
+    });
+    row.append(info, btn);
+    listEl.appendChild(row);
+  });
+}
+
+function closeBackupsModal() {
+  document.getElementById('backups-modal').classList.add('hidden');
 }
 
 function _loadBookmarkFavicons() {
@@ -727,6 +1003,7 @@ async function _adoptSyncData(meta) {
 
   const fresh = {};
   PAGE_KEYS.forEach(k => { fresh[k] = Array.isArray(data.pages[k]) ? data.pages[k] : []; });
+  _createBackup('sync');   // another device may have cleared or overwritten everything
   _pages = fresh;
   items = _pages[_currentPage];
   _pageNames = (data.pageNames && typeof data.pageNames === 'object') ? data.pageNames : {};
@@ -3652,6 +3929,7 @@ function _confirmClearAll() {
     t('confirmClearBody', { n: total, mod: _mod() }),
     t('clearAllOk'),
     () => {
+      _createBackup('clear');
       _snapshotForUndo();
       PAGE_KEYS.forEach(k => { _pages[k] = []; });
       items = _pages[_currentPage];
@@ -3734,6 +4012,7 @@ function doImportJson(file) {
       t('confirmRestoreBody', { n: totalTiles }),
       t('restore'),
       () => {
+        _createBackup('import');
         _snapshotForUndo();
         _pages = importedPages;
         items = _pages[_currentPage];
@@ -3959,6 +4238,7 @@ function promptRenamePage(pageKey) {
   (async () => {
     try { await loadLang();    } catch { applyLanguage('en', { save: false }); }
     try { await load(); } catch { PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; }); items = _pages[_currentPage]; }
+    try { await _loadUndo(); } catch { /* no saved undo history */ }
     try { await loadTheme();   } catch { applyTheme('cream'); }
     try { await loadTileSize(); } catch { applyTileSize('m'); }
     try { await loadModalDark(); } catch { applyModalDark(false); }
@@ -3968,6 +4248,7 @@ function promptRenamePage(pageKey) {
     render();
     _updatePageBar();
     _loadWeather();   // after loadLang so weather text uses the chosen language
+    try { await _maybeDailyBackup(); } catch { /* backups unavailable */ }
     try { await _initCloudSync(); } catch { /* sync unavailable */ }
   })();
 
@@ -4125,7 +4406,7 @@ function promptRenamePage(pageKey) {
 
     const anyOverlayOpen = [
       'add-modal','edit-modal','rename-modal',
-      'import-modal','location-modal','confirm-modal',
+      'import-modal','location-modal','confirm-modal','backups-modal',
       'search-overlay','tutorial-overlay','settings-modal','bg-adjust-modal',
     ].some(id => !document.getElementById(id).classList.contains('hidden'));
 
@@ -4141,6 +4422,7 @@ function promptRenamePage(pageKey) {
       if (_selectedIds.size > 0)                                                         { _clearSel();      return; }
       if (_focusedId)                                                                     { _focusTile(null); return; }
       if (!document.getElementById('search-overlay').classList.contains('hidden'))      { closeSearch();    return; }
+      if (!document.getElementById('backups-modal').classList.contains('hidden'))       { closeBackupsModal(); return; }
       if (!document.getElementById('import-modal').classList.contains('hidden'))        { closeImportModal(); return; }
       if (!document.getElementById('location-modal').classList.contains('hidden'))      { closeLocationModal(); return; }
       if (!document.getElementById('confirm-modal').classList.contains('hidden'))       { document.getElementById('confirm-modal').classList.add('hidden'); return; }
@@ -4442,6 +4724,14 @@ function promptRenamePage(pageKey) {
   });
   document.getElementById('settings-export-json').addEventListener('click', () => {
     doExportJson(); closeSettingsModal();
+  });
+  document.getElementById('settings-backups').addEventListener('click', () => {
+    closeSettingsModal();
+    openBackupsModal();
+  });
+  document.getElementById('close-backups').addEventListener('click', closeBackupsModal);
+  document.getElementById('backups-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeBackupsModal();
   });
   document.getElementById('settings-clear-all').addEventListener('click', () => {
     closeSettingsModal();
