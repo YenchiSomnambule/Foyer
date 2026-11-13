@@ -15,7 +15,9 @@
 - [ ] **拖 tile 到數字按鈕**移到該頁；多選拖曳一起移動（clone 顯示數量 badge）
 - [ ] **頁面命名**：右鍵數字 → 命名；當前頁顯示「數字 · 名稱」，其他頁 hover 有 tooltip；清空輸入 = 移除名稱
 - [ ] 換頁、放 tiles、reload 後確認 tiles 留在正確的頁
-- [ ] Quick pills：Sync bookmarks bar、Sync all bookmarks、Clear all tiles（清空**全部 10 頁**、確認 dialog、可 Undo）
+- [ ] Quick pills：Sync bookmarks bar、Sync all bookmarks（**Clear all 不在首頁**，只在設定 → 資料）
+- [ ] 設定 → 資料 → 清除所有圖示：清空**全部 10 頁**、確認 dialog 提到自動備份、可 Undo
+- [ ] **自動備份**：清除全部後，關掉分頁再開仍可 Ctrl+Z／⌘Z；設定 → 資料 → 從備份還原 列出備份（時間、原因、網站數），還原後 tiles、自訂圖示、頁面名稱都回來
 - [ ] Settings → Data：所有按鈕逐一測試（Sync / Import / Export / Clear）
 - [ ] Export JSON → Import 還原（含 pages + 頁面名稱）；舊版 v1 備份（items）匯入後進到頁面 1
 - [ ] Settings → Help：Restart tutorial 正常啟動；Rate Foyer 開啟商店評價頁

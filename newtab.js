@@ -196,7 +196,7 @@ const I18N = {
     partGroups: ({ n }) => `${n} group${n > 1 ? 's' : ''}`, partSites: ({ n }) => `${n} site${n > 1 ? 's' : ''}`,
     // confirm dialogs
     confirmClearTitle: 'Clear All Tiles',
-    confirmClearBody: ({ n, mod }) => `Remove all ${n} tile${n !== 1 ? 's' : ''} across all 10 pages? You can undo with ${mod}.`,
+    confirmClearBody: ({ n, mod }) => `Remove all ${n} tile${n !== 1 ? 's' : ''} across all 10 pages? A backup is saved first — undo with ${mod}, or restore it any time from Settings → Restore from backup.`,
     confirmRestoreTitle: 'Restore Backup',
     confirmRestoreBody: ({ n }) => `Replace all current tiles with ${n} tile${n !== 1 ? 's' : ''} from the backup?`,
     // weather
@@ -221,7 +221,7 @@ const I18N = {
     tutDragT: 'Drag to organise', tutDragB: 'Drag icons to rearrange. Drop one onto another to create a folder group. Drag on empty space to select several tiles at once.',
     tutPagesT: 'Ten pages', tutPagesB: 'Your grid has 10 pages. Click a number or press 1–9, 0 on your keyboard to switch. Drag any tile — or a multi-selection — onto a number to move it to that page.',
     tutNameT: 'Name your pages', tutNameB: 'Right-click a number to give that page a name, like "Work" or "Games". The number always stays, so keyboard switching never changes.',
-    tutQuickT: 'Quick actions', tutQuickB: 'Hover each icon to see what it does: sync your bookmarks bar, import all bookmarks, or clear every tile (a confirmation keeps you safe).',
+    tutQuickT: 'Quick actions', tutQuickB: 'Hover each icon to see what it does: sync your bookmarks bar or import all your bookmarks in one click.',
     tutThemeT: 'Change the look', tutThemeB: 'Pick a preset theme or dial in a custom colour. Saves automatically.',
     tutSettingsT: 'Settings', tutSettingsB: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.',
     // search engine / web search
@@ -302,7 +302,7 @@ const I18N = {
     restoredNTiles: ({ n }) => `已還原 ${n} 個圖示`,
     partGroups: ({ n }) => `${n} 個群組`, partSites: ({ n }) => `${n} 個網站`,
     confirmClearTitle: '清除所有圖示',
-    confirmClearBody: ({ n, mod }) => `要清除全部 10 頁共 ${n} 個圖示嗎？可按 ${mod} 復原。`,
+    confirmClearBody: ({ n, mod }) => `要清除全部 10 頁共 ${n} 個圖示嗎？清除前會自動備份，可按 ${mod} 復原，之後也能在「設定 → 從備份還原」找回。`,
     confirmRestoreTitle: '還原備份',
     confirmRestoreBody: ({ n }) => `要用備份中的 ${n} 個圖示取代目前所有圖示嗎？`,
     wDetecting: '偵測中…', wUnavailable: '無法取得', wSetLocation: '設定地點', wmoUnknown: '未知',
@@ -322,7 +322,7 @@ const I18N = {
     tutDragT: '拖曳整理', tutDragB: '拖曳圖示可重新排列。把一個拖到另一個上可建立資料夾群組。在空白處拖曳可一次選取多個圖示。',
     tutPagesT: '十個頁面', tutPagesB: '你的網格共有 10 頁。點數字或按鍵盤 1–9、0 即可切換。把圖示（或多選）拖到數字上，即可移到該頁。',
     tutNameT: '為頁面命名', tutNameB: '右鍵點數字即可為該頁命名，例如「工作」或「遊戲」。數字始終保留，所以鍵盤切換不受影響。',
-    tutQuickT: '快速操作', tutQuickB: '把游標移到各圖示上即可看到功能：同步書籤列、匯入所有書籤，或清除所有圖示（會先確認以保安全）。',
+    tutQuickT: '快速操作', tutQuickB: '把游標移到各圖示上即可看到功能：一鍵同步書籤列，或匯入所有書籤。',
     tutThemeT: '變更外觀', tutThemeB: '挑選預設主題或自訂顏色，會自動儲存。',
     tutSettingsT: '設定', tutSettingsB: '匯入書籤、匯出備份、設定圖示大小、自訂快速鍵。隨時可從「設定 → 說明」重新教學。',
     srSearchWeb: ({ engine, q }) => `用 ${engine} 搜尋「${q}」`,
@@ -398,7 +398,7 @@ const I18N = {
     restoredNTiles: ({ n }) => `已恢复 ${n} 个图标`,
     partGroups: ({ n }) => `${n} 个分组`, partSites: ({ n }) => `${n} 个网站`,
     confirmClearTitle: '清除所有图标',
-    confirmClearBody: ({ n, mod }) => `要清除全部 10 页共 ${n} 个图标吗？可按 ${mod} 撤销。`,
+    confirmClearBody: ({ n, mod }) => `要清除全部 10 页共 ${n} 个图标吗？清除前会自动备份，可按 ${mod} 撤销，之后也能在「设置 → 从备份恢复」找回。`,
     confirmRestoreTitle: '恢复备份',
     confirmRestoreBody: ({ n }) => `要用备份中的 ${n} 个图标替换当前所有图标吗？`,
     wDetecting: '检测中…', wUnavailable: '无法获取', wSetLocation: '设置地点', wmoUnknown: '未知',
@@ -418,7 +418,7 @@ const I18N = {
     tutDragT: '拖动整理', tutDragB: '拖动图标可重新排列。把一个拖到另一个上可创建文件夹分组。在空白处拖动可一次选取多个图标。',
     tutPagesT: '十个页面', tutPagesB: '你的网格共有 10 页。点数字或按键盘 1–9、0 即可切换。把图标（或多选）拖到数字上，即可移到该页。',
     tutNameT: '为页面命名', tutNameB: '右键点数字即可为该页命名，例如“工作”或“游戏”。数字始终保留，所以键盘切换不受影响。',
-    tutQuickT: '快速操作', tutQuickB: '把光标移到各图标上即可看到功能：同步书签栏、导入所有书签，或清除所有图标（会先确认以保安全）。',
+    tutQuickT: '快速操作', tutQuickB: '把光标移到各图标上即可看到功能：一键同步书签栏，或导入所有书签。',
     tutThemeT: '更改外观', tutThemeB: '挑选预设主题或自定义颜色，会自动保存。',
     tutSettingsT: '设置', tutSettingsB: '导入书签、导出备份、设置图标大小、自定义快捷键。随时可从“设置 → 帮助”重新教程。',
     srSearchWeb: ({ engine, q }) => `用 ${engine} 搜索“${q}”`,
@@ -494,7 +494,7 @@ const I18N = {
     restoredNTiles: ({ n }) => `${n} 個のアイコンを復元しました`,
     partGroups: ({ n }) => `${n} グループ`, partSites: ({ n }) => `${n} サイト`,
     confirmClearTitle: 'すべてのアイコンを消去',
-    confirmClearBody: ({ n, mod }) => `全 10 ページの ${n} 個のアイコンをすべて消去しますか？${mod} で元に戻せます。`,
+    confirmClearBody: ({ n, mod }) => `全 10 ページの ${n} 個のアイコンをすべて消去しますか？消去前に自動でバックアップされます。${mod} で元に戻せるほか、あとから「設定 → バックアップから復元」でも戻せます。`,
     confirmRestoreTitle: 'バックアップを復元',
     confirmRestoreBody: ({ n }) => `現在のすべてのアイコンを、バックアップの ${n} 個で置き換えますか？`,
     wDetecting: '検出中…', wUnavailable: '取得不可', wSetLocation: '地域を設定', wmoUnknown: '不明',
@@ -514,7 +514,7 @@ const I18N = {
     tutDragT: 'ドラッグで整理', tutDragB: 'アイコンをドラッグで並べ替え。重ねるとフォルダグループを作成。空白部分をドラッグすると複数のアイコンをまとめて選択できます。',
     tutPagesT: '10 ページ', tutPagesB: 'グリッドは 10 ページあります。数字をクリックするかキーボードの 1–9、0 で切り替え。アイコン（複数選択も可）を数字へドラッグするとそのページへ移動します。',
     tutNameT: 'ページに名前を', tutNameB: '数字を右クリックすると、そのページに「仕事」や「ゲーム」などの名前を付けられます。数字は常に残るので、キーボード切替は変わりません。',
-    tutQuickT: 'クイック操作', tutQuickB: '各アイコンにカーソルを合わせると機能がわかります：ブックマークバーを同期、すべてのブックマークをインポート、すべてのアイコンを消去（確認があり安全です）。',
+    tutQuickT: 'クイック操作', tutQuickB: '各アイコンにカーソルを合わせると機能がわかります：ブックマークバーの同期や、すべてのブックマークのインポートをワンクリックで。',
     tutThemeT: '見た目を変更', tutThemeB: 'プリセットのテーマを選ぶか、好きな色を指定できます。自動的に保存されます。',
     tutSettingsT: '設定', tutSettingsB: 'ブックマークのインポート、バックアップのエクスポート、アイコンサイズの設定、ショートカットのカスタマイズ。「設定 → ヘルプ」からいつでもチュートリアルを再開できます。',
     srSearchWeb: ({ engine, q }) => `${engine} で「${q}」を検索`,
@@ -4751,7 +4751,6 @@ function promptRenamePage(pageKey) {
   // Quick pill buttons (top bar)
   document.getElementById('quick-sync-bar').addEventListener('click', () => importBookmarksBar());
   document.getElementById('quick-sync-all').addEventListener('click', () => syncAllBookmarks());
-  document.getElementById('quick-clear-all').addEventListener('click', () => _confirmClearAll());
   const jsonImportInput = document.getElementById('json-import-input');
   document.getElementById('settings-import-json').addEventListener('click', () => {
     jsonImportInput.click(); closeSettingsModal();
