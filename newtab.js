@@ -250,6 +250,14 @@ const I18N = {
     bkReason_daily: 'Daily backup', bkReason_clear: 'Before clearing all',
     bkReason_import: 'Before importing', bkReason_restore: 'Before restoring',
     bkReason_sync: 'Before syncing from another device',
+    // bookmark mirror
+    bmMirrorTitle: 'Mirror to Chrome bookmarks',
+    bmMirrorDesc: 'Keeps a "Foyer" folder in Other bookmarks up to date. Your other bookmarks are never touched.',
+    bmMirrorOn: 'Your tiles are in Bookmarks → Other bookmarks → Foyer',
+    bmMirrorOff: 'Stopped updating the Foyer bookmarks folder',
+    bmPageFolder: ({ k, name }) => name ? `${k} · ${name}` : `Page ${k}`,
+    bmArchiveFolder: 'Foyer Archive',
+    bmArchived: 'Previous bookmarks moved to the "Foyer Archive" folder',
     confirmRestoreBackupBody: ({ n, when }) => `Replace all current tiles with the ${n} site${n !== 1 ? 's' : ''} saved on ${when}? Your current tiles will be backed up first.`,
   },
   'zh-TW': {
@@ -346,6 +354,14 @@ const I18N = {
     bkReason_daily: '每日備份', bkReason_clear: '清除全部之前',
     bkReason_import: '匯入之前', bkReason_restore: '還原之前',
     bkReason_sync: '從其他裝置同步之前',
+    // bookmark mirror
+    bmMirrorTitle: '同步到 Chrome 書籤',
+    bmMirrorDesc: '在「其他書籤」裡維護一個「Foyer」資料夾，內容跟著圖示更新。不會動到你其他的書籤。',
+    bmMirrorOn: '圖示已同步到 書籤 → 其他書籤 → Foyer',
+    bmMirrorOff: '已停止更新 Foyer 書籤資料夾',
+    bmPageFolder: ({ k, name }) => name ? `${k} · ${name}` : `第 ${k} 頁`,
+    bmArchiveFolder: 'Foyer 封存',
+    bmArchived: '原本的書籤已移到「Foyer 封存」資料夾',
     confirmRestoreBackupBody: ({ n, when }) => `要用 ${when} 備份的 ${n} 個網站取代目前所有圖示嗎？目前的圖示會先自動備份。`,
   },
   'zh-CN': {
@@ -442,6 +458,14 @@ const I18N = {
     bkReason_daily: '每日备份', bkReason_clear: '清除全部之前',
     bkReason_import: '导入之前', bkReason_restore: '恢复之前',
     bkReason_sync: '从其他设备同步之前',
+    // bookmark mirror
+    bmMirrorTitle: '同步到 Chrome 书签',
+    bmMirrorDesc: '在「其他书签」里维护一个「Foyer」文件夹，内容跟着图标更新。不会改动你的其他书签。',
+    bmMirrorOn: '图标已同步到 书签 → 其他书签 → Foyer',
+    bmMirrorOff: '已停止更新 Foyer 书签文件夹',
+    bmPageFolder: ({ k, name }) => name ? `${k} · ${name}` : `第 ${k} 页`,
+    bmArchiveFolder: 'Foyer 归档',
+    bmArchived: '原来的书签已移到「Foyer 归档」文件夹',
     confirmRestoreBackupBody: ({ n, when }) => `要用 ${when} 备份的 ${n} 个网站替换当前所有图标吗？当前的图标会先自动备份。`,
   },
   ja: {
@@ -538,6 +562,14 @@ const I18N = {
     bkReason_daily: '毎日のバックアップ', bkReason_clear: 'すべて消去する前',
     bkReason_import: 'インポートする前', bkReason_restore: '復元する前',
     bkReason_sync: '他のデバイスから同期する前',
+    // bookmark mirror
+    bmMirrorTitle: 'Chrome のブックマークに同期',
+    bmMirrorDesc: '「その他のブックマーク」内の「Foyer」フォルダをアイコンと同じ内容に保ちます。ほかのブックマークには一切触れません。',
+    bmMirrorOn: 'アイコンを ブックマーク → その他のブックマーク → Foyer に同期しました',
+    bmMirrorOff: 'Foyer ブックマークフォルダの更新を停止しました',
+    bmPageFolder: ({ k, name }) => name ? `${k} · ${name}` : `ページ ${k}`,
+    bmArchiveFolder: 'Foyer アーカイブ',
+    bmArchived: '以前のブックマークを「Foyer アーカイブ」フォルダに移動しました',
     confirmRestoreBackupBody: ({ n, when }) => `現在のアイコンを ${when} に保存された ${n} 件のサイトに置き換えますか？現在のアイコンは先にバックアップされます。`,
   },
 };
@@ -675,6 +707,7 @@ function save() {
   _pagesAt = Date.now();
   const p = chrome.storage.local.set({ pages: _pages, pagesAt: _pagesAt });
   _scheduleSyncPush();
+  _scheduleBmMirror();
   return p;
 }
 
@@ -682,6 +715,7 @@ function savePageNames() {
   _pagesAt = Date.now();
   chrome.storage.local.set({ pageNames: { ..._pageNames }, pagesAt: _pagesAt });
   _scheduleSyncPush();
+  _scheduleBmMirror();
 }
 
 function _storageGet(keys) {
@@ -1011,6 +1045,7 @@ async function _adoptSyncData(meta) {
   await chrome.storage.local.set({ pages: _pages, pageNames: { ..._pageNames }, pagesAt: _pagesAt });
   render();
   _updatePageBar();
+  _scheduleBmMirror();
   return true;
 }
 
@@ -1069,6 +1104,179 @@ async function _setCloudSync(on) {
   } else {
     _pushSync();
     _showToast(t('cloudSyncOn'));
+  }
+}
+
+// ─── Bookmark Mirror (Foyer → Chrome bookmarks) ─────────────────────────────
+// Opt-in, one-way. Keeps a single "Foyer" folder under Other bookmarks in step
+// with the tiles: one subfolder per non-empty page, one subfolder per group.
+// Foyer never reads from or writes to any other bookmark. If a change would
+// remove more than half of the mirrored bookmarks (e.g. Clear all), the old
+// folder is moved into "Foyer Archive" instead of being emptied, so nothing in
+// Chrome's bookmarks is ever lost in bulk.
+
+const BM_MASS_MIN      = 5;    // a mass removal must drop at least this many bookmarks…
+const BM_MASS_RATIO    = 0.5;  // …and more than this share of the mirrored ones
+const BM_ARCHIVE_LIMIT = 10;   // archived snapshots kept in "Foyer Archive"
+let _bmMirror      = false;
+let _bmMirrorTimer = null;
+let _bmMirrorQueue = Promise.resolve();
+
+function _bmAvailable() { return !!chrome.bookmarks?.create; }
+
+function _bmDesiredTree() {
+  _pages[_currentPage] = items;
+  const site = s => ({ url: s.url, title: s.name || s.url });
+  const out = [];
+  PAGE_KEYS.forEach(k => {
+    const arr = _pages[k] ?? [];
+    if (!arr.length) return;
+    out.push({
+      title: t('bmPageFolder', { k, name: _pageNames[k] ?? '' }),
+      children: arr.map(it => it.type === 'group'
+        ? { title: it.name || 'Folder', children: (it.items ?? []).filter(s => s.url).map(site) }
+        : site(it)).filter(n => n.children || n.url),
+    });
+  });
+  return out;
+}
+
+function _bmCollectUrls(nodes, out = []) {
+  nodes.forEach(n => { if (n.url) out.push(n.url); else _bmCollectUrls(n.children ?? [], out); });
+  return out;
+}
+
+// The parent all Foyer folders live in: "Other bookmarks" (fallback: first root folder)
+async function _bmRootParent() {
+  const [root] = await chrome.bookmarks.getTree();
+  const kids = root.children ?? [];
+  return (kids.find(n => n.id === '2') ?? kids[1] ?? kids[0]).id;
+}
+
+// Finds (or creates) a folder by stored id, then by title under parentId.
+async function _bmEnsureFolder(storeKey, title, parentId) {
+  const r = await chrome.storage.local.get(storeKey);
+  if (r[storeKey]) {
+    try {
+      const [n] = await chrome.bookmarks.get(r[storeKey]);
+      if (n && !n.url) return n.id;
+    } catch { /* deleted by the user */ }
+  }
+  const siblings = await chrome.bookmarks.getChildren(parentId);
+  const found = siblings.find(n => !n.url && n.title === title);
+  const id = found ? found.id : (await chrome.bookmarks.create({ parentId, title })).id;
+  await chrome.storage.local.set({ [storeKey]: id });
+  return id;
+}
+
+// Makes the children of parentId match desired, touching as little as possible.
+async function _bmReconcile(parentId, desired, existing) {
+  const used = new Set();
+  const match = d => existing.find(e => !used.has(e.id) &&
+    (d.url ? e.url === d.url : (!e.url && e.title === d.title)));
+  const pairs = desired.map(d => { const e = match(d); if (e) used.add(e.id); return [d, e]; });
+
+  for (const e of existing) {
+    if (used.has(e.id)) continue;
+    try { e.url ? await chrome.bookmarks.remove(e.id) : await chrome.bookmarks.removeTree(e.id); } catch {}
+  }
+  // Order of what's left; items before index i are already in place, so every
+  // move below is upward and Chrome's same-parent index quirk never applies.
+  const order = existing.filter(e => used.has(e.id)).map(e => e.id);
+  for (let i = 0; i < pairs.length; i++) {
+    const [d, e] = pairs[i];
+    if (!e) {
+      try {
+        const n = await chrome.bookmarks.create(d.url
+          ? { parentId, index: i, title: d.title, url: d.url }
+          : { parentId, index: i, title: d.title });
+        order.splice(i, 0, n.id);
+        if (!d.url) await _bmReconcile(n.id, d.children, []);
+      } catch { /* URL Chrome won't bookmark (e.g. javascript:) */ }
+      continue;
+    }
+    const pos = order.indexOf(e.id);
+    if (pos !== i && pos !== -1) {
+      await chrome.bookmarks.move(e.id, { parentId, index: i });
+      order.splice(pos, 1);
+      order.splice(i, 0, e.id);
+    }
+    if (d.url && e.title !== d.title) await chrome.bookmarks.update(e.id, { title: d.title });
+    if (!d.url) await _bmReconcile(e.id, d.children, e.children ?? []);
+  }
+}
+
+async function _bmArchive(folderId) {
+  const parentId = await _bmRootParent();
+  const archiveId = await _bmEnsureFolder('bmArchiveId', t('bmArchiveFolder'), parentId);
+  const [sub] = await chrome.bookmarks.getSubTree(folderId);
+  const n = _bmCollectUrls(sub.children ?? []).length;
+  const stamp = new Date().toLocaleString(_lang, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  await chrome.bookmarks.update(folderId, { title: `${stamp} · ${t('partSites', { n })}` });
+  await chrome.bookmarks.move(folderId, { parentId: archiveId, index: 0 });
+  await chrome.storage.local.remove('bmMirrorId');
+  const kept = await chrome.bookmarks.getChildren(archiveId);
+  for (const old of kept.slice(BM_ARCHIVE_LIMIT)) {
+    try { await chrome.bookmarks.removeTree(old.id); } catch {}
+  }
+}
+
+async function _bmMirrorNow() {
+  if (!_bmMirror || !_bmAvailable()) return;
+  const desired = _bmDesiredTree();
+  const parentId = await _bmRootParent();
+  let folderId = await _bmEnsureFolder('bmMirrorId', 'Foyer', parentId);
+  let [sub] = await chrome.bookmarks.getSubTree(folderId);
+
+  // Mass-removal brake: archive the whole folder instead of emptying it
+  const have = _bmCollectUrls(sub.children ?? []);
+  const want = new Map();
+  _bmCollectUrls(desired).forEach(u => want.set(u, (want.get(u) ?? 0) + 1));
+  let removed = 0;
+  have.forEach(u => { const c = want.get(u) ?? 0; if (c > 0) want.set(u, c - 1); else removed++; });
+  if (removed >= BM_MASS_MIN && removed > have.length * BM_MASS_RATIO) {
+    await _bmArchive(folderId);
+    _showToast(t('bmArchived'));
+    folderId = await _bmEnsureFolder('bmMirrorId', 'Foyer', parentId);
+    [sub] = await chrome.bookmarks.getSubTree(folderId);
+  }
+  await _bmReconcile(folderId, desired, sub.children ?? []);
+}
+
+function _scheduleBmMirror(delay = 1500) {
+  if (!_bmMirror || !_bmAvailable()) return;
+  clearTimeout(_bmMirrorTimer);
+  _bmMirrorTimer = setTimeout(() => {
+    _bmMirrorQueue = _bmMirrorQueue.then(_bmMirrorNow).catch(() => {});
+  }, delay);
+}
+
+function _updateBmMirrorToggle() {
+  const btn = document.getElementById('bm-mirror-toggle');
+  if (!btn) return;
+  btn.classList.toggle('on', _bmMirror);
+  btn.setAttribute('aria-checked', String(_bmMirror));
+  btn.disabled = !_bmAvailable();
+}
+
+async function _initBmMirror() {
+  const r = await _storageGet(['bmMirror']);
+  _bmMirror = !!r.bmMirror;
+  _updateBmMirrorToggle();
+  // Catch up on changes that arrived without a local save (e.g. from another device)
+  if (_bmMirror) _scheduleBmMirror(3000);
+}
+
+function _setBmMirror(on) {
+  _bmMirror = on && _bmAvailable();
+  chrome.storage.local.set({ bmMirror: _bmMirror });
+  _updateBmMirrorToggle();
+  if (_bmMirror) {
+    _scheduleBmMirror(0);
+    _showToast(t('bmMirrorOn'));
+  } else {
+    clearTimeout(_bmMirrorTimer);
+    _showToast(t('bmMirrorOff'));
   }
 }
 
@@ -4250,6 +4458,7 @@ function promptRenamePage(pageKey) {
     _loadWeather();   // after loadLang so weather text uses the chosen language
     try { await _maybeDailyBackup(); } catch { /* backups unavailable */ }
     try { await _initCloudSync(); } catch { /* sync unavailable */ }
+    try { await _initBmMirror(); } catch { /* bookmarks unavailable */ }
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -4651,6 +4860,9 @@ function promptRenamePage(pageKey) {
   // Cross-device sync toggle (Settings → Data)
   document.getElementById('cloud-sync-toggle').addEventListener('click', () => {
     _setCloudSync(!_cloudSync);
+  });
+  document.getElementById('bm-mirror-toggle').addEventListener('click', () => {
+    _setBmMirror(!_bmMirror);
   });
 
   // Most-visited suggestions (Add modal)
