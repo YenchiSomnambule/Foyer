@@ -84,8 +84,8 @@ let pendingEditFavicon = null;
 let editFaviconEpoch   = 0;
 
 // Group page state
-const GP_COLS     = 4;   // group overlay grid columns
-const GP_PER_PAGE = 16;  // tiles per group page (4×4)
+const GP_COLS     = 3;   // group overlay grid columns
+const GP_PER_PAGE = 9;   // tiles per group page (3×3)
 let groupCurrentPage  = 0;
 let groupTotalPages   = 0;
 let cleanupGroupDrag  = null;

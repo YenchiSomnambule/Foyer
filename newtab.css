@@ -648,7 +648,7 @@ body:has(#group-overlay:not(.hidden)) #page-bar { display: none; }
   border: 1px solid rgba(0,0,0,0.09);
   border-radius: 28px;
   padding: 28px 28px 24px;
-  width: min(500px, 92vw);
+  width: min(400px, 92vw);
   max-height: 80vh;
   overflow: visible;
   box-shadow: 0 24px 64px rgba(0,0,0,0.22);
@@ -724,11 +724,11 @@ body:has(#group-overlay:not(.hidden)) #page-bar { display: none; }
 .group-page {
   flex: 0 0 100%;
   display: grid;
-  grid-template-columns: repeat(4, 80px);
+  grid-template-columns: repeat(3, 80px);
   gap: 20px 20px;
   justify-content: center;
   padding: 4px 0 16px;
-  min-height: 320px;
+  min-height: 260px;
   align-content: start;
 }
 
