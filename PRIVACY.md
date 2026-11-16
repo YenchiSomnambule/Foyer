@@ -27,7 +27,7 @@ You can clear all stored data at any time by removing the extension or clearing 
 
 ## Cross-device sync (optional, off by default)
 
-If you enable **Sync across devices** in Settings → Data, your site list and page names are also written to `chrome.storage.sync`. This data is replicated between your devices by **Chrome's own sync infrastructure**, tied to the Google account you use for Chrome sync — the extension itself still sends nothing to any server of its own, and no third-party service is involved. Uploaded custom icons and large cached favicons are excluded from the synced payload and remain local. Turning the toggle off stops this device from reading or writing sync data.
+If you enable **Sync across devices** in Settings → Data, your site list, page names and sticky notes are also written to `chrome.storage.sync`. This data is replicated between your devices by **Chrome's own sync infrastructure**, tied to the Google account you use for Chrome sync — the extension itself still sends nothing to any server of its own, and no third-party service is involved. Uploaded custom icons and large cached favicons are excluded from the synced payload and remain local. Turning the toggle off stops this device from reading or writing sync data.
 
 ---
 
@@ -55,7 +55,7 @@ If you turn on **Mirror to Chrome bookmarks** (off by default), the extension cr
 
 ## Sticky notes
 
-Notes you write in the sticky-notes column are stored only in local extension storage on your device. They are included in a backup file only when you choose Export backup, and are never uploaded or synced.
+Notes you write in the sticky-notes column are stored in local extension storage on your device. If you turn on **Sync across devices**, they are also stored in Chrome's sync storage for your Google account (like your tiles) so they appear on your other computers; they are never sent to any other server. They are included in a backup file only when you choose Export backup.
 
 ## Automatic backups
 

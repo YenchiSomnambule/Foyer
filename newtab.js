@@ -248,7 +248,12 @@ const I18N = {
     styleAuto: 'Auto',
     // cross-device sync
     cloudSyncTitle: 'Sync across devices',
-    cloudSyncDesc: 'Backs up your tiles to your Google account and keeps every Chrome with Foyer in sync.',
+    cloudSyncDesc: 'Backs up your tiles and notes to your Google account and keeps every Chrome with Foyer in sync.',
+    notesSyncFull: 'Notes are too long to sync — they stay on this device',
+    partNotes: ({ n }) => `${n} note${n !== 1 ? 's' : ''}`,
+    restoredNNotes: ({ n }) => `Restored ${n} note${n !== 1 ? 's' : ''}`,
+    bkReason_notesSync: 'Before syncing notes from another device',
+    confirmRestoreNotesBackupBody: ({ n, when }) => `Replace your current notes with the ${n} note${n !== 1 ? 's' : ''} saved on ${when}? Your tiles are not affected, and your current notes will be backed up first.`,
     cloudSyncOn: 'Sync enabled', cloudSyncOff: 'Sync disabled on this device',
     cloudSyncFull: 'Too much data to sync — tiles stay on this device',
     cloudSyncErr: 'Sync failed — will retry on the next change',
@@ -360,7 +365,12 @@ const I18N = {
     ttChangeEngine: '更換搜尋引擎',
     styleAuto: '自動',
     cloudSyncTitle: '跨裝置同步',
-    cloudSyncDesc: '將圖示備份到你的 Google 帳戶，並在所有安裝 Foyer 的 Chrome 之間保持同步。',
+    cloudSyncDesc: '將圖示和便條備份到你的 Google 帳戶，並在所有安裝 Foyer 的 Chrome 之間保持同步。',
+    notesSyncFull: '便條內容太多無法同步——只會保留在這台裝置',
+    partNotes: ({ n }) => `${n} 張便條`,
+    restoredNNotes: ({ n }) => `已還原 ${n} 張便條`,
+    bkReason_notesSync: '從其他裝置同步便條之前',
+    confirmRestoreNotesBackupBody: ({ n, when }) => `要用 ${when} 備份的 ${n} 張便條取代目前的便條嗎？圖示不受影響，目前的便條會先自動備份。`,
     cloudSyncOn: '已開啟同步', cloudSyncOff: '已關閉此裝置的同步',
     cloudSyncFull: '資料量過大無法同步——圖示僅保留在本機',
     cloudSyncErr: '同步失敗——下次變更時會再試',
@@ -470,7 +480,12 @@ const I18N = {
     ttChangeEngine: '更换搜索引擎',
     styleAuto: '自动',
     cloudSyncTitle: '跨设备同步',
-    cloudSyncDesc: '将图标备份到你的 Google 账户，并在所有安装 Foyer 的 Chrome 之间保持同步。',
+    cloudSyncDesc: '将图标和便签备份到你的 Google 账户，并在所有安装 Foyer 的 Chrome 之间保持同步。',
+    notesSyncFull: '便签内容太多无法同步——只会保留在这台设备',
+    partNotes: ({ n }) => `${n} 张便签`,
+    restoredNNotes: ({ n }) => `已恢复 ${n} 张便签`,
+    bkReason_notesSync: '从其他设备同步便签之前',
+    confirmRestoreNotesBackupBody: ({ n, when }) => `要用 ${when} 备份的 ${n} 张便签替换当前的便签吗？图标不受影响，当前的便签会先自动备份。`,
     cloudSyncOn: '已开启同步', cloudSyncOff: '已关闭此设备的同步',
     cloudSyncFull: '数据量过大无法同步——图标仅保留在本地',
     cloudSyncErr: '同步失败——下次更改时会重试',
@@ -580,7 +595,12 @@ const I18N = {
     ttChangeEngine: '検索エンジンを変更',
     styleAuto: '自動',
     cloudSyncTitle: 'デバイス間同期',
-    cloudSyncDesc: 'アイコンを Google アカウントにバックアップし、Foyer を入れたすべての Chrome と同期します。',
+    cloudSyncDesc: 'アイコンとメモを Google アカウントにバックアップし、Foyer を入れたすべての Chrome と同期します。',
+    notesSyncFull: 'メモが長すぎて同期できません——このデバイスにのみ保存されます',
+    partNotes: ({ n }) => `メモ ${n} 件`,
+    restoredNNotes: ({ n }) => `メモを ${n} 件復元しました`,
+    bkReason_notesSync: '他のデバイスからメモを同期する前',
+    confirmRestoreNotesBackupBody: ({ n, when }) => `現在のメモを ${when} に保存された ${n} 件のメモに置き換えますか？アイコンには影響せず、現在のメモは先にバックアップされます。`,
     cloudSyncOn: '同期をオンにしました', cloudSyncOff: 'このデバイスの同期をオフにしました',
     cloudSyncFull: 'データが大きすぎて同期できません——このデバイスにのみ保存されます',
     cloudSyncErr: '同期に失敗しました——次の変更時に再試行します',
@@ -773,6 +793,7 @@ function _storageGet(keys) {
 // don't hold ten copies of the same image.
 
 const BACKUP_LIMIT  = 10;
+const NOTES_BACKUP_LIMIT = 5;      // notes snapshots are kept separately so they can't push out tile backups
 const BACKUP_BUDGET = 3_000_000;   // chars of JSON for all backups + icons, leaves room for tiles & background image
 const BACKUP_DAY_MS = 24 * 60 * 60 * 1000;
 const _BLOB_REF     = '@blob:';
@@ -861,14 +882,20 @@ async function _writeBackup(entry, blobs) {
   // No timeout race here: a slow read must never be mistaken for "no backups".
   const r = await chrome.storage.local.get(['backups', 'backupBlobs']);
   let list = Array.isArray(r.backups) ? r.backups : [];
-  const last = list[list.length - 1];
+  const kindOf = b => b.kind === 'notes' ? 'notes' : 'tiles';
+  const sameKind = list.filter(b => kindOf(b) === kindOf(entry));
+  const last = sameKind[sameKind.length - 1];
   if (last && last.fp === entry.fp) {
-    // Same tiles as the newest backup: just relabel it with the newer, more telling reason
+    // Same content as the newest backup of this kind: just relabel it with the newer, more telling reason
     if (last.reason === entry.reason) return;
-    list = [...list.slice(0, -1), { ...last, at: entry.at, reason: entry.reason }];
+    list = list.map(b => b === last ? { ...b, at: entry.at, reason: entry.reason } : b);
   } else {
-    list = [...list, entry].slice(-BACKUP_LIMIT);
+    list = [...list, entry];
   }
+  list = [
+    ...list.filter(b => kindOf(b) === 'tiles').slice(-BACKUP_LIMIT),
+    ...list.filter(b => kindOf(b) === 'notes').slice(-NOTES_BACKUP_LIMIT),
+  ].sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
   const pool = { ...(r.backupBlobs ?? {}), ...blobs };
   // Drop oldest snapshots until the write fits in the storage quota
   while (list.length) {
@@ -920,9 +947,19 @@ async function _clearHostNamesOnce() {
   await chrome.storage.local.set({ hostNamesCleared: true });
 }
 
+// Snapshot of the notes (taken before notes from another device replace them)
+function _createNotesBackup(reason) {
+  const notes = _notes.filter(n => n.text.trim()).map(n => ({ ...n }));
+  if (!notes.length) return _backupQueue;
+  const fp = _hashStr(JSON.stringify(notes.map(n => [n.id, n.text, n.color])));
+  const entry = { id: uid(), kind: 'notes', at: Date.now(), reason, n: notes.length, fp, notes };
+  _backupQueue = _backupQueue.then(() => _writeBackup(entry, {})).catch(() => {});
+  return _backupQueue;
+}
+
 async function _maybeDailyBackup() {
   const { list } = await _getBackups();
-  const last = list.reduce((m, b) => Math.max(m, b.at ?? 0), 0);
+  const last = list.filter(b => b.kind !== 'notes').reduce((m, b) => Math.max(m, b.at ?? 0), 0);
   if (Date.now() - last >= BACKUP_DAY_MS) _createBackup('daily');
 }
 
@@ -930,6 +967,14 @@ async function _restoreBackup(id) {
   const { list, blobs } = await _getBackups();
   const b = list.find(x => x.id === id);
   if (!b) return;
+  if (b.kind === 'notes') {
+    _createNotesBackup('restore');   // current notes, so this can be reversed too
+    _notes = _cleanNotes(b.notes);
+    _saveNotes(true);
+    renderNotes();
+    _showToast(t('restoredNNotes', { n: b.n }));
+    return;
+  }
   const pages = _expandPages(b.pages, blobs);
   _createBackup('restore');   // keep the current tiles so this restore can be reversed too
   _snapshotForUndo();
@@ -976,7 +1021,7 @@ async function openBackupsModal() {
     when.textContent = _fmtBackupTime(b.at);
     const meta = document.createElement('div');
     meta.className = 'backup-meta';
-    meta.textContent = `${t('bkReason_' + b.reason)} · ${t('partSites', { n: b.n })}`;
+    meta.textContent = `${t('bkReason_' + b.reason)} · ${t(b.kind === 'notes' ? 'partNotes' : 'partSites', { n: b.n })}`;
     info.append(when, meta);
     const btn = document.createElement('button');
     btn.className = 'backup-restore-btn';
@@ -985,7 +1030,7 @@ async function openBackupsModal() {
       closeBackupsModal();
       _showConfirm(
         t('confirmRestoreTitle'),
-        t('confirmRestoreBackupBody', { n: b.n, when: _fmtBackupTime(b.at) }),
+        t(b.kind === 'notes' ? 'confirmRestoreNotesBackupBody' : 'confirmRestoreBackupBody', { n: b.n, when: _fmtBackupTime(b.at) }),
         t('restore'),
         () => _restoreBackup(b.id)
       );
@@ -1034,7 +1079,7 @@ let _cloudSync    = false;
 let _pagesAt      = 0;     // timestamp of the last local tile/page-name change
 let _syncPushTimer = null;
 const _SYNC_CHUNK   = 2000;   // UTF-16 units per chunk — ≤ ~6KB UTF-8, safely under the 8KB/item quota
-const _SYNC_MAX_LEN = 90000;  // stay under the 100KB total storage.sync quota
+const _SYNC_MAX_LEN = 82000;  // tiles; with notes (≤15 KB) stays under the ~100 KB storage.sync quota
 
 function _syncAvailable() { return !!chrome.storage?.sync; }
 
@@ -1173,6 +1218,7 @@ async function _setCloudSync(on) {
     _pushSync();
     _showToast(t('cloudSyncOn'));
   }
+  _reconcileNotes();
 }
 
 // ─── Bookmark Mirror (Foyer → Chrome bookmarks) ─────────────────────────────
@@ -1359,7 +1405,11 @@ let _notesSaveTimer = null;
 
 function _saveNotes(now = false) {
   clearTimeout(_notesSaveTimer);
-  const write = () => chrome.storage.local.set({ notes: _notes });
+  const write = () => {
+    _notesAt = Date.now();
+    chrome.storage.local.set({ notes: _notes, notesAt: _notesAt });
+    _scheduleNotesPush();
+  };
   if (now) write(); else _notesSaveTimer = setTimeout(write, 300);
 }
 
@@ -1376,6 +1426,7 @@ async function loadNotes() {
   // Keep several open new-tab pages in step (skip while the user is typing here)
   chrome.storage.onChanged?.addListener((changes, area) => {
     if (area !== 'local' || !changes.notes) return;
+    if (changes.notesAt) _notesAt = changes.notesAt.newValue ?? _notesAt;
     if (document.activeElement?.closest('#notes-panel')) return;
     _notes = _cleanNotes(changes.notes.newValue);
     renderNotes();
@@ -1399,6 +1450,7 @@ function _buildNote(note, i) {
   ta.placeholder = t('notePh');
   ta.value = note.text;
   ta.addEventListener('input', () => {
+    _lastNoteInputAt = Date.now();
     note.text = ta.value;
     note.at = Date.now();
     _autoGrow(ta);
@@ -1449,7 +1501,8 @@ function renderNotes(focusId) {
   list.innerHTML = '';
   _notes.forEach((n, i) => list.appendChild(_buildNote(n, i)));
   list.querySelectorAll('.note-text').forEach(_autoGrow);
-  if (focusId) list.querySelector(`.note[data-id="${focusId}"] .note-text`)?.focus();
+  const ta = focusId && list.querySelector(`.note[data-id="${focusId}"] .note-text`);
+  if (ta) { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }
 }
 
 function addNote() {
@@ -1457,6 +1510,127 @@ function addNote() {
   _notes.unshift(note);
   renderNotes(note.id);
   document.getElementById('notes-panel').scrollTop = 0;
+}
+
+// ─── Notes cross-device sync ─────────────────────────────────────────────────
+// Rides on the "Sync across devices" switch but has its own keys and timestamp
+// (sn_meta / sn_0…), so editing notes on one computer and tiles on another never
+// overwrite each other. Last write wins per channel; the replaced notes are
+// backed up first.
+
+const _NOTES_SYNC_MAX = 15000;   // bytes of the ~100 KB storage.sync quota set aside for notes
+let _notesAt = 0;                // when notes were last edited on this device (0 = never synced)
+const NOTE_TYPING_MS = 4000;     // remote notes wait until the user has paused typing this long
+let _lastNoteInputAt = 0;
+let _pendingNotesMeta = null;
+let _pendingNotesTimer = null;
+let _notesPushTimer = null;
+let _notesSyncFullShown = false;
+
+function _scheduleNotesPush() {
+  if (!_cloudSync || !_syncAvailable()) return;
+  clearTimeout(_notesPushTimer);
+  _notesPushTimer = setTimeout(_pushNotes, 1500);
+}
+
+async function _pushNotes() {
+  if (!_cloudSync || !_syncAvailable()) return;
+  const payload = JSON.stringify(_notes);
+  if (new TextEncoder().encode(payload).length > _NOTES_SYNC_MAX) {
+    if (!_notesSyncFullShown) { _notesSyncFullShown = true; _showToast(t('notesSyncFull')); }
+    return;
+  }
+  _notesSyncFullShown = false;
+  const chunks = [];
+  for (let i = 0; i < payload.length; i += _SYNC_CHUNK) chunks.push(payload.slice(i, i + _SYNC_CHUNK));
+  if (!chunks.length) chunks.push('[]');
+  const obj = { sn_meta: { v: 1, at: _notesAt, n: chunks.length } };
+  chunks.forEach((c, i) => { obj['sn_' + i] = c; });
+  try {
+    const old = await chrome.storage.sync.get('sn_meta');
+    await chrome.storage.sync.set(obj);
+    const oldN = old.sn_meta?.n ?? 0;
+    if (oldN > chunks.length) {
+      const stale = [];
+      for (let i = chunks.length; i < oldN; i++) stale.push('sn_' + i);
+      await chrome.storage.sync.remove(stale);
+    }
+  } catch (e) {
+    _showToast(t(String(e?.message ?? '').includes('QUOTA') ? 'notesSyncFull' : 'cloudSyncErr'));
+  }
+}
+
+async function _readSyncedNotes(meta) {
+  if (!meta || !Number.isInteger(meta.n) || meta.n <= 0) return null;
+  const keys = [];
+  for (let i = 0; i < meta.n; i++) keys.push('sn_' + i);
+  let r;
+  try { r = await chrome.storage.sync.get(keys); } catch { return null; }
+  let payload = '';
+  for (let i = 0; i < meta.n; i++) {
+    if (typeof r['sn_' + i] !== 'string') return null;   // a push may be in flight
+    payload += r['sn_' + i];
+  }
+  try { return _cleanNotes(JSON.parse(payload)); } catch { return null; }
+}
+
+// merge: first sync on a device that already had its own notes — keep both sets
+async function _adoptNotes(meta, { merge = false } = {}) {
+  const remote = await _readSyncedNotes(meta);
+  if (!remote) return false;
+  let next = remote;
+  if (merge) {
+    const ids = new Set(remote.map(n => n.id));
+    next = [...remote, ..._notes.filter(n => !ids.has(n.id) && n.text.trim())];
+  }
+  if (JSON.stringify(next) !== JSON.stringify(_notes)) _createNotesBackup('notesSync');
+  const focusedId = document.activeElement?.closest?.('.note')?.dataset.id;
+  _notes = next;
+  _notesAt = merge ? Date.now() : (meta.at ?? Date.now());
+  await chrome.storage.local.set({ notes: _notes, notesAt: _notesAt });
+  renderNotes(focusedId);
+  if (merge) _pushNotes();
+  return true;
+}
+
+async function _reconcileNotes() {
+  if (!_cloudSync || !_syncAvailable()) return;
+  let meta = null;
+  try { meta = (await chrome.storage.sync.get('sn_meta')).sn_meta; } catch {}
+  const hasLocal = _notes.some(n => n.text.trim());
+  if (meta && !_notesAt && hasLocal) { await _adoptNotes(meta, { merge: true }); return; }
+  if (meta && (meta.at ?? 0) > _notesAt) { await _adoptNotes(meta); return; }
+  if (_notesAt > (meta?.at ?? 0) || (!meta && hasLocal)) {
+    if (!_notesAt) { _notesAt = Date.now(); chrome.storage.local.set({ notesAt: _notesAt }); }
+    _pushNotes();
+  }
+}
+
+// Applies the newest remote notes once the user has paused typing (last write wins)
+function _maybeAdoptPendingNotes() {
+  const m = _pendingNotesMeta;
+  if (!m || (m.at ?? 0) <= _notesAt) { _pendingNotesMeta = null; return; }
+  const wait = NOTE_TYPING_MS - (Date.now() - _lastNoteInputAt);
+  if (wait > 0) {
+    clearTimeout(_pendingNotesTimer);
+    _pendingNotesTimer = setTimeout(_maybeAdoptPendingNotes, wait + 50);
+    return;
+  }
+  _pendingNotesMeta = null;
+  _adoptNotes(m);
+}
+
+async function _initNotesSync() {
+  const r = await _storageGet(['notesAt']);
+  _notesAt = r.notesAt ?? 0;
+  await _reconcileNotes();
+  chrome.storage.onChanged?.addListener((changes, area) => {
+    if (area !== 'sync' || !_cloudSync || !changes.sn_meta) return;
+    const m = changes.sn_meta.newValue;
+    if (!m || (m.at ?? 0) <= _notesAt) return;
+    _pendingNotesMeta = m;
+    _maybeAdoptPendingNotes();
+  });
 }
 
 function deleteNote(id) {
@@ -4674,6 +4848,7 @@ function promptRenamePage(pageKey) {
     try { await _clearHostNamesOnce(); } catch { /* leave names as they are */ }
     try { await _initBmMirror(); } catch { /* bookmarks unavailable */ }
     try { await loadNotes(); } catch { /* notes unavailable */ }
+    try { await _initNotesSync(); } catch { /* sync unavailable */ }
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
