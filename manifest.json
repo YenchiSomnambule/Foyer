@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Foyer",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "description": "Your websites in a clean new-tab grid — pages, folders, quick search, weather, and free cross-device sync.",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
