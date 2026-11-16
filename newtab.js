@@ -223,6 +223,7 @@ const I18N = {
     srNoResults: ({ q }) => `No results for "${q}"`,
     // page rename
     pageNamePh: ({ k }) => `Page ${k} name (empty = number only)`,
+    pageKeyHint: ({ k, name }) => `${name} · press ${k}`,
     // tutorial
     tutWelcomeT: 'Welcome to Foyer',
     tutWelcomeB: "Your websites, organised in a clean home screen grid. Here's a quick tour — or tap Skip to jump straight in. Tip: press Enter to step through.",
@@ -230,7 +231,7 @@ const I18N = {
     tutOpenT: 'Open or manage', tutOpenB: 'Click an icon to open the site. Right-click for options: rename, edit, or delete.',
     tutDragT: 'Drag to organise', tutDragB: 'Drag icons to rearrange. Drop one onto another to create a folder group. Drag on empty space to select several tiles at once.',
     tutPagesT: 'Ten pages', tutPagesB: 'Your grid has 10 pages. Click a number or press 1–9, 0 on your keyboard to switch. Drag any tile — or a multi-selection — onto a number to move it to that page.',
-    tutNameT: 'Name your pages', tutNameB: 'Right-click a number to give that page a name, like "Work" or "Games". The number always stays, so keyboard switching never changes.',
+    tutNameT: 'Name your pages', tutNameB: 'Double-click or right-click a number to name that page, like "Work" or "Games". The name replaces the number on the bar, and the number key still switches to it.',
     tutQuickT: 'Quick actions', tutQuickB: 'Hover each icon to see what it does: sync your bookmarks bar or import all your bookmarks in one click.',
     tutThemeT: 'Change the look', tutThemeB: 'Pick a preset theme or dial in a custom colour. Saves automatically.',
     tutSettingsT: 'Settings', tutSettingsB: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.',
@@ -334,13 +335,14 @@ const I18N = {
     locSearching: '搜尋中…', locNoResults: '無結果', locSearchFailed: '搜尋失敗',
     srNoResults: ({ q }) => `找不到「${q}」的結果`,
     pageNamePh: ({ k }) => `第 ${k} 頁名稱（留空則僅顯示數字）`,
+    pageKeyHint: ({ k, name }) => `${name} · 按 ${k} 切換`,
     tutWelcomeT: '歡迎使用 Foyer',
     tutWelcomeB: '你的網站，整齊排列在乾淨的主畫面網格中。這是個快速導覽——或點「略過」直接開始。提示：按 Enter 可逐步前進。',
     tutAddT: '新增網站', tutAddB: '點 + 即可新增任何網站。貼上網址、命名，它就會加入網格。',
     tutOpenT: '開啟或管理', tutOpenB: '點圖示即可開啟網站。右鍵可重新命名、編輯或刪除。',
     tutDragT: '拖曳整理', tutDragB: '拖曳圖示可重新排列。把一個拖到另一個上可建立資料夾群組。在空白處拖曳可一次選取多個圖示。',
     tutPagesT: '十個頁面', tutPagesB: '你的網格共有 10 頁。點數字或按鍵盤 1–9、0 即可切換。把圖示（或多選）拖到數字上，即可移到該頁。',
-    tutNameT: '為頁面命名', tutNameB: '右鍵點數字即可為該頁命名，例如「工作」或「遊戲」。數字始終保留，所以鍵盤切換不受影響。',
+    tutNameT: '為頁面命名', tutNameB: '雙擊或右鍵點數字即可為該頁命名，例如「工作」或「遊戲」。名稱會取代列上的數字，按原本的數字鍵仍可切換到該頁。',
     tutQuickT: '快速操作', tutQuickB: '把游標移到各圖示上即可看到功能：一鍵同步書籤列，或匯入所有書籤。',
     tutThemeT: '變更外觀', tutThemeB: '挑選預設主題或自訂顏色，會自動儲存。',
     tutSettingsT: '設定', tutSettingsB: '匯入書籤、匯出備份、設定圖示大小、自訂快速鍵。隨時可從「設定 → 說明」重新教學。',
@@ -439,13 +441,14 @@ const I18N = {
     locSearching: '搜索中…', locNoResults: '无结果', locSearchFailed: '搜索失败',
     srNoResults: ({ q }) => `未找到“${q}”的结果`,
     pageNamePh: ({ k }) => `第 ${k} 页名称（留空则仅显示数字）`,
+    pageKeyHint: ({ k, name }) => `${name} · 按 ${k} 切换`,
     tutWelcomeT: '欢迎使用 Foyer',
     tutWelcomeB: '你的网站，整齐排列在简洁的主屏网格中。这是快速导览——或点“跳过”直接开始。提示：按 Enter 可逐步前进。',
     tutAddT: '添加网站', tutAddB: '点 + 即可添加任何网站。粘贴网址、命名，它就会加入网格。',
     tutOpenT: '打开或管理', tutOpenB: '点图标即可打开网站。右键可重命名、编辑或删除。',
     tutDragT: '拖动整理', tutDragB: '拖动图标可重新排列。把一个拖到另一个上可创建文件夹分组。在空白处拖动可一次选取多个图标。',
     tutPagesT: '十个页面', tutPagesB: '你的网格共有 10 页。点数字或按键盘 1–9、0 即可切换。把图标（或多选）拖到数字上，即可移到该页。',
-    tutNameT: '为页面命名', tutNameB: '右键点数字即可为该页命名，例如“工作”或“游戏”。数字始终保留，所以键盘切换不受影响。',
+    tutNameT: '为页面命名', tutNameB: '双击或右键点数字即可为该页命名，例如“工作”或“游戏”。名称会取代栏上的数字，按原来的数字键仍可切换到该页。',
     tutQuickT: '快速操作', tutQuickB: '把光标移到各图标上即可看到功能：一键同步书签栏，或导入所有书签。',
     tutThemeT: '更改外观', tutThemeB: '挑选预设主题或自定义颜色，会自动保存。',
     tutSettingsT: '设置', tutSettingsB: '导入书签、导出备份、设置图标大小、自定义快捷键。随时可从“设置 → 帮助”重新教程。',
@@ -544,13 +547,14 @@ const I18N = {
     locSearching: '検索中…', locNoResults: '結果なし', locSearchFailed: '検索に失敗しました',
     srNoResults: ({ q }) => `「${q}」の結果はありません`,
     pageNamePh: ({ k }) => `${k} ページの名前（空欄で数字のみ）`,
+    pageKeyHint: ({ k, name }) => `${name} · ${k} キーで切り替え`,
     tutWelcomeT: 'Foyer へようこそ',
     tutWelcomeB: 'あなたのサイトを、すっきりしたホーム画面のグリッドに整理します。簡単なツアーです。「スキップ」ですぐ始められます。ヒント：Enter で次へ進めます。',
     tutAddT: 'サイトを追加', tutAddB: '+ を押せばどんなサイトも追加できます。URL を貼り付けて名前を付けると、グリッドに加わります。',
     tutOpenT: '開く・管理', tutOpenB: 'アイコンをクリックでサイトを開きます。右クリックで名前変更・編集・削除ができます。',
     tutDragT: 'ドラッグで整理', tutDragB: 'アイコンをドラッグで並べ替え。重ねるとフォルダグループを作成。空白部分をドラッグすると複数のアイコンをまとめて選択できます。',
     tutPagesT: '10 ページ', tutPagesB: 'グリッドは 10 ページあります。数字をクリックするかキーボードの 1–9、0 で切り替え。アイコン（複数選択も可）を数字へドラッグするとそのページへ移動します。',
-    tutNameT: 'ページに名前を', tutNameB: '数字を右クリックすると、そのページに「仕事」や「ゲーム」などの名前を付けられます。数字は常に残るので、キーボード切替は変わりません。',
+    tutNameT: 'ページに名前を', tutNameB: '数字をダブルクリックまたは右クリックすると、そのページに「仕事」や「ゲーム」などの名前を付けられます。名前はバーの数字の代わりに表示され、数字キーでの切り替えはそのまま使えます。',
     tutQuickT: 'クイック操作', tutQuickB: '各アイコンにカーソルを合わせると機能がわかります：ブックマークバーの同期や、すべてのブックマークのインポートをワンクリックで。',
     tutThemeT: '見た目を変更', tutThemeB: 'プリセットのテーマを選ぶか、好きな色を指定できます。自動的に保存されます。',
     tutSettingsT: '設定', tutSettingsB: 'ブックマークのインポート、バックアップのエクスポート、アイコンサイズの設定、ショートカットのカスタマイズ。「設定 → ヘルプ」からいつでもチュートリアルを再開できます。',
@@ -4422,9 +4426,10 @@ function _updatePageBar() {
     const hasTiles = (_pages[k] ?? []).length > 0;
     btn.classList.toggle('active', isActive);
     btn.classList.toggle('has-tiles', hasTiles);
-    btn.classList.toggle('named', isActive && !!name);
-    btn.textContent = (isActive && name) ? `${k} · ${name}` : k;
-    if (name && !isActive) btn.setAttribute('data-tooltip', name);
+    // A named page shows its name instead of the digit; the digit key still switches to it
+    btn.classList.toggle('named', !!name);
+    btn.innerHTML = `<span class="page-label">${escHtml(name || k)}</span>`;
+    if (name) btn.setAttribute('data-tooltip', t('pageKeyHint', { k, name }));
     else btn.removeAttribute('data-tooltip');
   });
 }
@@ -4509,6 +4514,7 @@ function promptRenamePage(pageKey) {
   // Page bar buttons — click to switch, right-click to rename
   document.querySelectorAll('.page-btn').forEach(btn => {
     btn.addEventListener('click', () => _switchToPage(btn.dataset.page));
+    btn.addEventListener('dblclick', () => promptRenamePage(btn.dataset.page));
     btn.addEventListener('contextmenu', e => {
       e.preventDefault();
       e.stopPropagation();

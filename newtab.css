@@ -123,16 +123,21 @@ body:has(#group-overlay:not(.hidden)) #page-bar { display: none; }
   opacity: 0.55;
 }
 .page-btn.active.has-tiles::after { opacity: 0; }
-/* Active page with a custom name: expand to "digit · name", capped width */
+/* Named page: shows the name instead of the digit, capped width (full name in tooltip) */
 .page-btn.named {
   width: auto;
   min-width: 42px;
-  max-width: 130px;
   padding: 0 12px;
+}
+/* Clip on the inner label so the hover tooltip (::before) isn't clipped too */
+.page-label {
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.page-btn.named .page-label        { max-width: 72px; }
+.page-btn.named.active .page-label { max-width: 116px; }
 /* Hover tooltip showing the page's custom name (::after is taken by the dot) */
 .page-btn[data-tooltip]::before {
   content: attr(data-tooltip);
