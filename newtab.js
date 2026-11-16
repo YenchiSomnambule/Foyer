@@ -120,10 +120,16 @@ const _GP_DUR  = 380; // ms
 
 let _addTargetGroupId = null;  // non-null when the add modal is adding into a group
 
-let _saveTimer = null;
-function debouncedSave() {
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => save(), 400);
+// Persists cache-like changes (resolved favicon URLs) without counting as an
+// edit: no new timestamp, so it can never win a cross-device sync against real
+// changes made elsewhere, and no bookmark-mirror run.
+let _quietSaveTimer = null;
+function _quietSave() {
+  clearTimeout(_quietSaveTimer);
+  _quietSaveTimer = setTimeout(() => {
+    _pages[_currentPage] = items;
+    chrome.storage.local.set({ pages: _pages });
+  }, 400);
 }
 
 // ─── Undo ─────────────────────────────────────────────────────────────────────
@@ -256,6 +262,7 @@ const I18N = {
     // sticky notes
     newNote: 'New note', notePh: 'Write a note…', noteColor: 'Note color', noteDelete: 'Delete note',
     deleteNoteTitle: 'Delete Note', deleteNoteBody: 'Delete this note? This can’t be undone.', noteDeleted: 'Note deleted',
+    confirmRestoreNotes: ({ n }) => `Your notes will also be replaced by the ${n} note${n !== 1 ? 's' : ''} in the backup.`,
     // auto backups
     restoreFromBackup: 'Restore from backup', close: 'Close',
     backupsTitle: 'Restore from Backup',
@@ -365,6 +372,7 @@ const I18N = {
     // sticky notes
     newNote: '新增便條', notePh: '寫點什麼…', noteColor: '便條顏色', noteDelete: '刪除便條',
     deleteNoteTitle: '刪除便條', deleteNoteBody: '要刪除這張便條嗎？刪除後無法復原。', noteDeleted: '已刪除便條',
+    confirmRestoreNotes: ({ n }) => `目前的便條也會被備份裡的 ${n} 張便條取代。`,
     // auto backups
     restoreFromBackup: '從備份還原', close: '關閉',
     backupsTitle: '從備份還原',
@@ -474,6 +482,7 @@ const I18N = {
     // sticky notes
     newNote: '新建便签', notePh: '写点什么…', noteColor: '便签颜色', noteDelete: '删除便签',
     deleteNoteTitle: '删除便签', deleteNoteBody: '要删除这张便签吗？删除后无法恢复。', noteDeleted: '已删除便签',
+    confirmRestoreNotes: ({ n }) => `当前的便签也会被备份里的 ${n} 张便签替换。`,
     // auto backups
     restoreFromBackup: '从备份恢复', close: '关闭',
     backupsTitle: '从备份恢复',
@@ -583,6 +592,7 @@ const I18N = {
     // sticky notes
     newNote: '新しいメモ', notePh: 'メモを書く…', noteColor: 'メモの色', noteDelete: 'メモを削除',
     deleteNoteTitle: 'メモを削除', deleteNoteBody: 'このメモを削除しますか？元に戻せません。', noteDeleted: 'メモを削除しました',
+    confirmRestoreNotes: ({ n }) => `現在のメモもバックアップ内の ${n} 件のメモに置き換えられます。`,
     // auto backups
     restoreFromBackup: 'バックアップから復元', close: '閉じる',
     backupsTitle: 'バックアップから復元',
@@ -763,6 +773,7 @@ function _storageGet(keys) {
 // don't hold ten copies of the same image.
 
 const BACKUP_LIMIT  = 10;
+const BACKUP_BUDGET = 3_000_000;   // chars of JSON for all backups + icons, leaves room for tiles & background image
 const BACKUP_DAY_MS = 24 * 60 * 60 * 1000;
 const _BLOB_REF     = '@blob:';
 let _hasRealData    = false;              // false while showing first-run sample tiles
@@ -865,6 +876,8 @@ async function _writeBackup(entry, blobs) {
     for (const m of JSON.stringify(list).matchAll(/@blob:([a-z0-9]+)/g)) {
       if (pool[m[1]]) used[m[1]] = pool[m[1]];
     }
+    const size = JSON.stringify(list).length + JSON.stringify(used).length;
+    if (size > BACKUP_BUDGET && list.length > 1) { list = list.slice(1); continue; }
     try {
       await chrome.storage.local.set({ backups: list, backupBlobs: used });
       return;
@@ -1091,6 +1104,8 @@ async function _adoptSyncData(meta) {
   const fresh = {};
   PAGE_KEYS.forEach(k => { fresh[k] = Array.isArray(data.pages[k]) ? data.pages[k] : []; });
   _createBackup('sync');   // another device may have cleared or overwritten everything
+  _undoStack.length = 0;   // undoing past a sync would wipe the other device's changes
+  _persistUndo();
   _pages = fresh;
   items = _pages[_currentPage];
   _pageNames = (data.pageNames && typeof data.pageNames === 'object') ? data.pageNames : {};
@@ -2032,10 +2047,10 @@ function buildSiteTile(item) {
     // Auto-persist the working URL so future renders skip the chain probing
     if (resolvedSrc && resolvedSrc !== item.favicon && resolvedSrc !== item.icon) {
       item.favicon = resolvedSrc;
-      debouncedSave();
+      _quietSave();
     } else if (!resolvedSrc && _isGoogleFavicon(item.favicon)) {
       delete item.favicon;   // a stored generic globe from older versions
-      debouncedSave();
+      _quietSave();
     }
   });
 
@@ -3910,8 +3925,19 @@ function _existingUrls() {
   return s;
 }
 
+// Foyer's own bookmark folders ("Foyer" mirror + "Foyer Archive") must never be
+// imported back as tiles — the archive holds tiles the user deliberately removed.
+let _bmSkipIds = new Set();
+async function _refreshBmSkipIds() {
+  try {
+    const r = await chrome.storage.local.get(['bmMirrorId', 'bmArchiveId']);
+    _bmSkipIds = new Set([r.bmMirrorId, r.bmArchiveId].filter(Boolean));
+  } catch { _bmSkipIds = new Set(); }
+}
+
 function _collectBmNodes(nodes, out, existingUrls) {
   for (const node of nodes) {
+    if (_bmSkipIds.has(node.id)) continue;
     if (node.url) {
       if (!/^https?:\/\//i.test(node.url)) continue;
       let hostname = node.url;
@@ -3950,6 +3976,7 @@ async function openImportModal() {
     const root = tree[0];
     const existing = _existingUrls();
     const sections = [];
+    await _refreshBmSkipIds();
 
     for (const chromeFolder of (root.children ?? [])) {
       if (!chromeFolder.children) continue;
@@ -3957,6 +3984,7 @@ async function openImportModal() {
       const loose   = [];
 
       for (const child of chromeFolder.children) {
+        if (_bmSkipIds.has(child.id)) continue;
         if (child.url) {
           if (/^https?:\/\//i.test(child.url)) {
             let hostname = child.url;
@@ -4131,8 +4159,10 @@ async function importBookmarksBar() {
     const existing = _existingUrls(); // Set of already-added URLs
     const newItems = [];
     let siteCount = 0, groupCount = 0;
+    await _refreshBmSkipIds();
 
     for (const node of barNode.children) {
+      if (_bmSkipIds.has(node.id)) continue;
       if (node.url) {
         // Direct bookmark on the bar
         if (!/^https?:\/\//i.test(node.url) || existing.has(node.url)) continue;
@@ -4189,11 +4219,13 @@ async function syncAllBookmarks() {
     const existing = _existingUrls();
     const newItems = [];
     let siteCount = 0, groupCount = 0;
+    await _refreshBmSkipIds();
 
     for (const chromeFolder of (root.children ?? [])) {
       if (!chromeFolder.children) continue;
 
       for (const child of chromeFolder.children) {
+        if (_bmSkipIds.has(child.id)) continue;
         if (child.url) {
           // Direct bookmark inside a top-level Chrome folder
           if (!/^https?:\/\//i.test(child.url) || existing.has(child.url)) continue;
@@ -4385,9 +4417,10 @@ function doImportJson(file) {
     }
 
     const totalTiles = Object.values(importedPages).reduce((s, arr) => s + arr.length, 0);
+    const noteCount = Array.isArray(data.notes) ? _cleanNotes(data.notes).length : 0;
     _showConfirm(
       t('confirmRestoreTitle'),
-      t('confirmRestoreBody', { n: totalTiles }),
+      t('confirmRestoreBody', { n: totalTiles }) + (noteCount ? ' ' + t('confirmRestoreNotes', { n: noteCount }) : ''),
       t('restore'),
       () => {
         _createBackup('import');
@@ -4635,9 +4668,10 @@ function promptRenamePage(pageKey) {
     render();
     _updatePageBar();
     _loadWeather();   // after loadLang so weather text uses the chosen language
-    try { await _clearHostNamesOnce(); } catch { /* leave names as they are */ }
     try { await _maybeDailyBackup(); } catch { /* backups unavailable */ }
     try { await _initCloudSync(); } catch { /* sync unavailable */ }
+    // After sync: on a stale device, cleaning first would make old tiles look newest and overwrite the cloud
+    try { await _clearHostNamesOnce(); } catch { /* leave names as they are */ }
     try { await _initBmMirror(); } catch { /* bookmarks unavailable */ }
     try { await loadNotes(); } catch { /* notes unavailable */ }
   })();
