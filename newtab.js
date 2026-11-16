@@ -1126,7 +1126,7 @@ function _bmAvailable() { return !!chrome.bookmarks?.create; }
 
 function _bmDesiredTree() {
   _pages[_currentPage] = items;
-  const site = s => ({ url: s.url, title: s.name || s.url });
+  const site = s => ({ url: s.url, title: s.name || '' });
   const out = [];
   PAGE_KEYS.forEach(k => {
     const arr = _pages[k] ?? [];
@@ -1818,12 +1818,20 @@ function render() {
   }
 }
 
+// Tiles may have no name (left blank on purpose); icons fall back to the host's first letter
+function _hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+function _letterOf(site) {
+  return ((site?.name || _hostOf(site?.url) || '?')[0]).toUpperCase();
+}
+
 function buildSiteTile(item) {
   const tile = document.createElement('div');
   tile.className = 'tile site-tile';
   tile.dataset.id = item.id;
 
-  const letter = (item.name[0] ?? '?').toUpperCase();
+  const letter = _letterOf(item);
   tile.innerHTML = `
     <div class="tile-icon">
       <img alt="" draggable="false" style="display:none">
@@ -1878,7 +1886,7 @@ function buildGroupTile(item) {
 
   if (coverSite) {
     // Cover mode: full-size favicon with a count badge
-    const letter = (coverSite.name[0] ?? '?').toUpperCase();
+    const letter = _letterOf(coverSite);
     const bg     = tileGradient(coverSite.url);
     tile.innerHTML = `
       <div class="tile-icon group-cover-icon">
@@ -1904,7 +1912,7 @@ function buildGroupTile(item) {
     for (let i = 0; i < 9; i++) {
       const s = sites[i];
       if (s) {
-        const letter = (s.name[0] ?? '?').toUpperCase();
+        const letter = _letterOf(s);
         const bg = tileGradient(s.url);
         miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
       } else {
@@ -2281,7 +2289,7 @@ function buildGroupSiteTile(site, groupId) {
   const tile = document.createElement('div');
   tile.className = 'group-site-tile';
   tile.dataset.siteId = site.id;
-  const letter   = (site.name[0] ?? '?').toUpperCase();
+  const letter   = _letterOf(site);
   const gradient = tileGradient(site.url);
   tile.innerHTML = `
     <div class="group-site-icon">
@@ -2938,7 +2946,7 @@ function promptRename(id) {
 
   const doSave = () => {
     const val = input.value.trim();
-    if (val) {
+    if (val || item.type === 'site') {   // sites may be left unnamed; groups keep a name
       item.name = val;
       save().then(render);
       // Also refresh the overlay title if this group is currently open
@@ -3085,7 +3093,7 @@ function saveEdit() {
   if (!isValidUrl(url)) { showUrlError(editUrlInput, 'That doesn\'t look like a valid URL.'); return; }
 
   item.url  = url;
-  item.name = name || item.name;
+  item.name = name;
   // Clear cached favicon so it re-resolves with the new URL
   item.favicon = pendingEditFavicon ?? undefined;
   if (pendingEditIcon === null) delete item.icon;
@@ -3188,15 +3196,6 @@ function loadModalFaviconPreview(rawValue) {
   if (!url) { resetFaviconPreview(); pendingFavicon = null; return; }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-  // Auto-fill name from hostname if name field is still empty
-  const nameInput = document.getElementById('name-input');
-  if (!nameInput.value.trim()) {
-    try {
-      const host = new URL(url).hostname.replace(/^www\./, '');
-      const base = host.split('.')[0];
-      nameInput.value = base.charAt(0).toUpperCase() + base.slice(1);
-    } catch {}
-  }
 
   // Increment epoch so any stale chain is ignored
   faviconEpoch++;
@@ -3244,13 +3243,7 @@ function addSite() {
   if (!url) { showUrlError(urlInput, 'Please enter a website URL.'); return; }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   if (!isValidUrl(url)) { showUrlError(urlInput, 'That doesn\'t look like a valid URL.'); return; }
-  const siteName = name || (() => {
-    try {
-      const host = new URL(url).hostname.replace(/^www\./, '');
-      const base = host.split('.')[0];
-      return base.charAt(0).toUpperCase() + base.slice(1);
-    } catch { return url; }
-  })();
+  const siteName = name;   // blank is fine — no name is forced on the tile
 
   if (_addTargetGroupId) {
     const group = items.find(i => i.id === _addTargetGroupId);
@@ -3322,7 +3315,7 @@ function _renderTopSiteChips() {
       chip.addEventListener('click', () => {
         const s = suggestions[+chip.dataset.idx];
         if (!s) return;
-        const name = (s.title || new URL(s.url).hostname.replace(/^www\./, '')).slice(0, 40);
+        const name = (s.title || '').slice(0, 40);
         if (_addTargetGroupId) {
           const group = items.find(i => i.id === _addTargetGroupId);
           if (group) {
@@ -3745,7 +3738,7 @@ function _collectBmNodes(nodes, out, existingUrls) {
       if (!/^https?:\/\//i.test(node.url)) continue;
       let hostname = node.url;
       try { hostname = new URL(node.url).hostname.replace(/^www\./, ''); } catch {}
-      out.push({ id: node.id, name: node.title || hostname, url: node.url, hostname, exists: existingUrls.has(node.url) });
+      out.push({ id: node.id, name: node.title || '', url: node.url, hostname, exists: existingUrls.has(node.url) });
     } else if (node.children) {
       _collectBmNodes(node.children, out, existingUrls); // flatten nested sub-folders
     }
@@ -3790,7 +3783,7 @@ async function openImportModal() {
           if (/^https?:\/\//i.test(child.url)) {
             let hostname = child.url;
             try { hostname = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
-            loose.push({ id: child.id, name: child.title || hostname, url: child.url, hostname, exists: existing.has(child.url) });
+            loose.push({ id: child.id, name: child.title || '', url: child.url, hostname, exists: existing.has(child.url) });
           }
         } else if (child.children) {
           const bookmarks = [];
@@ -3811,12 +3804,12 @@ async function openImportModal() {
 
 function _bmItemHtml(bm) {
   const grad   = tileGradient(bm.url);
-  const letter = (bm.name[0] ?? '?').toUpperCase();
+  const letter = _letterOf(bm);
   return `<label class="bm-item${bm.exists ? ' bm-exists' : ''}">
     <input type="checkbox" class="bm-check" data-url="${escHtml(bm.url)}" data-name="${escHtml(bm.name)}" ${bm.exists ? 'disabled' : 'checked'}>
     <div class="bm-icon" style="background:${grad}">${letter}</div>
     <div class="bm-text">
-      <span class="bm-name">${escHtml(bm.name)}</span>
+      <span class="bm-name">${escHtml(bm.name || bm.hostname)}</span>
       <span class="bm-url">${escHtml(bm.hostname)}</span>
     </div>
     ${bm.exists ? `<span class="bm-exists-badge">${t('bmAdded')}</span>` : ''}
@@ -3965,8 +3958,7 @@ async function importBookmarksBar() {
       if (node.url) {
         // Direct bookmark on the bar
         if (!/^https?:\/\//i.test(node.url) || existing.has(node.url)) continue;
-        let name = node.title || node.url;
-        try { if (!node.title) name = new URL(node.url).hostname.replace(/^www\./, ''); } catch {}
+        const name = node.title || '';
         newItems.push({ id: uid(), type: 'site', name, url: node.url });
         existing.add(node.url);
         siteCount++;
@@ -4027,8 +4019,7 @@ async function syncAllBookmarks() {
         if (child.url) {
           // Direct bookmark inside a top-level Chrome folder
           if (!/^https?:\/\//i.test(child.url) || existing.has(child.url)) continue;
-          let name = child.title || child.url;
-          try { if (!child.title) name = new URL(child.url).hostname.replace(/^www\./, ''); } catch {}
+          const name = child.title || '';
           newItems.push({ id: uid(), type: 'site', name, url: child.url });
           existing.add(child.url);
           siteCount++;
@@ -4331,11 +4322,11 @@ function _renderSearch(raw) {
          data-url="${escHtml(site.url)}" data-idx="${i}">
       <div class="sr-icon" style="background:${tileGradient(site.url)}"
            data-fav="${escHtml(site.favicon ?? '')}">
-        <span>${(site.name[0] ?? '?').toUpperCase()}</span>
+        <span>${_letterOf(site)}</span>
         <img alt="" draggable="false" style="display:none">
       </div>
       <div class="sr-text">
-        <div class="sr-name">${_hlMatch(site.name, raw.trim())}</div>
+        <div class="sr-name">${_hlMatch(site.name || _hostOf(site.url), raw.trim())}</div>
         <div class="sr-url">${_hlMatch(site.url, raw.trim())}</div>
       </div>
       ${site.groupName
