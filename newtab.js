@@ -45,6 +45,15 @@ function getFaviconSources(url) {
   }
 }
 
+// Google's favicon services answer unknown sites (intranet, demos, new domains) with
+// a generic 16×16 globe — sent as an image body, so onerror never fires. Treat that
+// as "no icon" so the tile shows its letter instead of the globe.
+const _GOOGLE_FAVICON_RE = /^https:\/\/(t\d\.gstatic\.com\/faviconV2|www\.google\.com\/s2\/favicons)/;
+function _isGoogleFavicon(src) { return _GOOGLE_FAVICON_RE.test(src ?? ''); }
+function _isGenericGlobe(img) {
+  return _isGoogleFavicon(img.src) && img.naturalWidth > 0 && img.naturalWidth <= 16;
+}
+
 // Tries each source in order; calls onResolved(src) with the first that loads, or onResolved(null) if all fail.
 function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
   if (idx === undefined) idx = 0;
@@ -56,6 +65,7 @@ function tryFaviconChain(img, fallbackEl, sources, idx, onResolved) {
   }
   img.onerror = () => tryFaviconChain(img, fallbackEl, sources, idx + 1, onResolved);
   img.onload  = () => {
+    if (_isGenericGlobe(img)) { tryFaviconChain(img, fallbackEl, sources, idx + 1, onResolved); return; }
     img.style.display = '';
     if (fallbackEl) fallbackEl.style.display = 'none';
     if (onResolved) onResolved(img.src);
@@ -1880,8 +1890,11 @@ function buildSiteTile(item) {
 
   tryFaviconChain(img, fallback, sources, 0, resolvedSrc => {
     // Auto-persist the working URL so future renders skip the chain probing
-    if (resolvedSrc && !item.favicon && resolvedSrc !== item.icon) {
+    if (resolvedSrc && resolvedSrc !== item.favicon && resolvedSrc !== item.icon) {
       item.favicon = resolvedSrc;
+      debouncedSave();
+    } else if (!resolvedSrc && _isGoogleFavicon(item.favicon)) {
+      delete item.favicon;   // a stored generic globe from older versions
       debouncedSave();
     }
   });
@@ -1914,11 +1927,10 @@ function buildGroupTile(item) {
   if (coverSite) {
     // Cover mode: full-size favicon with a count badge
     const letter = _letterOf(coverSite);
-    const bg     = tileGradient(coverSite.url);
     tile.innerHTML = `
       <div class="tile-icon group-cover-icon">
         <img alt="" draggable="false" style="display:none">
-        <div class="tile-icon-fallback" style="display:flex;background:${bg}">${letter}</div>
+        <div class="tile-icon-fallback" style="display:flex">${letter}</div>
         <span class="group-cover-badge">${allSites.length}</span>
       </div>
       <span class="tile-name">${escHtml(item.name)}</span>
@@ -1939,9 +1951,7 @@ function buildGroupTile(item) {
     for (let i = 0; i < 9; i++) {
       const s = sites[i];
       if (s) {
-        const letter = _letterOf(s);
-        const bg = tileGradient(s.url);
-        miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter" style="background:${bg}">${letter}</span></div>`;
+        miniHTML += `<div class="mini-cell"><img alt="" draggable="false" style="display:none"><span class="mini-letter">${_letterOf(s)}</span></div>`;
       } else {
         miniHTML += `<div class="mini-cell empty"></div>`;
       }
@@ -2317,11 +2327,10 @@ function buildGroupSiteTile(site, groupId) {
   tile.className = 'group-site-tile';
   tile.dataset.siteId = site.id;
   const letter   = _letterOf(site);
-  const gradient = tileGradient(site.url);
   tile.innerHTML = `
     <div class="group-site-icon">
       <img alt="" draggable="false" style="display:none">
-      <div class="group-site-fallback" style="display:flex;background:${gradient}">${letter}</div>
+      <div class="group-site-fallback" style="display:flex">${letter}</div>
     </div>
     <span>${escHtml(site.name)}</span>
   `;
@@ -3097,6 +3106,7 @@ function loadEditFaviconPreview(rawValue) {
     img.onerror = () => tryIdx(idx + 1);
     img.onload  = () => {
       if (editFaviconEpoch !== epoch) return;
+      if (_isGenericGlobe(img)) { tryIdx(idx + 1); return; }
       img.style.display = '';
       letter.style.display = 'none';
       box.classList.add('loaded');
@@ -3252,6 +3262,7 @@ function loadModalFaviconPreview(rawValue) {
     img.onerror = () => tryIdx(idx + 1);
     img.onload  = () => {
       if (faviconEpoch !== epoch) return;
+      if (_isGenericGlobe(img)) { tryIdx(idx + 1); return; }
       img.style.display  = '';
       letter.style.display = 'none';
       box.classList.add('loaded');
@@ -3401,7 +3412,8 @@ function applyTheme(theme) {
   ['background','background-image','background-size','background-position','background-repeat']
     .forEach(p => document.body.style.removeProperty(p));
   ['--text-color','--text-shadow','--glass','--glass-border',
-   '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color']
+   '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color',
+   '--letter-bg','--letter-fg']
     .forEach(p => document.body.style.removeProperty(p));
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
   document.body.classList.remove('theme-custom');
@@ -3462,6 +3474,8 @@ function applyCustomColor(hex) {
     document.body.style.setProperty('--add-btn-bg', 'rgba(0,0,0,0.07)');
     document.body.style.setProperty('--add-btn-border', 'rgba(0,0,0,0.22)');
     document.body.style.setProperty('--add-btn-color', 'rgba(30,25,15,0.75)');
+    document.body.style.setProperty('--letter-bg', 'var(--letter-dark)');
+    document.body.style.setProperty('--letter-fg', 'var(--letter-light)');
   } else {
     // Explicitly set white-text dark-mode values rather than relying on :root defaults
     document.body.style.setProperty('--text-color', 'rgba(255,255,255,0.92)');
@@ -3472,6 +3486,8 @@ function applyCustomColor(hex) {
     document.body.style.setProperty('--add-btn-bg', 'rgba(255,255,255,0.14)');
     document.body.style.setProperty('--add-btn-border', 'rgba(255,255,255,0.22)');
     document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
+    document.body.style.setProperty('--letter-bg', 'var(--letter-light)');
+    document.body.style.setProperty('--letter-fg', 'var(--letter-dark)');
   }
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
@@ -3559,6 +3575,8 @@ function applyBgImage(dataUrl, posX = _bgPosX, posY = _bgPosY, zoom = _bgZoom) {
   document.body.style.setProperty('--add-btn-bg',    'rgba(255,255,255,0.18)');
   document.body.style.setProperty('--add-btn-border','rgba(255,255,255,0.28)');
   document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
+  document.body.style.setProperty('--letter-bg',     'var(--letter-light)');
+  document.body.style.setProperty('--letter-fg',     'var(--letter-dark)');
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.swatch-image').forEach(btn => {
@@ -4347,7 +4365,7 @@ function _renderSearch(raw) {
   el.innerHTML = list.map((site, i) => `
     <div class="sr-item${i === _srActiveIdx ? ' active' : ''}" role="option"
          data-url="${escHtml(site.url)}" data-idx="${i}">
-      <div class="sr-icon" style="background:${tileGradient(site.url)}"
+      <div class="sr-icon sr-letter-icon"
            data-fav="${escHtml(site.favicon ?? '')}">
         <span>${_letterOf(site)}</span>
         <img alt="" draggable="false" style="display:none">
@@ -4367,7 +4385,10 @@ function _renderSearch(raw) {
     const fav = icon.dataset.fav;
     if (!fav) return;
     const img = icon.querySelector('img'), span = icon.querySelector('span');
-    img.onload  = () => { img.style.display = ''; span.style.display = 'none'; };
+    img.onload  = () => {
+      if (_isGenericGlobe(img)) return;
+      img.style.display = ''; span.style.display = 'none';
+    };
     img.onerror = () => {};
     img.src = fav;
   });
