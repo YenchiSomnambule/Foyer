@@ -28,12 +28,20 @@
 
   <!-- Sticky notes: left column under the clock + weather -->
   <aside id="notes-panel" aria-label="Notes">
-    <button id="add-note-btn" data-i18n-label="newNote">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      New note
-    </button>
+    <div id="notes-head">
+      <button id="add-note-btn" data-i18n-label="newNote">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New note
+      </button>
+      <button id="notes-collapse-btn" aria-expanded="true" title="Hide notes" aria-label="Hide notes" data-i18n-title="notesHide" data-i18n-aria="notesHide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg></button>
+    </div>
     <div id="notes-list"></div>
   </aside>
+  <!-- Shown at the left edge while the notes column is collapsed -->
+  <button id="notes-expand-btn" aria-expanded="false" title="Show notes" aria-label="Show notes" data-i18n-title="notesShow" data-i18n-aria="notesShow">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5z"/><polyline points="15 3 15 9 21 9"/></svg>
+    <span id="notes-count"></span>
+  </button>
 
   <!-- Top widgets: Clock + Weather -->
   <div id="top-widgets">

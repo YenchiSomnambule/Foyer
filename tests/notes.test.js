@@ -56,6 +56,25 @@ async function run(browser, r, theme) {
   await p.waitForTimeout(400);
   r.ok(L.notes.length === 2 && !L.notes.some(n => n.text.startsWith('Q4')), 'Note deleted after confirming');
 
+  // Collapse / expand
+  await p.locator('#notes-head').screenshot({ path: shotPath(`notes-head-${theme}`) });
+  await p.click('#notes-collapse-btn');
+  await p.waitForTimeout(500);
+  const firstX = async () => (await p.locator('#grid .tile').first().boundingBox()).x;
+  r.ok(await p.locator('#notes-panel').isHidden(), 'Collapse hides the notes column');
+  r.ok(await firstX() < 100, `Tiles move back to the left (${Math.round(await firstX())}px)`);
+  r.ok(await p.locator('#notes-expand-btn').isVisible() && (await p.textContent('#notes-count')) === '2', 'A tab at the left edge shows the note count');
+  r.ok(L.notesCollapsed === true, 'Collapsed state saved');
+  await p.screenshot({ path: shotPath(`notes-collapsed-${theme}`) });
+  await p.close();
+  p = await dev.open();
+  r.ok(await p.locator('#notes-panel').isHidden() && await firstX() < 100, 'Still collapsed after reopening the tab');
+  await p.click('#notes-expand-btn');
+  await p.waitForTimeout(500);
+  const pb = await p.locator('#notes-panel').boundingBox();
+  r.ok(await p.locator('#notes-panel').isVisible() && await firstX() > pb.x + pb.width, 'Expand brings the column back and tiles move right');
+  r.ok(await p.locator('#notes-expand-btn').isHidden() && L.notesCollapsed === false, 'Edge tab hidden again, state saved');
+
   const narrow = await dev.ctx.newPage();
   await narrow.setViewportSize({ width: 700, height: 800 });
   await narrow.goto(p.url());

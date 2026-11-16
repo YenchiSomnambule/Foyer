@@ -53,6 +53,9 @@ body {
   overflow-x: hidden;
   padding: 104px 48px 120px var(--grid-left);
 }
+/* Notes column collapsed: tiles take the left side back */
+body.notes-collapsed { --grid-left: 64px; }   /* room for the edge tab */
+body.notes-ready #app { transition: padding-left 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
 
 /* ─── Sticky notes (left column under clock + weather) ─── */
 #notes-panel {
@@ -69,14 +72,65 @@ body {
   scrollbar-width: none;
 }
 #notes-panel::-webkit-scrollbar { display: none; }
+body.notes-ready #notes-panel { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
+body.notes-collapsed #notes-panel {
+  transform: translateX(calc(-100% - 40px));
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+body.notes-ready.notes-collapsed #notes-panel { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, visibility 0s 0.28s; }
+
+#notes-head { display: flex; gap: 6px; margin-bottom: 18px; }
+#notes-collapse-btn {
+  flex: none;
+  width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+#notes-collapse-btn:hover { opacity: 0.9; background: var(--glass); }
+
+/* Small tab at the left edge to bring the notes back */
+#notes-expand-btn {
+  position: fixed;
+  top: 104px;
+  left: 0;
+  z-index: 20;
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 10px 9px 12px;
+  border-radius: 0 12px 12px 0;
+  border: 1px solid var(--glass-border);
+  border-left: none;
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-color);
+  font: 600 11px var(--font);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, padding 0.15s;
+}
+#notes-expand-btn:hover { opacity: 1; padding-left: 16px; }
+body.notes-collapsed #notes-expand-btn { display: flex; }
+#notes-count:empty { display: none; }
 
 #add-note-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 8px 12px;
-  margin-bottom: 18px;
   border-radius: 10px;
   border: 1px dashed var(--add-btn-border, rgba(255,255,255,0.3));
   background: transparent;
@@ -181,7 +235,7 @@ body {
 /* Narrow windows: no room for a notes column — tiles take the full width */
 @media (max-width: 720px) {
   :root { --grid-left: 48px; }
-  #notes-panel { display: none; }
+  #notes-panel, body.notes-collapsed #notes-expand-btn { display: none; }
 }
 
 /* ─── Top widgets strip (clock + weather) ─── */

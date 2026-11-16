@@ -265,6 +265,7 @@ const I18N = {
     // custom icons
     uploadIcon: 'Upload icon', resetIcon: 'Reset icon',
     // sticky notes
+    notesHide: 'Hide notes', notesShow: 'Show notes',
     newNote: 'New note', notePh: 'Write a note…', noteColor: 'Note color', noteDelete: 'Delete note',
     deleteNoteTitle: 'Delete Note', deleteNoteBody: 'Delete this note? This can’t be undone.', noteDeleted: 'Note deleted',
     confirmRestoreNotes: ({ n }) => `Your notes will also be replaced by the ${n} note${n !== 1 ? 's' : ''} in the backup.`,
@@ -380,6 +381,7 @@ const I18N = {
     topSitesEmpty: '沒有新的建議',
     uploadIcon: '上傳圖示', resetIcon: '重設圖示',
     // sticky notes
+    notesHide: '收起便條', notesShow: '展開便條',
     newNote: '新增便條', notePh: '寫點什麼…', noteColor: '便條顏色', noteDelete: '刪除便條',
     deleteNoteTitle: '刪除便條', deleteNoteBody: '要刪除這張便條嗎？刪除後無法復原。', noteDeleted: '已刪除便條',
     confirmRestoreNotes: ({ n }) => `目前的便條也會被備份裡的 ${n} 張便條取代。`,
@@ -495,6 +497,7 @@ const I18N = {
     topSitesEmpty: '没有新的建议',
     uploadIcon: '上传图标', resetIcon: '重置图标',
     // sticky notes
+    notesHide: '收起便签', notesShow: '展开便签',
     newNote: '新建便签', notePh: '写点什么…', noteColor: '便签颜色', noteDelete: '删除便签',
     deleteNoteTitle: '删除便签', deleteNoteBody: '要删除这张便签吗？删除后无法恢复。', noteDeleted: '已删除便签',
     confirmRestoreNotes: ({ n }) => `当前的便签也会被备份里的 ${n} 张便签替换。`,
@@ -610,6 +613,7 @@ const I18N = {
     topSitesEmpty: '新しい提案はありません',
     uploadIcon: 'アイコンをアップロード', resetIcon: 'アイコンをリセット',
     // sticky notes
+    notesHide: 'メモを隠す', notesShow: 'メモを表示',
     newNote: '新しいメモ', notePh: 'メモを書く…', noteColor: 'メモの色', noteDelete: 'メモを削除',
     deleteNoteTitle: 'メモを削除', deleteNoteBody: 'このメモを削除しますか？元に戻せません。', noteDeleted: 'メモを削除しました',
     confirmRestoreNotes: ({ n }) => `現在のメモもバックアップ内の ${n} 件のメモに置き換えられます。`,
@@ -1419,9 +1423,29 @@ function _cleanNotes(arr) {
     .map(n => ({ id: n.id, text: n.text, color: NOTE_COLORS.includes(n.color) ? n.color : 'yellow', at: n.at ?? Date.now() }));
 }
 
+// Collapsed = the column slides away and tiles move back to the left. Per device.
+// Mirrored to localStorage so the very first paint already has the right layout.
+const _NOTES_COLLAPSED_LS = 'foyer.notesCollapsed';
+function _applyNotesCollapsed(on, { persist = true } = {}) {
+  document.body.classList.toggle('notes-collapsed', on);
+  document.getElementById('notes-collapse-btn')?.setAttribute('aria-expanded', String(!on));
+  document.getElementById('notes-expand-btn')?.setAttribute('aria-expanded', String(!on));
+  try { localStorage.setItem(_NOTES_COLLAPSED_LS, on ? '1' : '0'); } catch {}
+  if (persist) chrome.storage.local.set({ notesCollapsed: on });
+  if (on && document.activeElement?.closest('#notes-panel')) document.activeElement.blur();
+}
+
+function _updateNotesCount() {
+  const el = document.getElementById('notes-count');
+  if (el) el.textContent = String(_notes.filter(n => n.text.trim()).length || '');
+}
+
 async function loadNotes() {
-  const r = await _storageGet(['notes']);
+  const r = await _storageGet(['notes', 'notesCollapsed']);
   _notes = _cleanNotes(r.notes);
+  _applyNotesCollapsed(!!r.notesCollapsed, { persist: false });
+  // Animate only user-initiated changes, not the initial layout
+  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('notes-ready')));
   renderNotes();
   // Keep several open new-tab pages in step (skip while the user is typing here)
   chrome.storage.onChanged?.addListener((changes, area) => {
@@ -1501,6 +1525,7 @@ function renderNotes(focusId) {
   list.innerHTML = '';
   _notes.forEach((n, i) => list.appendChild(_buildNote(n, i)));
   list.querySelectorAll('.note-text').forEach(_autoGrow);
+  _updateNotesCount();
   const ta = focusId && list.querySelector(`.note[data-id="${focusId}"] .note-text`);
   if (ta) { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }
 }
@@ -4822,6 +4847,7 @@ function promptRenamePage(pageKey) {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 (async () => {
+  try { if (localStorage.getItem(_NOTES_COLLAPSED_LS) === '1') document.body.classList.add('notes-collapsed'); } catch {}
   PAGE_KEYS.forEach(k => { _pages[k] = k === '1' ? sampleItems() : []; });
   items = _pages[_currentPage];
   applyTheme('cream');
@@ -5250,6 +5276,8 @@ function promptRenamePage(pageKey) {
 
   // Sticky notes
   document.getElementById('add-note-btn').addEventListener('click', addNote);
+  document.getElementById('notes-collapse-btn').addEventListener('click', () => _applyNotesCollapsed(true));
+  document.getElementById('notes-expand-btn').addEventListener('click', () => _applyNotesCollapsed(false));
 
   // Cross-device sync toggle (Settings → Data)
   document.getElementById('cloud-sync-toggle').addEventListener('click', () => {
