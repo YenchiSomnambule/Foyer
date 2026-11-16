@@ -250,6 +250,7 @@ const I18N = {
     bkReason_daily: 'Daily backup', bkReason_clear: 'Before clearing all',
     bkReason_import: 'Before importing', bkReason_restore: 'Before restoring',
     bkReason_sync: 'Before syncing from another device',
+    bkReason_cleanup: 'Before clearing auto-filled names',
     // bookmark mirror
     bmMirrorTitle: 'Mirror to Chrome bookmarks',
     bmMirrorDesc: 'Keeps a "Foyer" folder in Other bookmarks up to date. Your other bookmarks are never touched.',
@@ -354,6 +355,7 @@ const I18N = {
     bkReason_daily: '每日備份', bkReason_clear: '清除全部之前',
     bkReason_import: '匯入之前', bkReason_restore: '還原之前',
     bkReason_sync: '從其他裝置同步之前',
+    bkReason_cleanup: '清除自動填入的名稱之前',
     // bookmark mirror
     bmMirrorTitle: '同步到 Chrome 書籤',
     bmMirrorDesc: '在「其他書籤」裡維護一個「Foyer」資料夾，內容跟著圖示更新。不會動到你其他的書籤。',
@@ -458,6 +460,7 @@ const I18N = {
     bkReason_daily: '每日备份', bkReason_clear: '清除全部之前',
     bkReason_import: '导入之前', bkReason_restore: '恢复之前',
     bkReason_sync: '从其他设备同步之前',
+    bkReason_cleanup: '清除自动填入的名称之前',
     // bookmark mirror
     bmMirrorTitle: '同步到 Chrome 书签',
     bmMirrorDesc: '在「其他书签」里维护一个「Foyer」文件夹，内容跟着图标更新。不会改动你的其他书签。',
@@ -562,6 +565,7 @@ const I18N = {
     bkReason_daily: '毎日のバックアップ', bkReason_clear: 'すべて消去する前',
     bkReason_import: 'インポートする前', bkReason_restore: '復元する前',
     bkReason_sync: '他のデバイスから同期する前',
+    bkReason_cleanup: '自動入力された名前を消去する前',
     // bookmark mirror
     bmMirrorTitle: 'Chrome のブックマークに同期',
     bmMirrorDesc: '「その他のブックマーク」内の「Foyer」フォルダをアイコンと同じ内容に保ちます。ほかのブックマークには一切触れません。',
@@ -852,6 +856,29 @@ async function _getBackups() {
   } catch {
     return { list: [], blobs: {} };
   }
+}
+
+// One-time cleanup (v2.5.1): earlier versions named untitled bookmarks after
+// their host ("keep.google.com"). Clear names that are exactly the site's own
+// host; anything the user typed themselves is left alone.
+async function _clearHostNamesOnce() {
+  const r = await _storageGet(['hostNamesCleared']);
+  if (r.hostNamesCleared || !_hasRealData) return;
+  _pages[_currentPage] = items;
+  const isHostName = s => s && s.url && s.name && s.name === _hostOf(s.url);
+  const hits = [];
+  Object.values(_pages).forEach(arr => arr.forEach(it => {
+    if (it.type === 'group') (it.items ?? []).forEach(s => { if (isHostName(s)) hits.push(s); });
+    else if (isHostName(it)) hits.push(it);
+  }));
+  if (hits.length) {
+    _createBackup('cleanup');
+    hits.forEach(s => { s.name = ''; });
+    items = _pages[_currentPage];
+    await save();
+    render();
+  }
+  await chrome.storage.local.set({ hostNamesCleared: true });
 }
 
 async function _maybeDailyBackup() {
@@ -4447,6 +4474,7 @@ function promptRenamePage(pageKey) {
     render();
     _updatePageBar();
     _loadWeather();   // after loadLang so weather text uses the chosen language
+    try { await _clearHostNamesOnce(); } catch { /* leave names as they are */ }
     try { await _maybeDailyBackup(); } catch { /* backups unavailable */ }
     try { await _initCloudSync(); } catch { /* sync unavailable */ }
     try { await _initBmMirror(); } catch { /* bookmarks unavailable */ }
