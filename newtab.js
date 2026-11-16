@@ -267,6 +267,12 @@ const I18N = {
     uploadIcon: 'Upload icon', resetIcon: 'Reset icon',
     // sticky notes
     notesHide: 'Hide notes', notesShow: 'Show notes',
+    // what's new (2.7)
+    wnTitle: 'What’s new in Foyer ✨', wnOk: 'Got it', wnHideNotes: 'I don’t need notes',
+    wnNotesT: 'Sticky notes', wnNotesB: '— jot things down in this column; with Sync across devices they follow you to every computer. Click « to tuck them away.',
+    wnBackupT: 'Automatic backups', wnBackupB: '— Foyer backs up your tiles every day. Lost something? Settings → Restore from backup.',
+    wnClearT: 'Clear all moved', wnClearB: '— it now lives in Settings, so it can’t be hit by accident.',
+    wnPagesT: 'Name your pages', wnPagesB: '— double-click a page number to give it a name.',
     newNote: 'New note', notePh: 'Write a note…', noteColor: 'Note color', noteDelete: 'Delete note',
     deleteNoteTitle: 'Delete Note', deleteNoteBody: 'Delete this note? This can’t be undone.', noteDeleted: 'Note deleted',
     confirmRestoreNotes: ({ n }) => `Your notes will also be replaced by the ${n} note${n !== 1 ? 's' : ''} in the backup.`,
@@ -384,6 +390,12 @@ const I18N = {
     uploadIcon: '上傳圖示', resetIcon: '重設圖示',
     // sticky notes
     notesHide: '收起便條', notesShow: '展開便條',
+    // what's new (2.7)
+    wnTitle: 'Foyer 新功能 ✨', wnOk: '知道了', wnHideNotes: '我不需要便條',
+    wnNotesT: '便條', wnNotesB: '——在這一欄隨手記事；開啟「跨裝置同步」後每台電腦都看得到。用不到就按 « 收起。',
+    wnBackupT: '自動備份', wnBackupB: '——每天自動備份圖示，東西不見時到「設定 → 從備份還原」找回。',
+    wnClearT: '「清除全部」搬家了', wnClearB: '——移到設定裡，不會再不小心按到。',
+    wnPagesT: '頁籤可以命名', wnPagesB: '——雙擊頁碼就能取名字。',
     newNote: '新增便條', notePh: '寫點什麼…', noteColor: '便條顏色', noteDelete: '刪除便條',
     deleteNoteTitle: '刪除便條', deleteNoteBody: '要刪除這張便條嗎？刪除後無法復原。', noteDeleted: '已刪除便條',
     confirmRestoreNotes: ({ n }) => `目前的便條也會被備份裡的 ${n} 張便條取代。`,
@@ -501,6 +513,12 @@ const I18N = {
     uploadIcon: '上传图标', resetIcon: '重置图标',
     // sticky notes
     notesHide: '收起便签', notesShow: '展开便签',
+    // what's new (2.7)
+    wnTitle: 'Foyer 新功能 ✨', wnOk: '知道了', wnHideNotes: '我不需要便签',
+    wnNotesT: '便签', wnNotesB: '——在这一栏随手记事；开启“跨设备同步”后每台电脑都看得到。用不到就按 « 收起。',
+    wnBackupT: '自动备份', wnBackupB: '——每天自动备份图标，东西不见时到“设置 → 从备份恢复”找回。',
+    wnClearT: '“清除全部”搬家了', wnClearB: '——移到设置里，不会再不小心按到。',
+    wnPagesT: '页签可以命名', wnPagesB: '——双击页码就能取名字。',
     newNote: '新建便签', notePh: '写点什么…', noteColor: '便签颜色', noteDelete: '删除便签',
     deleteNoteTitle: '删除便签', deleteNoteBody: '要删除这张便签吗？删除后无法恢复。', noteDeleted: '已删除便签',
     confirmRestoreNotes: ({ n }) => `当前的便签也会被备份里的 ${n} 张便签替换。`,
@@ -618,6 +636,12 @@ const I18N = {
     uploadIcon: 'アイコンをアップロード', resetIcon: 'アイコンをリセット',
     // sticky notes
     notesHide: 'メモを隠す', notesShow: 'メモを表示',
+    // what's new (2.7)
+    wnTitle: 'Foyer の新機能 ✨', wnOk: 'OK', wnHideNotes: 'メモは使わない',
+    wnNotesT: 'メモ', wnNotesB: '— この欄に何でも書き留められます。「デバイス間同期」をオンにすると、どのパソコンでも見られます。« でしまえます。',
+    wnBackupT: '自動バックアップ', wnBackupB: '— 毎日アイコンを自動でバックアップ。消えたときは「設定 → バックアップから復元」へ。',
+    wnClearT: '「すべて消去」は移動しました', wnClearB: '— 誤って押さないよう、設定の中に移しました。',
+    wnPagesT: 'ページに名前を', wnPagesB: '— ページ番号をダブルクリックすると名前を付けられます。',
     newNote: '新しいメモ', notePh: 'メモを書く…', noteColor: 'メモの色', noteDelete: 'メモを削除',
     deleteNoteTitle: 'メモを削除', deleteNoteBody: 'このメモを削除しますか？元に戻せません。', noteDeleted: 'メモを削除しました',
     confirmRestoreNotes: ({ n }) => `現在のメモもバックアップ内の ${n} 件のメモに置き換えられます。`,
@@ -4071,7 +4095,31 @@ function _tutNext() {
 
 function _tutDone() {
   document.getElementById('tutorial-overlay').classList.add('hidden');
-  chrome.storage.local.set({ tutorialDone: true });
+  // The tour already covers what's new — don't show the "What's new" card afterwards
+  chrome.storage.local.set({ tutorialDone: true, whatsNewSeen: WHATS_NEW_ID });
+}
+
+// ─── What's New (one-time card for people updating from an older version) ────
+// New installs see the tutorial instead (tutorialDone is false for them).
+// Bump WHATS_NEW_ID — and the wn* strings — to announce a future release.
+const WHATS_NEW_ID        = '2.7';
+const WHATS_NEW_MAX_SHOWS = 3;    // if ignored, stop showing after this many new tabs
+
+async function _maybeShowWhatsNew() {
+  const r = await _storageGet(['tutorialDone', 'whatsNewSeen', 'whatsNewShows']);
+  if (!r.tutorialDone || r.whatsNewSeen === WHATS_NEW_ID) return;
+  const shows = (r.whatsNewShows ?? 0) + 1;
+  chrome.storage.local.set(shows >= WHATS_NEW_MAX_SHOWS
+    ? { whatsNewSeen: WHATS_NEW_ID, whatsNewShows: 0 }
+    : { whatsNewShows: shows });
+  document.getElementById('wn-hide-notes').hidden = document.body.classList.contains('notes-collapsed');
+  document.getElementById('whats-new').classList.remove('hidden');
+}
+
+function _dismissWhatsNew({ hideNotes = false } = {}) {
+  document.getElementById('whats-new').classList.add('hidden');
+  chrome.storage.local.set({ whatsNewSeen: WHATS_NEW_ID, whatsNewShows: 0 });
+  if (hideNotes) _applyNotesCollapsed(true);
 }
 
 // ─── Rate Prompt ──────────────────────────────────────────────────────────────
@@ -4089,7 +4137,7 @@ function _rateUrl() {
 async function _maybeShowRatePrompt() {
   const DAY = 86400000;
   const now = Date.now();
-  const data = await _storageGet(['installDate', 'tabOpens', 'rateState', 'tutorialDone']);
+  const data = await _storageGet(['installDate', 'tabOpens', 'rateState', 'tutorialDone', 'whatsNewSeen']);
 
   const installDate = data.installDate ?? now;
   const tabOpens    = (data.tabOpens ?? 0) + 1;
@@ -4100,6 +4148,7 @@ async function _maybeShowRatePrompt() {
   if ((st.asks ?? 0) >= RATE_MAX_ASKS) return;
   if (st.snoozeUntil && now < st.snoozeUntil) return;
   if (!data.tutorialDone) return;   // never compete with onboarding
+  if (data.whatsNewSeen !== WHATS_NEW_ID) return;   // …or with the "What's new" card
   if (now - installDate < RATE_MIN_DAYS * DAY) return;
   if (tabOpens < RATE_MIN_OPENS) return;
 
@@ -4884,6 +4933,7 @@ function promptRenamePage(pageKey) {
     try { await _initBmMirror(); } catch { /* bookmarks unavailable */ }
     try { await loadNotes(); } catch { /* notes unavailable */ }
     try { await _initNotesSync(); } catch { /* sync unavailable */ }
+    try { await _maybeShowWhatsNew(); } catch { /* skip the card */ }
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -5286,6 +5336,8 @@ function promptRenamePage(pageKey) {
   // Sticky notes
   document.getElementById('add-note-btn').addEventListener('click', addNote);
   document.getElementById('notes-collapse-btn').addEventListener('click', () => _applyNotesCollapsed(true));
+  document.getElementById('wn-ok').addEventListener('click', () => _dismissWhatsNew());
+  document.getElementById('wn-hide-notes').addEventListener('click', () => _dismissWhatsNew({ hideNotes: true }));
   document.getElementById('notes-expand-btn').addEventListener('click', () => _applyNotesCollapsed(false));
 
   // Cross-device sync toggle (Settings → Data)

@@ -38,9 +38,12 @@ function group(name, sites, extra = {}) {
   return { id: `g${++_seq}`, type: 'group', name, items: sites.map(s => ({ ...s, type: undefined })), ...extra };
 }
 
-// Local storage that skips first-run UI (tutorial, host-name cleanup)
+// The current "What's new" id, read from the source so tests never fall out of step
+const WHATS_NEW_ID = fs.readFileSync(path.join(ROOT, 'newtab.js'), 'utf8').match(/const WHATS_NEW_ID\s*=\s*'([^']+)'/)[1];
+
+// Local storage that skips first-run UI (tutorial, "What's new" card, host-name cleanup)
 function baseLocal(extra = {}) {
-  return { tutorialDone: true, hostNamesCleared: true, ...extra };
+  return { tutorialDone: true, whatsNewSeen: WHATS_NEW_ID, hostNamesCleared: true, ...extra };
 }
 
 // ─── Reporter ────────────────────────────────────────────────────────────────
@@ -195,7 +198,7 @@ async function clearAllTiles(page) {
 }
 
 module.exports = {
-  ROOT, NEWTAB, SHOTS, PAGE_KEYS,
+  ROOT, NEWTAB, SHOTS, PAGE_KEYS, WHATS_NEW_ID,
   clone, emptyPages, site, group, baseLocal,
   reporter, launch, shotPath, Cloud, openDevice,
   tileNames, noteTexts, clearAllTiles,

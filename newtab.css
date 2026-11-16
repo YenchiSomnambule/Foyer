@@ -2368,6 +2368,61 @@ body.modal-dark #search-box {
 #rate-later:hover, #rate-no:hover { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85); }
 #rate-no { margin-left: auto; }
 
+/* ─── One-time "What's new" card (sits in the notes column it introduces) ─── */
+#whats-new {
+  position: fixed;
+  top: 172px;
+  left: 28px;
+  width: calc(var(--notes-w) - 16px);   /* same width as the "+ New note" row */
+  z-index: 680;            /* under the rate card / toast, over the notes column */
+  background: rgba(22,22,28,0.97);
+  color: rgba(255,255,255,0.88);
+  padding: 16px 16px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  font-family: var(--font);
+  animation: rateCardIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+#whats-new.hidden { display: none; }
+/* little arrow pointing up at "+ New note" */
+#whats-new::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 28px;
+  width: 14px;
+  height: 14px;
+  background: inherit;
+  border-left: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  transform: rotate(45deg);
+  border-radius: 3px 0 0 0;
+}
+#whats-new-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+#whats-new-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+#whats-new-list li { display: flex; gap: 8px; font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.62); }
+#whats-new-list b { color: rgba(255,255,255,0.9); font-weight: 650; }
+.wn-ico { flex: none; width: 18px; text-align: center; }
+#whats-new-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#whats-new-actions button {
+  border: none;
+  border-radius: 8px;
+  font: 600 12px var(--font);
+  cursor: pointer;
+  padding: 7px 12px;
+  transition: background 0.15s, color 0.15s;
+}
+#wn-ok { background: rgba(60,120,240,0.92); color: #fff; }
+#wn-ok:hover { background: rgba(60,120,240,1); }
+#wn-hide-notes { background: transparent; color: rgba(255,255,255,0.55); }
+#wn-hide-notes:hover { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85); }
+/* No notes column in narrow windows: float the card at the bottom-left instead */
+@media (max-width: 720px) {
+  #whats-new { top: auto; bottom: 24px; left: 16px; width: min(300px, calc(100vw - 32px)); }
+  #whats-new::before, #wn-hide-notes { display: none; }
+}
+
 /* ─── Settings Modal ─────────────────────────────────────────────────────────── */
 
 #settings-card {
