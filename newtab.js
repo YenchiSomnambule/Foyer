@@ -240,7 +240,8 @@ const I18N = {
     tutNameT: 'Name your pages', tutNameB: 'Double-click or right-click a number to name that page, like "Work" or "Games". The name replaces the number on the bar, and the number key still switches to it.',
     tutQuickT: 'Quick actions', tutQuickB: 'Hover each icon to see what it does: sync your bookmarks bar or import all your bookmarks in one click.',
     tutThemeT: 'Change the look', tutThemeB: 'Pick a preset theme or dial in a custom colour. Saves automatically.',
-    tutSettingsT: 'Settings', tutSettingsB: 'Import bookmarks, export backups, set tile size, and customise shortcuts. Restart this tutorial any time from Settings → Help.',
+    tutNotesT: 'Sticky notes', tutNotesB: 'Jot down anything here — notes save as you type and come in five colours. Don’t need them? Click « to tuck them away to the left; the small tab at the edge brings them back.',
+    tutSettingsT: 'Settings', tutSettingsB: 'Turn on Sync across devices to keep tiles and notes on every computer, or mirror your tiles into Chrome bookmarks. Foyer also backs up your tiles daily — use Restore from backup if anything goes missing. Restart this tour from Settings → Help.',
     // search engine / web search
     srSearchWeb: ({ engine, q }) => `Search ${engine} for “${q}”`,
     ttChangeEngine: 'Change search engine',
@@ -361,7 +362,8 @@ const I18N = {
     tutNameT: '為頁面命名', tutNameB: '雙擊或右鍵點數字即可為該頁命名，例如「工作」或「遊戲」。名稱會取代列上的數字，按原本的數字鍵仍可切換到該頁。',
     tutQuickT: '快速操作', tutQuickB: '把游標移到各圖示上即可看到功能：一鍵同步書籤列，或匯入所有書籤。',
     tutThemeT: '變更外觀', tutThemeB: '挑選預設主題或自訂顏色，會自動儲存。',
-    tutSettingsT: '設定', tutSettingsB: '匯入書籤、匯出備份、設定圖示大小、自訂快速鍵。隨時可從「設定 → 說明」重新教學。',
+    tutNotesT: '便條', tutNotesB: '隨手記下任何事——打字就會自動存檔，有五種顏色可選。用不到的話，按 « 就能收到左邊，點邊緣的小標籤再展開。',
+    tutSettingsT: '設定', tutSettingsB: '開啟「跨裝置同步」可在每台電腦上看到相同的圖示和便條，也能把圖示同步到 Chrome 書籤。Foyer 每天會自動備份，東西不見時可用「從備份還原」找回。隨時可從「設定 → 說明」重新教學。',
     srSearchWeb: ({ engine, q }) => `用 ${engine} 搜尋「${q}」`,
     ttChangeEngine: '更換搜尋引擎',
     styleAuto: '自動',
@@ -477,7 +479,8 @@ const I18N = {
     tutNameT: '为页面命名', tutNameB: '双击或右键点数字即可为该页命名，例如“工作”或“游戏”。名称会取代栏上的数字，按原来的数字键仍可切换到该页。',
     tutQuickT: '快速操作', tutQuickB: '把光标移到各图标上即可看到功能：一键同步书签栏，或导入所有书签。',
     tutThemeT: '更改外观', tutThemeB: '挑选预设主题或自定义颜色，会自动保存。',
-    tutSettingsT: '设置', tutSettingsB: '导入书签、导出备份、设置图标大小、自定义快捷键。随时可从“设置 → 帮助”重新教程。',
+    tutNotesT: '便签', tutNotesB: '随手记下任何事——打字就会自动保存，有五种颜色可选。用不到的话，按 « 就能收到左边，点边缘的小标签再展开。',
+    tutSettingsT: '设置', tutSettingsB: '开启“跨设备同步”可在每台电脑上看到相同的图标和便签，也能把图标同步到 Chrome 书签。Foyer 每天会自动备份，东西不见时可用“从备份恢复”找回。随时可从“设置 → 帮助”重新教程。',
     srSearchWeb: ({ engine, q }) => `用 ${engine} 搜索“${q}”`,
     ttChangeEngine: '更换搜索引擎',
     styleAuto: '自动',
@@ -593,7 +596,8 @@ const I18N = {
     tutNameT: 'ページに名前を', tutNameB: '数字をダブルクリックまたは右クリックすると、そのページに「仕事」や「ゲーム」などの名前を付けられます。名前はバーの数字の代わりに表示され、数字キーでの切り替えはそのまま使えます。',
     tutQuickT: 'クイック操作', tutQuickB: '各アイコンにカーソルを合わせると機能がわかります：ブックマークバーの同期や、すべてのブックマークのインポートをワンクリックで。',
     tutThemeT: '見た目を変更', tutThemeB: 'プリセットのテーマを選ぶか、好きな色を指定できます。自動的に保存されます。',
-    tutSettingsT: '設定', tutSettingsB: 'ブックマークのインポート、バックアップのエクスポート、アイコンサイズの設定、ショートカットのカスタマイズ。「設定 → ヘルプ」からいつでもチュートリアルを再開できます。',
+    tutNotesT: 'メモ', tutNotesB: '思いついたことを書き留めましょう。入力すると自動で保存され、5 色から選べます。不要なら « で左にしまえます。端の小さなタブで再び表示できます。',
+    tutSettingsT: '設定', tutSettingsB: '「デバイス間同期」をオンにすると、どのパソコンでも同じアイコンとメモが使えます。アイコンを Chrome のブックマークに同期することもできます。Foyer は毎日自動でバックアップするので、何か消えたら「バックアップから復元」で戻せます。「設定 → ヘルプ」からいつでも再開できます。',
     srSearchWeb: ({ engine, q }) => `${engine} で「${q}」を検索`,
     ttChangeEngine: '検索エンジンを変更',
     styleAuto: '自動',
@@ -3988,6 +3992,8 @@ const TUT_STEPS = [
   { sel: '#grid',       key: 'tutDrag' },
   { sel: '#page-bar',   key: 'tutPages' },
   { sel: '#page-bar',   key: 'tutName' },
+  // Notes: point at the column header, or at the edge tab if the user has collapsed it
+  { sel: () => document.body.classList.contains('notes-collapsed') ? '#notes-expand-btn' : '#notes-head', key: 'tutNotes' },
   { sel: '#quick-btns', key: 'tutQuick' },
   { sel: '#theme-btn',  key: 'tutTheme' },
   { sel: '#config-btn', key: 'tutSettings' },
@@ -4027,7 +4033,10 @@ function _renderTutStep() {
   document.getElementById('tutorial-dots').innerHTML    = TUT_STEPS.map((_, i) =>
     `<span class="t-dot${i === _tutStep ? ' on' : ''}"></span>`).join('');
 
-  const target = step.sel ? document.querySelector(step.sel) : null;
+  const sel    = typeof step.sel === 'function' ? step.sel() : step.sel;
+  const found  = sel ? document.querySelector(sel) : null;
+  // Hidden targets (e.g. the notes column in a narrow window) get a centred card instead
+  const target = found && found.getClientRects().length ? found : null;
   const PAD = 14, CW = 300;
 
   if (!target) {
