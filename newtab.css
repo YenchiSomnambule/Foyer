@@ -6,6 +6,9 @@
 }
 
 :root {
+  /* Left column for sticky notes; tiles start to its right */
+  --notes-w:   232px;
+  --grid-left: calc(28px + var(--notes-w) + 40px);
   /* Letter icons for sites without a usable favicon: always white on black */
   --letter-bg: #1c1a17;
   --letter-fg: #ffffff;
@@ -48,7 +51,137 @@ body {
   inset: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 104px 48px 120px;
+  padding: 104px 48px 120px var(--grid-left);
+}
+
+/* ─── Sticky notes (left column under clock + weather) ─── */
+#notes-panel {
+  position: fixed;
+  top: 104px;
+  bottom: 24px;
+  left: 28px;
+  width: var(--notes-w);
+  z-index: 20;
+  overflow-y: auto;
+  overflow-x: visible;
+  padding: 10px 8px 24px;
+  margin: -10px -8px 0;
+  scrollbar-width: none;
+}
+#notes-panel::-webkit-scrollbar { display: none; }
+
+#add-note-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 18px;
+  border-radius: 10px;
+  border: 1px dashed var(--add-btn-border, rgba(255,255,255,0.3));
+  background: transparent;
+  color: var(--text-color);
+  opacity: 0.55;
+  font: 500 12px var(--font);
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+#add-note-btn:hover { opacity: 0.9; background: var(--glass); }
+
+#notes-list { display: flex; flex-direction: column; gap: 22px; }
+
+.note {
+  --note-bg: #fff3a8;
+  position: relative;
+  background: var(--note-bg);
+  color: rgba(40,32,16,0.88);
+  border-radius: 2px 2px 4px 16px;
+  padding: 16px 14px 10px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.06), 0 10px 20px -8px rgba(0,0,0,0.35);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+/* strip of translucent tape holding the note up */
+.note::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 58px;
+  height: 17px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: rgba(255,255,255,0.55);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  border-radius: 2px;
+}
+.note:hover,
+.note:focus-within {
+  transform: rotate(0deg) scale(1.015);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.06), 0 14px 26px -8px rgba(0,0,0,0.4);
+  z-index: 1;
+}
+.note-yellow { --note-bg: #fff3a8; }
+.note-pink   { --note-bg: #ffd4df; }
+.note-blue   { --note-bg: #cfe6ff; }
+.note-green  { --note-bg: #d3f2c8; }
+.note-purple { --note-bg: #e4d9ff; }
+
+.note-text {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: inherit;
+  font: 13px/1.5 var(--font);
+}
+.note-text::placeholder { color: rgba(40,32,16,0.38); }
+
+.note-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.note:hover .note-tools,
+.note:focus-within .note-tools { opacity: 1; }
+
+.note-dot {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.18);
+  background: var(--note-bg);
+  cursor: pointer;
+}
+.note-dot.active { box-shadow: 0 0 0 2px rgba(40,32,16,0.55); }
+
+.note-del {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(40,32,16,0.5);
+  cursor: pointer;
+}
+.note-del:hover { background: rgba(0,0,0,0.08); color: rgba(160,30,30,0.9); }
+
+/* Narrow windows: no room for a notes column — tiles take the full width */
+@media (max-width: 720px) {
+  :root { --grid-left: 48px; }
+  #notes-panel { display: none; }
 }
 
 /* ─── Top widgets strip (clock + weather) ─── */

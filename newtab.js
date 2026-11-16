@@ -253,6 +253,9 @@ const I18N = {
     topSitesEmpty: 'No new suggestions',
     // custom icons
     uploadIcon: 'Upload icon', resetIcon: 'Reset icon',
+    // sticky notes
+    newNote: 'New note', notePh: 'Write a note…', noteColor: 'Note color', noteDelete: 'Delete note',
+    deleteNoteTitle: 'Delete Note', deleteNoteBody: 'Delete this note? This can’t be undone.', noteDeleted: 'Note deleted',
     // auto backups
     restoreFromBackup: 'Restore from backup', close: 'Close',
     backupsTitle: 'Restore from Backup',
@@ -359,6 +362,9 @@ const I18N = {
     topSitesShow: '推薦我最常造訪的網站',
     topSitesEmpty: '沒有新的建議',
     uploadIcon: '上傳圖示', resetIcon: '重設圖示',
+    // sticky notes
+    newNote: '新增便條', notePh: '寫點什麼…', noteColor: '便條顏色', noteDelete: '刪除便條',
+    deleteNoteTitle: '刪除便條', deleteNoteBody: '要刪除這張便條嗎？刪除後無法復原。', noteDeleted: '已刪除便條',
     // auto backups
     restoreFromBackup: '從備份還原', close: '關閉',
     backupsTitle: '從備份還原',
@@ -465,6 +471,9 @@ const I18N = {
     topSitesShow: '推荐我最常访问的网站',
     topSitesEmpty: '没有新的建议',
     uploadIcon: '上传图标', resetIcon: '重置图标',
+    // sticky notes
+    newNote: '新建便签', notePh: '写点什么…', noteColor: '便签颜色', noteDelete: '删除便签',
+    deleteNoteTitle: '删除便签', deleteNoteBody: '要删除这张便签吗？删除后无法恢复。', noteDeleted: '已删除便签',
     // auto backups
     restoreFromBackup: '从备份恢复', close: '关闭',
     backupsTitle: '从备份恢复',
@@ -571,6 +580,9 @@ const I18N = {
     topSitesShow: 'よく見るサイトから提案',
     topSitesEmpty: '新しい提案はありません',
     uploadIcon: 'アイコンをアップロード', resetIcon: 'アイコンをリセット',
+    // sticky notes
+    newNote: '新しいメモ', notePh: 'メモを書く…', noteColor: 'メモの色', noteDelete: 'メモを削除',
+    deleteNoteTitle: 'メモを削除', deleteNoteBody: 'このメモを削除しますか？元に戻せません。', noteDeleted: 'メモを削除しました',
     // auto backups
     restoreFromBackup: 'バックアップから復元', close: '閉じる',
     backupsTitle: 'バックアップから復元',
@@ -1319,6 +1331,130 @@ function _setBmMirror(on) {
     clearTimeout(_bmMirrorTimer);
     _showToast(t('bmMirrorOff'));
   }
+}
+
+// ─── Sticky Notes ────────────────────────────────────────────────────────────
+// Left column under the clock + weather. Stored in storage.local; newest first.
+// An empty note disappears when it loses focus, so "+ New note" never leaves junk.
+
+const NOTE_COLORS = ['yellow', 'pink', 'blue', 'green', 'purple'];
+const NOTE_TILTS  = [-1.2, 0.9, -0.5, 1.3, -0.8];   // degrees — a hand-placed look
+let _notes = [];
+let _notesSaveTimer = null;
+
+function _saveNotes(now = false) {
+  clearTimeout(_notesSaveTimer);
+  const write = () => chrome.storage.local.set({ notes: _notes });
+  if (now) write(); else _notesSaveTimer = setTimeout(write, 300);
+}
+
+function _cleanNotes(arr) {
+  return (Array.isArray(arr) ? arr : [])
+    .filter(n => n && typeof n.id === 'string' && typeof n.text === 'string')
+    .map(n => ({ id: n.id, text: n.text, color: NOTE_COLORS.includes(n.color) ? n.color : 'yellow', at: n.at ?? Date.now() }));
+}
+
+async function loadNotes() {
+  const r = await _storageGet(['notes']);
+  _notes = _cleanNotes(r.notes);
+  renderNotes();
+  // Keep several open new-tab pages in step (skip while the user is typing here)
+  chrome.storage.onChanged?.addListener((changes, area) => {
+    if (area !== 'local' || !changes.notes) return;
+    if (document.activeElement?.closest('#notes-panel')) return;
+    _notes = _cleanNotes(changes.notes.newValue);
+    renderNotes();
+  });
+}
+
+function _autoGrow(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+function _buildNote(note, i) {
+  const el = document.createElement('div');
+  el.className = `note note-${note.color}`;
+  el.dataset.id = note.id;
+  el.style.setProperty('--tilt', NOTE_TILTS[i % NOTE_TILTS.length] + 'deg');
+
+  const ta = document.createElement('textarea');
+  ta.className = 'note-text';
+  ta.rows = 2;
+  ta.placeholder = t('notePh');
+  ta.value = note.text;
+  ta.addEventListener('input', () => {
+    note.text = ta.value;
+    note.at = Date.now();
+    _autoGrow(ta);
+    _saveNotes();
+  });
+
+  const tools = document.createElement('div');
+  tools.className = 'note-tools';
+  NOTE_COLORS.forEach(c => {
+    const dot = document.createElement('button');
+    dot.className = `note-dot note-${c}` + (c === note.color ? ' active' : '');
+    dot.title = t('noteColor');
+    dot.setAttribute('aria-label', t('noteColor'));
+    dot.addEventListener('click', () => {
+      note.color = c;
+      el.className = `note note-${c}`;
+      tools.querySelectorAll('.note-dot').forEach(d => d.classList.toggle('active', d === dot));
+      _saveNotes(true);
+      ta.focus();
+    });
+    tools.appendChild(dot);
+  });
+  const del = document.createElement('button');
+  del.className = 'note-del';
+  del.title = t('noteDelete');
+  del.setAttribute('aria-label', t('noteDelete'));
+  del.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+  del.addEventListener('click', () => deleteNote(note.id));
+  tools.appendChild(del);
+
+  // Drop a note that is still empty once focus leaves it
+  el.addEventListener('focusout', e => {
+    if (el.contains(e.relatedTarget)) return;
+    if (!note.text.trim()) {
+      _notes = _notes.filter(n => n.id !== note.id);
+      _saveNotes(true);
+      renderNotes();
+    }
+  });
+
+  el.append(ta, tools);
+  return el;
+}
+
+function renderNotes(focusId) {
+  const list = document.getElementById('notes-list');
+  if (!list) return;
+  list.innerHTML = '';
+  _notes.forEach((n, i) => list.appendChild(_buildNote(n, i)));
+  list.querySelectorAll('.note-text').forEach(_autoGrow);
+  if (focusId) list.querySelector(`.note[data-id="${focusId}"] .note-text`)?.focus();
+}
+
+function addNote() {
+  const note = { id: uid(), text: '', color: 'yellow', at: Date.now() };
+  _notes.unshift(note);
+  renderNotes(note.id);
+  document.getElementById('notes-panel').scrollTop = 0;
+}
+
+function deleteNote(id) {
+  const note = _notes.find(n => n.id === id);
+  if (!note) return;
+  const doDelete = () => {
+    _notes = _notes.filter(n => n.id !== id);
+    _saveNotes(true);
+    renderNotes();
+    _showToast(t('noteDeleted'));
+  };
+  if (!note.text.trim()) doDelete();
+  else _showConfirm(t('deleteNoteTitle'), t('deleteNoteBody'), t('ctxDelete'), doDelete);
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────
@@ -4130,6 +4266,7 @@ async function doExportJson() {
     exportedAt: new Date().toISOString(),
     pages: JSON.parse(JSON.stringify(_pages)),
     pageNames: { ..._pageNames },
+    notes: _notes,
     theme: stored.theme ?? null,
     customColor: stored.customColor ?? null,
   };
@@ -4260,6 +4397,11 @@ function doImportJson(file) {
         if (data.pageNames && typeof data.pageNames === 'object') {
           _pageNames = data.pageNames;
           savePageNames();
+        }
+        if (Array.isArray(data.notes)) {
+          _notes = _cleanNotes(data.notes);
+          _saveNotes(true);
+          renderNotes();
         }
         save().then(() => {
           if (data.theme && data.theme !== 'custom') { applyTheme(data.theme); saveTheme(data.theme); }
@@ -4497,6 +4639,7 @@ function promptRenamePage(pageKey) {
     try { await _maybeDailyBackup(); } catch { /* backups unavailable */ }
     try { await _initCloudSync(); } catch { /* sync unavailable */ }
     try { await _initBmMirror(); } catch { /* bookmarks unavailable */ }
+    try { await loadNotes(); } catch { /* notes unavailable */ }
   })();
 
   // Clock — tick immediately; pause when tab is hidden to save CPU
@@ -4776,7 +4919,7 @@ function promptRenamePage(pageKey) {
     }
 
     // ── ⌘Z / Ctrl+Z: undo ──
-    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey && !isInput) {
       e.preventDefault();
       doUndo();
       return;
@@ -4895,6 +5038,9 @@ function promptRenamePage(pageKey) {
       engineMenu.classList.add('hidden');
     }
   });
+
+  // Sticky notes
+  document.getElementById('add-note-btn').addEventListener('click', addNote);
 
   // Cross-device sync toggle (Settings → Data)
   document.getElementById('cloud-sync-toggle').addEventListener('click', () => {

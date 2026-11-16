@@ -53,6 +53,10 @@ The extension can read your Chrome bookmarks via the `bookmarks` permission when
 
 If you turn on **Mirror to Chrome bookmarks** (off by default), the extension creates and maintains a single folder named "Foyer" in Other bookmarks that reflects your tiles, plus a "Foyer Archive" folder that keeps previous versions when many tiles are removed at once. It only creates, edits, or deletes bookmarks inside those two folders and never touches any other bookmark. Like all Chrome bookmarks, these folders sync through your Google account only if you have enabled Chrome Sync.
 
+## Sticky notes
+
+Notes you write in the sticky-notes column are stored only in local extension storage on your device. They are included in a backup file only when you choose Export backup, and are never uploaded or synced.
+
 ## Automatic backups
 
 The extension keeps up to 10 snapshots of your tiles in local extension storage (once a day and before large changes such as clearing or importing) so you can restore them from Settings. These backups stay on your device and are never uploaded.
