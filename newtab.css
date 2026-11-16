@@ -6,12 +6,9 @@
 }
 
 :root {
-  /* Letter icons for sites without a usable favicon: white tile on dark
-     backgrounds, black tile on light ones (light themes swap these below) */
-  --letter-dark:  #1c1a17;
-  --letter-light: #ffffff;
-  --letter-bg:    var(--letter-light);
-  --letter-fg:    var(--letter-dark);
+  /* Letter icons for sites without a usable favicon: always white on black */
+  --letter-bg: #1c1a17;
+  --letter-fg: #ffffff;
   --tile-size: 88px;
   --tile-icon-size: 60px;
   --tile-name-h: 21px;
@@ -847,13 +844,8 @@ body:has(#group-overlay:not(.hidden)) #page-bar { display: none; }
   justify-content: center;
   font-size: 22px;
   font-weight: 700;
-  /* the group panel is light unless the window style is dark */
-  background: var(--letter-dark);
-  color: var(--letter-light);
-}
-body.modal-dark .group-site-fallback {
-  background: var(--letter-light);
-  color: var(--letter-dark);
+  background: var(--letter-bg);
+  color: var(--letter-fg);
 }
 
 .group-site-tile span {
@@ -1235,8 +1227,6 @@ body.theme-cream {
   --add-btn-bg:   rgba(0,0,0,0.07);
   --add-btn-border: rgba(0,0,0,0.22);
   --add-btn-color:  rgba(30,25,15,0.75);
-  --letter-bg:      var(--letter-dark);
-  --letter-fg:      var(--letter-light);
 }
 
 body.theme-yellow #add-btn:hover,
@@ -2056,8 +2046,7 @@ body.modal-dark #search-box {
   color: #fff;
   overflow: hidden;
 }
-.sr-letter-icon { background: var(--letter-dark); color: var(--letter-light); }
-body.modal-dark .sr-letter-icon { background: var(--letter-light); color: var(--letter-dark); }
+.sr-letter-icon { background: var(--letter-bg); color: var(--letter-fg); }
 
 .sr-icon img {
   position: absolute;

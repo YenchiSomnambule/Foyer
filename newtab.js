@@ -3412,8 +3412,7 @@ function applyTheme(theme) {
   ['background','background-image','background-size','background-position','background-repeat']
     .forEach(p => document.body.style.removeProperty(p));
   ['--text-color','--text-shadow','--glass','--glass-border',
-   '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color',
-   '--letter-bg','--letter-fg']
+   '--overlay-bg','--add-btn-bg','--add-btn-border','--add-btn-color']
     .forEach(p => document.body.style.removeProperty(p));
   THEMES.forEach(t => document.body.classList.remove(`theme-${t}`));
   document.body.classList.remove('theme-custom');
@@ -3474,8 +3473,6 @@ function applyCustomColor(hex) {
     document.body.style.setProperty('--add-btn-bg', 'rgba(0,0,0,0.07)');
     document.body.style.setProperty('--add-btn-border', 'rgba(0,0,0,0.22)');
     document.body.style.setProperty('--add-btn-color', 'rgba(30,25,15,0.75)');
-    document.body.style.setProperty('--letter-bg', 'var(--letter-dark)');
-    document.body.style.setProperty('--letter-fg', 'var(--letter-light)');
   } else {
     // Explicitly set white-text dark-mode values rather than relying on :root defaults
     document.body.style.setProperty('--text-color', 'rgba(255,255,255,0.92)');
@@ -3486,8 +3483,6 @@ function applyCustomColor(hex) {
     document.body.style.setProperty('--add-btn-bg', 'rgba(255,255,255,0.14)');
     document.body.style.setProperty('--add-btn-border', 'rgba(255,255,255,0.22)');
     document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
-    document.body.style.setProperty('--letter-bg', 'var(--letter-light)');
-    document.body.style.setProperty('--letter-fg', 'var(--letter-dark)');
   }
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
@@ -3575,8 +3570,6 @@ function applyBgImage(dataUrl, posX = _bgPosX, posY = _bgPosY, zoom = _bgZoom) {
   document.body.style.setProperty('--add-btn-bg',    'rgba(255,255,255,0.18)');
   document.body.style.setProperty('--add-btn-border','rgba(255,255,255,0.28)');
   document.body.style.setProperty('--add-btn-color', 'rgba(255,255,255,0.92)');
-  document.body.style.setProperty('--letter-bg',     'var(--letter-light)');
-  document.body.style.setProperty('--letter-fg',     'var(--letter-dark)');
 
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.swatch-image').forEach(btn => {
