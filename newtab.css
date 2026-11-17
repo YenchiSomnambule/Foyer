@@ -9,9 +9,9 @@
   /* Left column for sticky notes; tiles start to its right */
   --notes-w:   232px;
   --grid-left: calc(28px + var(--notes-w) + 40px);
-  /* Letter icons for sites without a usable favicon: always white on black */
-  --letter-bg: #1c1a17;
-  --letter-fg: #ffffff;
+  /* Letter icons for sites without a usable favicon: always black on white */
+  --letter-bg: #ffffff;
+  --letter-fg: #1c1a17;
   --tile-size: 88px;
   --tile-icon-size: 60px;
   --tile-name-h: 21px;

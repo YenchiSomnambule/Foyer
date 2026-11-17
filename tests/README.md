@@ -49,7 +49,7 @@ TEST_JOBS=1 npm test
 | `blank-names.test.js` | 沒名字就留白，不自動填網址 |
 | `hostname-cleanup.test.js` | 一次性清除「名字等於網址」的舊 tiles |
 | `page-names.test.js` | 頁籤顯示名稱取代數字、數字鍵仍可切換、雙擊改名 |
-| `letter-icons.test.js` | 讀不到圖示時顯示黑底白字的字母方塊（**需要網路**） |
+| `letter-icons.test.js` | 讀不到圖示時顯示白底黑字的字母方塊（**需要網路**） |
 | `notes.test.js` | 便條：版面、打字不觸發快捷鍵、顏色、保存、刪除確認、收起／展開（淺色＋深色主題） |
 | `notes-sync.test.js` | 便條跨裝置同步：三台模擬電腦、打字中不被覆蓋、合併、備份、容量上限 |
 | `tutorial.test.js` | 新手教學：10 步、「便條」步驟會指向便條欄／收起時的小標籤／窄視窗時置中 |

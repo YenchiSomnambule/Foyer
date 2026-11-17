@@ -1,5 +1,5 @@
 'use strict';
-// Sites with no favicon (Google answers with a 16×16 globe) get a white-on-black
+// Sites with no favicon (Google answers with a 16×16 globe) get a black-on-white
 // letter tile in every theme. NEEDS INTERNET (real favicon lookups); skipped
 // when FOYER_OFFLINE=1.
 const { launch, openDevice, reporter, baseLocal, emptyPages, site, group, shotPath } = require('./helpers');
@@ -29,7 +29,7 @@ const globe = u => `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&
     }));
     r.ok(state.slice(0, 3).map(s => s.letter).join() === 'R,A,C', 'Unknown sites show their first letter');
     r.ok(state[3].letter === null, 'GitHub keeps its real favicon');
-    r.ok(state[0].bg === 'rgb(28, 26, 23)' && state[0].fg === 'rgb(255, 255, 255)', 'Letter tile is white on black');
+    r.ok(state[0].bg === 'rgb(255, 255, 255)' && state[0].fg === 'rgb(28, 26, 23)', 'Letter tile is black on white');
     r.ok(!('favicon' in dev.store.local.pages['1'][0]), 'A globe cached by an older version is dropped');
     await p.screenshot({ path: shotPath(`letter-icons-${theme}`), clip: { x: 260, y: 70, width: 900, height: 120 } });
     if (theme === 'cream') {
