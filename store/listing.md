@@ -13,13 +13,7 @@ Keep claims in step with the code — reviewers check them.
 
 The summary is **not** typed in the dashboard — it is the `"description"` in `manifest.json`.
 
-Current (2.7.3, 107 chars — doesn't mention notes):
-
-```
-Your websites in a clean new-tab grid — pages, folders, quick search, weather, and free cross-device sync.
-```
-
-Suggested for the next release (119 chars):
+Current (since 2.7.4, 119 chars):
 
 ```
 Your websites in a clean new-tab grid — pages, folders, sticky notes, quick search, weather and free cross-device sync.
