@@ -85,6 +85,7 @@
 
 - [ ] 前往 [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole)
 - [ ] 選擇 Foyer → **Package** → 上傳新 ZIP
+- [ ] **Store listing 分頁**：功能有變時，照 `store/listing.md` 更新商店描述（摘要來自 `manifest.json` 的 description）
 - [ ] **Privacy practices 分頁**：照 `store/privacy-practices.md` 貼上單一用途、各權限理由、資料使用勾選（權限或對外連線有變時先更新這個檔案和 `PRIVACY.md`）
 - [ ] 確認 Privacy Policy URL 有效：`https://github.com/YenchiSomnambule/Foyer/blob/main/PRIVACY.md`
 - [ ] 填寫版本說明（What's new）
